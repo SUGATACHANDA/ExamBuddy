@@ -88,8 +88,7 @@
     },
     "files": [
       "build/**/*",
-      "!node_modules/fsevents/**/*",
-      "public/electron.js",
+      "public/electron-prod.js",
       "public/preload.js"
     ],
     "extraMetadata": {
