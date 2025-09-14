@@ -3,12 +3,25 @@
 // This is the MAIN entry file for the PACKAGED PRODUCTION application.
 
 // `session` is the key module we need to import for this fix
-const { app, BrowserWindow, ipcMain, screen, session } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, session, dialog } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const url = require('url');
+const fs = require('fs');
+
+const log = require('electron-log');
+autoUpdater.logger = log;
+autoUpdater.logger.transports.file.level = 'info';
+const updateInfoPath = path.join(app.getPath('userData'), 'update-info.json');
 
 let mainWindow;
 let isExamInProgress = false;
+
+function checkForUpdates() {
+    log.info('Checking for updates...');
+    // This will check your GitHub Releases page for a newer version tag
+    autoUpdater.checkForUpdatesAndNotify();
+}
 
 function createWindow() {
     console.log("--- Production electron.js (electron-prod.js) is running ---");
@@ -78,8 +91,72 @@ app.whenReady().then(() => {
 
     // Now that the protocol is configured, we can create our main window.
     createWindow();
+    setTimeout(checkForUpdates, 3000)
 });
 // ------------------------------------------
+
+autoUpdater.on('update-available', (_info) => {
+    log.info('Update available. Downloading...');
+});
+
+// Fired when an update has been downloaded.
+autoUpdater.on('update-downloaded', (_info) => {
+    log.info('Update downloaded. Storing release notes and prompting user.');
+    const releaseNotes = _info.releaseNotes || 'No release notes provided.';
+    const updateData = {
+        version: _info.version,
+        notes: releaseNotes,
+        showOnNextLaunch: true // A flag to tell the new version to show the dialog
+    };
+    fs.writeFileSync(updateInfoPath, JSON.stringify(updateData));
+    // The update is ready. Prompt the user to restart the application.
+    const dialogOpts = {
+        type: 'info',
+        buttons: ['Restart Now', 'Later'],
+        title: 'Application Update',
+        message: 'A new version of Exam Proctor has been downloaded.',
+        detail: 'Restart the application to apply the updates.'
+    };
+
+    dialog.showMessageBox(dialogOpts).then((returnValue) => {
+        if (returnValue.response === 0) { // The "Restart Now" button was clicked (index 0)
+            autoUpdater.quitAndInstall();
+        }
+    });
+});
+
+// Fired when there is an error during the update process.
+autoUpdater.on('error', (err) => {
+    log.error('Error in auto-updater. ' + err);
+});
+
+ipcMain.handle('get-release-notes', () => {
+    try {
+        if (fs.existsSync(updateInfoPath)) {
+            const data = JSON.parse(fs.readFileSync(updateInfoPath, 'utf8'));
+            // If the "show" flag is true, return the data.
+            if (data && data.showOnNextLaunch) {
+                return data;
+            }
+        }
+    } catch (err) {
+        console.error("Could not read release notes:", err);
+    }
+    return null; // Return null if there are no notes to show.
+});
+
+// Another handler to mark the notes as "read" so they don't show again.
+ipcMain.on('release-notes-shown', () => {
+    try {
+        if (fs.existsSync(updateInfoPath)) {
+            const data = JSON.parse(fs.readFileSync(updateInfoPath, 'utf8'));
+            data.showOnNextLaunch = false; // Set the flag to false
+            fs.writeFileSync(updateInfoPath, JSON.stringify(data));
+        }
+    } catch (err) {
+        console.error("Could not mark release notes as shown:", err);
+    }
+});
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {

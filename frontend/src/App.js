@@ -1,5 +1,5 @@
 // src/App.js
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -34,12 +34,45 @@ import HODDashboard from './screens/hod/HODDashboard';
 import HODManageUsers from './screens/hod/HODManageUsers';
 import HODViewExams from 'screens/hod/HODViewExams';
 
+import WhatsNewModal from './components/WhatsNewModal';
+
 
 function App() {
+  const [releaseInfo, setReleaseInfo] = useState(null);
+  const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);
+
+  useEffect(() => {
+    const checkForReleaseNotes = async () => {
+      if (window.electronAPI) {
+        const notes = await window.electronAPI.getReleaseNotes();
+        if (notes) {
+          setReleaseInfo(notes);
+          setIsWhatsNewOpen(true);
+        }
+      }
+    };
+    checkForReleaseNotes();
+  }, []);
+
+  const handleCloseWhatsNew = () => {
+    setIsWhatsNewOpen(false);
+    // Tell the main process that we've shown the notes, so it doesn't show them again.
+    if (window.electronAPI) {
+      window.electronAPI.releaseNotesShown();
+    }
+  };
   return (
     <AuthProvider>
       <Router>
         <div className="App">
+          {/* --- RENDER THE MODAL IF NEEDED --- */}
+          {isWhatsNewOpen && releaseInfo && (
+            <WhatsNewModal
+              version={releaseInfo.version}
+              notes={releaseInfo.notes}
+              onClose={handleCloseWhatsNew}
+            />
+          )}
           <Routes>
             <Route path="/login" element={<LoginScreen />} />
             <Route path="/" element={<LoginScreen />} />

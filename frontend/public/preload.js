@@ -18,6 +18,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getAppsToClose: () => ipcRenderer.invoke('get-apps-to-close'), // New name
     closeApp: () => ipcRenderer.send('close-app'),
 
+    getReleaseNotes: () => ipcRenderer.invoke('get-release-notes'),
+    releaseNotesShown: () => ipcRenderer.send('release-notes-shown'),
+
 
     // New listener to get the result back from the main process
     onKillProcessesResult: (callback) => ipcRenderer.on('kill-processes-result', (event, result) => callback(result)),

@@ -20,6 +20,9 @@ export interface IElectronAPI {
     getAppsToClose: () => Promise<string[]>;
     killAppList: (appList: string[]) => void;
     closeApp: () => void;
+
+    getReleaseNotes: () => Promise<{ version: string; notes: string; } | null>;
+    releaseNotesShown: () => void;
 }
 
 // Now, we augment the global Window interface to include our `electronAPI` property

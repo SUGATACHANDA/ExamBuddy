@@ -1620,3 +1620,25 @@ th.sortable.desc::after {
 .card-actions .btn-primary {
   width: 100%; /* Make button span full width of card */
 }
+.whats-new-modal {
+  max-width: 600px;
+}
+.release-notes-content {
+  margin-top: 20px;
+  max-height: 400px;
+  overflow-y: auto;
+  background-color: var(--background-light);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 15px;
+}
+/* Basic styles for markdown content */
+.release-notes-content h3 {
+  margin-top: 0;
+}
+.release-notes-content ul {
+  padding-left: 20px;
+}
+.release-notes-content li {
+  margin-bottom: 8px;
+}
