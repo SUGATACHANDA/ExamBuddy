@@ -42,7 +42,8 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "electron:start": "npx concurrently -k \"npm run start\" \"npx wait-on http://localhost:3000 && npx electron .\"",
-    "electron:package": "npm run build && npm run postbuild && npx cross-env NODE_ENV=production electron-builder"
+    "electron:package": "npx dotenv -e ./.env -- npm run build && npm run clean:fsevents && npm run postbuild && electron-builder",
+    "publish": "npx dotenv -e ./.env -- npm run electron:package -- --publish always"
   },
   "eslintConfig": {
     "extends": [
@@ -65,6 +66,7 @@
   "devDependencies": {
     "concurrently": "^9.2.1",
     "cross-env": "^10.0.0",
+    "dotenv-cli": "^10.0.0",
     "electron": "^37.4.0",
     "electron-builder": "^26.0.12",
     "fs-extra": "^11.3.1",
