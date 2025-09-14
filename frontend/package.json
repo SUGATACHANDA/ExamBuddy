@@ -106,8 +106,5 @@
       "allowToChangeInstallationDirectory": true,
       "deleteAppDataOnUninstall": true
     }
-  },
-  "overrides": {
-    "fsevents": "2.3.2"
   }
 }
