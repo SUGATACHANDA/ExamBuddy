@@ -44,19 +44,28 @@ function App() {
   useEffect(() => {
     const checkForReleaseNotes = async () => {
       if (window.electronAPI) {
-        const notes = await window.electronAPI.getReleaseNotes();
-        if (notes) {
-          setReleaseInfo(notes);
-          setIsWhatsNewOpen(true);
+        // 1. First, ask the main process what the environment is.
+        const isDevelopment = await window.electronAPI.isDev();
+
+        // 2. ONLY if we are NOT in development, proceed to check for notes.
+        if (!isDevelopment) {
+          console.log("Production environment detected. Checking for release notes...");
+          const notes = await window.electronAPI.getReleaseNotes();
+          if (notes) {
+            setReleaseInfo(notes);
+            setIsWhatsNewOpen(true);
+          }
+        } else {
+          console.log("Development environment detected. Skipping release notes check.");
         }
       }
     };
+
     checkForReleaseNotes();
-  }, []);
+  }, []); // Empty dependency array means this runs only once on startup.
 
   const handleCloseWhatsNew = () => {
     setIsWhatsNewOpen(false);
-    // Tell the main process that we've shown the notes, so it doesn't show them again.
     if (window.electronAPI) {
       window.electronAPI.releaseNotesShown();
     }
@@ -102,7 +111,7 @@ function App() {
 
             {/* Teacher Routes */}
             <Route path="/teacher/dashboard" element={<ProtectedRoute role="teacher"><TeacherDashboard /></ProtectedRoute>} />
-            <Route path="/teacher/results/:examId" element={<ProtectedRoute role={['teacher', 'HOD']}><ResultsScreen /></ProtectedRoute>} />
+            <Route path="/teacher/results/:examId" element={<ProtectedRoute role='teacher'><ResultsScreen /></ProtectedRoute>} />
             <Route path="/teacher/proctor/:examId" element={<ProtectedRoute role="teacher"><ProctorScreen /></ProtectedRoute>} />
 
             <Route path="/teacher/questions" element={<ProtectedRoute role="teacher"><ManageQuestions /></ProtectedRoute>} />
