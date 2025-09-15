@@ -15,15 +15,16 @@ autoUpdater.logger.transports.file.level = 'info';
 const updateInfoPath = path.join(app.getPath('userData'), 'update-info.json');
 
 autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = true;
 
 let mainWindow;
 let isExamInProgress = false;
 
-function checkForUpdates() {
-    log.info('Checking for updates...');
-    // This will check your GitHub Releases page for a newer version tag
-    autoUpdater.checkForUpdates();
-}
+// function checkForUpdates() {
+//     log.info('Checking for updates...');
+//     // This will check your GitHub Releases page for a newer version tag
+//     autoUpdater.checkForUpdates();
+// }
 
 function createWindow() {
     console.log("--- Production electron.js (electron-prod.js) is running ---");
@@ -93,44 +94,62 @@ app.whenReady().then(() => {
 
     // Now that the protocol is configured, we can create our main window.
     createWindow();
-    autoUpdater.checkForUpdatesAndNotify();
+    setTimeout(() => {
+        autoUpdater.checkForUpdates();
+    }, 3000); // Check 3 seconds after launch.
+
+    // Optional: Periodically check for updates in the background (e.g., every 4 hours)
+    setInterval(() => {
+        log.info("Performing periodic update check...");
+        autoUpdater.checkForUpdates();
+    }, 1000 * 60 * 60 * 4);
 });
 // ------------------------------------------
 
-autoUpdater.on('update-available', (info) => {
-    log.info(`Update available: version ${info.version}. Prompting user to download.`);
+autoUpdater.on('error', (err) => {
+    log.error('Auto-Updater Error:', err);
+});
 
-    // An update is available. ASK the user if they want to download it now.
+autoUpdater.on('update-not-available', () => {
+    log.info('No update available.');
+});
+
+// This event fires when a new version is found, BEFORE downloading.
+autoUpdater.on('update-available', (info) => {
+    log.info(`Update found: version ${info.version}. Prompting user to download.`);
+
     dialog.showMessageBox({
         type: 'info',
         title: 'Update Available',
-        message: 'A new version of Exam Proctor is available.',
-        detail: `Version ${info.version} is available. Would you like to download and install it now?`,
-        buttons: ['Yes, Download Now', 'No, Later']
+        message: `A new version (${info.version}) of Exam Proctor is available.`,
+        detail: `Would you like to download it now? It will be installed the next time you restart the application.`,
+        buttons: ['Download Update', 'Remind Me Later'],
+        defaultId: 0,
+        cancelId: 1
     }).then(result => {
-        if (result.response === 0) { // 'Yes' button
-            log.info("User agreed to download the update.");
+        if (result.response === 0) { // 'Download Update' was clicked
+            log.info('User approved download. Starting download...');
             autoUpdater.downloadUpdate();
         } else {
-            log.info("User declined the update.");
+            log.info('User deferred the update.');
         }
     });
 });
 
-autoUpdater.on('update-not-available', (info) => {
-    log.info('Update not available.');
-});
-
-autoUpdater.on('error', (err) => {
-    log.error('Error in auto-updater:', err);
-});
-
-// The 'update-downloaded' event remains the same as before.
 autoUpdater.on('update-downloaded', (info) => {
-    log.info(`Update for version ${info.version} has been downloaded. Prompting for restart.`);
-    // ... your existing dialog box logic to ask the user to restart is PERFECT here ...
-    dialog.showMessageBox({/* ... */ }).then(result => {
-        if (result.response === 0) {
+    log.info(`Update ${info.version} downloaded. Prompting user to restart.`);
+
+    dialog.showMessageBox({
+        type: 'info',
+        title: 'Update Ready to Install',
+        message: 'The new version of Exam Proctor has been downloaded.',
+        detail: 'Restart the application now to apply the updates.',
+        buttons: ['Restart Now', 'Later'],
+        defaultId: 0,
+        cancelId: 1
+    }).then(result => {
+        if (result.response === 0) { // 'Restart Now' was clicked
+            log.info('User approved restart. Quitting and installing...');
             autoUpdater.quitAndInstall();
         }
     });
