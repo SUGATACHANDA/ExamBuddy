@@ -14,13 +14,15 @@ autoUpdater.logger = log;
 autoUpdater.logger.transports.file.level = 'info';
 const updateInfoPath = path.join(app.getPath('userData'), 'update-info.json');
 
+autoUpdater.autoDownload = false;
+
 let mainWindow;
 let isExamInProgress = false;
 
 function checkForUpdates() {
     log.info('Checking for updates...');
     // This will check your GitHub Releases page for a newer version tag
-    autoUpdater.checkForUpdatesAndNotify();
+    autoUpdater.checkForUpdates();
 }
 
 function createWindow() {
@@ -91,43 +93,47 @@ app.whenReady().then(() => {
 
     // Now that the protocol is configured, we can create our main window.
     createWindow();
-    setTimeout(checkForUpdates, 3000)
+    autoUpdater.checkForUpdatesAndNotify();
 });
 // ------------------------------------------
 
-autoUpdater.on('update-available', (_info) => {
-    log.info('Update available. Downloading...');
-});
+autoUpdater.on('update-available', (info) => {
+    log.info(`Update available: version ${info.version}. Prompting user to download.`);
 
-// Fired when an update has been downloaded.
-autoUpdater.on('update-downloaded', (_info) => {
-    log.info('Update downloaded. Storing release notes and prompting user.');
-    const releaseNotes = _info.releaseNotes || 'No release notes provided.';
-    const updateData = {
-        version: _info.version,
-        notes: releaseNotes,
-        showOnNextLaunch: true // A flag to tell the new version to show the dialog
-    };
-    fs.writeFileSync(updateInfoPath, JSON.stringify(updateData));
-    // The update is ready. Prompt the user to restart the application.
-    const dialogOpts = {
+    // An update is available. ASK the user if they want to download it now.
+    dialog.showMessageBox({
         type: 'info',
-        buttons: ['Restart Now', 'Later'],
-        title: 'Application Update',
-        message: 'A new version of Exam Proctor has been downloaded.',
-        detail: 'Restart the application to apply the updates.'
-    };
-
-    dialog.showMessageBox(dialogOpts).then((returnValue) => {
-        if (returnValue.response === 0) { // The "Restart Now" button was clicked (index 0)
-            autoUpdater.quitAndInstall();
+        title: 'Update Available',
+        message: 'A new version of Exam Proctor is available.',
+        detail: `Version ${info.version} is available. Would you like to download and install it now?`,
+        buttons: ['Yes, Download Now', 'No, Later']
+    }).then(result => {
+        if (result.response === 0) { // 'Yes' button
+            log.info("User agreed to download the update.");
+            autoUpdater.downloadUpdate();
+        } else {
+            log.info("User declined the update.");
         }
     });
 });
 
-// Fired when there is an error during the update process.
+autoUpdater.on('update-not-available', (info) => {
+    log.info('Update not available.');
+});
+
 autoUpdater.on('error', (err) => {
-    log.error('Error in auto-updater. ' + err);
+    log.error('Error in auto-updater:', err);
+});
+
+// The 'update-downloaded' event remains the same as before.
+autoUpdater.on('update-downloaded', (info) => {
+    log.info(`Update for version ${info.version} has been downloaded. Prompting for restart.`);
+    // ... your existing dialog box logic to ask the user to restart is PERFECT here ...
+    dialog.showMessageBox({/* ... */ }).then(result => {
+        if (result.response === 0) {
+            autoUpdater.quitAndInstall();
+        }
+    });
 });
 
 ipcMain.handle('get-release-notes', () => {
