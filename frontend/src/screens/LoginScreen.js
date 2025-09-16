@@ -65,7 +65,7 @@ const LoginScreen = () => {
         <div className="container login-container">
             <div className="login-box">
                 <h1>Exam Proctoring System</h1>
-                <p>Please enter your login credentials to proceed.</p>
+                <p>Please enter your credentials to proceed.</p>
                 <form onSubmit={handleSubmit} className="login-form">
 
                     {error && <p className="error">{error}</p>}
