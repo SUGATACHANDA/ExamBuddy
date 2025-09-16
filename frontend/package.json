@@ -1,11 +1,15 @@
 {
   "name": "exambuddy",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "productName": "Exam Buddy",
   "author": {
     "name": "SUGATA CHANDA",
     "email": "scbabai2704@gmail.com",
     "url": "https://sugatachanda.vercel.app"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SUGATACHANDA/ExamBuddy.git"
   },
   "private": true,
   "description": "A secure, hierarchical exam proctoring application for educational institutions",
