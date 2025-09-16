@@ -21,6 +21,8 @@ export interface IElectronAPI {
     killAppList: (appList: string[]) => void;
     closeApp: () => void;
 
+    isDev: () => Promise<boolean>;
+
     getReleaseNotes: () => Promise<{ version: string; notes: string; } | null>;
     releaseNotesShown: () => void;
 }

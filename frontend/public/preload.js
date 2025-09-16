@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     getAppsToClose: () => ipcRenderer.invoke('get-apps-to-close'), // New name
     closeApp: () => ipcRenderer.send('close-app'),
+    isDev: () => ipcRenderer.invoke('is-dev'),
 
     getReleaseNotes: () => ipcRenderer.invoke('get-release-notes'),
     releaseNotesShown: () => ipcRenderer.send('release-notes-shown'),
