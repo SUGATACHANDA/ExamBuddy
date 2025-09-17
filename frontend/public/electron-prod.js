@@ -20,11 +20,22 @@ autoUpdater.autoInstallOnAppQuit = true;
 let mainWindow;
 let isExamInProgress = false;
 
-// function checkForUpdates() {
-//     log.info('Checking for updates...');
-//     // This will check your GitHub Releases page for a newer version tag
-//     autoUpdater.checkForUpdates();
-// }
+let splashWindow;
+
+function createSplashWindow() {
+    splashWindow = new BrowserWindow({
+        width: 400,
+        height: 300,
+        transparent: true,
+        frame: false,
+        alwaysOnTop: true,
+        resizable: false,
+        center: true,
+    });
+    // This assumes you have created the `splash.html` file in the `public` directory.
+    splashWindow.loadFile(path.join(__dirname, 'splash.html'));
+    splashWindow.on('closed', () => (splashWindow = null));
+}
 
 function createWindow() {
     console.log("--- Production electron.js (electron-prod.js) is running ---");
@@ -32,16 +43,16 @@ function createWindow() {
     const { width, height } = screen.getPrimaryDisplay().workAreaSize;
 
     mainWindow = new BrowserWindow({
-        width,
-        height,
-        show: false,
-        frame: false,
-        kiosk: true,
-        alwaysOnTop: true,
+        width: 1280,
+        height: 800,
+        minWidth: 1024,
+        minHeight: 768,
+        show: false, // Window will be created hidden.
+        frame: true, // Show the normal window frame for login.
+        // kiosk and alwaysOnTop are now handled programmatically.
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
-            // devTools: true,
             preload: path.join(__dirname, 'preload.js')
         }
     });
@@ -93,12 +104,13 @@ app.whenReady().then(() => {
     }
 
     // Now that the protocol is configured, we can create our main window.
+
+    createSplashWindow();
     createWindow();
     setTimeout(() => {
         autoUpdater.checkForUpdates();
-    }, 3000); // Check 3 seconds after launch.
+    }, 3000);
 
-    // Optional: Periodically check for updates in the background (e.g., every 4 hours)
     setInterval(() => {
         log.info("Performing periodic update check...");
         autoUpdater.checkForUpdates();
@@ -155,6 +167,15 @@ autoUpdater.on('update-downloaded', (info) => {
     });
 });
 
+ipcMain.on('react-app-ready', () => {
+    console.log("React app has signaled it is ready.");
+    if (splashWindow) {
+        splashWindow.close();
+    }
+    mainWindow.center();
+    mainWindow.show();
+});
+
 ipcMain.handle('get-release-notes', () => {
     try {
         if (fs.existsSync(updateInfoPath)) {
@@ -196,19 +217,22 @@ app.on('activate', () => {
 });
 
 // == Inter-Process Communication (IPC) ==
-ipcMain.on('exam-started', () => { isExamInProgress = true; });
+ipcMain.on('exam-started', () => {
+    console.log('IPC: Exam started. Entering kiosk mode.');
+    isExamInProgress = true;
+    if (mainWindow) {
+        mainWindow.setKiosk(true);
+        mainWindow.setAlwaysOnTop(true);
+    }
+});
+
 ipcMain.on('exam-finished', () => {
-    console.log('IPC: Production exam finished signal received. Quitting application.');
-    isExamInProgress = false; // Disable lockdowns just in case quit fails
-    // if (mainWindow) {
-    //     mainWindow.setKiosk(false);
-    //     mainWindow.setAlwaysOnTop(false);
-    //     mainWindow.setFullScreen(false);
-    //     // Optionally resize the window
-    //     const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-    //     mainWindow.setSize(Math.round(width * 0.8), Math.round(height * 0.8), true);
-    //     mainWindow.center();
-    // }
+    console.log('IPC: Exam finished. Exiting kiosk mode.');
+    isExamInProgress = false;
+    if (mainWindow) {
+        mainWindow.setKiosk(false);
+        mainWindow.setAlwaysOnTop(false);
+    }
 });
 ipcMain.on('force-expel-student', () => { if (mainWindow) mainWindow.webContents.send('exam-expelled-by-proctor'); });
 

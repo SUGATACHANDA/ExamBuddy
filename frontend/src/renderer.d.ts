@@ -23,6 +23,8 @@ export interface IElectronAPI {
 
     isDev: () => Promise<boolean>;
 
+    sendAppReady: () => void;
+
     getReleaseNotes: () => Promise<{ version: string; notes: string; } | null>;
     releaseNotesShown: () => void;
 }

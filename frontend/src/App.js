@@ -47,6 +47,8 @@ function App() {
         // 1. First, ask the main process what the environment is.
         const isDevelopment = await window.electronAPI.isDev();
 
+        window.electronAPI.sendAppReady();
+
         // 2. ONLY if we are NOT in development, proceed to check for notes.
         if (!isDevelopment) {
           console.log("Production environment detected. Checking for release notes...");

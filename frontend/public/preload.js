@@ -19,6 +19,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     closeApp: () => ipcRenderer.send('close-app'),
     isDev: () => ipcRenderer.invoke('is-dev'),
 
+    sendAppReady: () => ipcRenderer.send('react-app-ready'),
+
     getReleaseNotes: () => ipcRenderer.invoke('get-release-notes'),
     releaseNotesShown: () => ipcRenderer.send('release-notes-shown'),
 
