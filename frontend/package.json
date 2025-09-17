@@ -1,6 +1,6 @@
 {
   "name": "exambuddy",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "productName": "Exam Buddy",
   "author": {
     "name": "SUGATA CHANDA",
@@ -104,11 +104,11 @@
       "icon": "assets/icon.ico"
     },
     "nsis": {
-      "artifactName": "${productName}.${ext}",
+      "artifactName": "${productName} v${version}.${ext}",
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
-      "deleteAppDataOnUninstall": true
+      "deleteAppDataOnUninstall": false
     }
   }
 }
