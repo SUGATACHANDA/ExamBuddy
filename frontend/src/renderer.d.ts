@@ -27,6 +27,9 @@ export interface IElectronAPI {
 
     getReleaseNotes: () => Promise<{ version: string; notes: string; } | null>;
     releaseNotesShown: () => void;
+
+    enterFullscreen: () => void;
+    onShowReleaseNotes: (callback: (data: { version: string, notes: string }) => void) => void;
 }
 
 // Now, we augment the global Window interface to include our `electronAPI` property

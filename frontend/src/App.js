@@ -42,28 +42,17 @@ function App() {
   const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);
 
   useEffect(() => {
-    const checkForReleaseNotes = async () => {
-      if (window.electronAPI) {
-        // 1. First, ask the main process what the environment is.
-        const isDevelopment = await window.electronAPI.isDev();
+    if (window.electronAPI) {
+      // Listen for a message from the main process
+      window.electronAPI.onShowReleaseNotes((data) => {
+        console.log("Received release notes from main process:", data);
+        setReleaseInfo(data);
+        setIsWhatsNewOpen(true);
+      });
+    }
 
-        window.electronAPI.sendAppReady();
-
-        // 2. ONLY if we are NOT in development, proceed to check for notes.
-        if (!isDevelopment) {
-          console.log("Production environment detected. Checking for release notes...");
-          const notes = await window.electronAPI.getReleaseNotes();
-          if (notes) {
-            setReleaseInfo(notes);
-            setIsWhatsNewOpen(true);
-          }
-        } else {
-          console.log("Development environment detected. Skipping release notes check.");
-        }
-      }
-    };
-
-    checkForReleaseNotes();
+    // It's good practice to have a cleanup function, though not strictly needed here
+    // if onShowReleaseNotes doesn't return a remover function.
   }, []); // Empty dependency array means this runs only once on startup.
 
   const handleCloseWhatsNew = () => {

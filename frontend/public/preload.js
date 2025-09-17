@@ -24,6 +24,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getReleaseNotes: () => ipcRenderer.invoke('get-release-notes'),
     releaseNotesShown: () => ipcRenderer.send('release-notes-shown'),
 
+    enterFullscreen: () => ipcRenderer.send('enter-fullscreen'), // For LoginScreen
+    onShowReleaseNotes: (callback) => ipcRenderer.on('show-release-notes', (event, data) => callback(data)),
 
     // New listener to get the result back from the main process
     onKillProcessesResult: (callback) => ipcRenderer.on('kill-processes-result', (event, result) => callback(result)),

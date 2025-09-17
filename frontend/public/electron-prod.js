@@ -67,6 +67,9 @@ function createWindow() {
     mainWindow.loadURL(startUrl);
 
     mainWindow.once('ready-to-show', () => {
+        if (splashWindow) {
+            splashWindow.close();
+        }
         mainWindow.show();
         // mainWindow.webContents.openDevTools();
     });
@@ -116,6 +119,28 @@ app.whenReady().then(() => {
         autoUpdater.checkForUpdates();
     }, 1000 * 60 * 60 * 4);
 });
+
+function handlePostUpdateLaunch() {
+    try {
+        if (fs.existsSync(updateInfoPath)) {
+            const data = JSON.parse(fs.readFileSync(updateInfoPath, 'utf8'));
+
+            // Check if we need to show the "What's New" dialog
+            if (data && data.showOnNextLaunch) {
+                console.log(`First launch after updating to ${data.version}. Sending release notes to UI.`);
+                // Send the release notes to the frontend to be displayed.
+                mainWindow.webContents.send('show-release-notes', data);
+
+                // Now, immediately update the flag to false so it doesn't show again.
+                data.showOnNextLaunch = false;
+                fs.writeFileSync(updateInfoPath, JSON.stringify(data));
+            }
+        }
+    } catch (err) {
+        console.error("Error handling post-update launch:", err);
+    }
+}
+
 // ------------------------------------------
 
 autoUpdater.on('error', (err) => {
@@ -133,7 +158,7 @@ autoUpdater.on('update-available', (info) => {
     dialog.showMessageBox({
         type: 'info',
         title: 'Update Available',
-        message: `A new version (${info.version}) of Exam Proctor is available.`,
+        message: `A new version (${info.version}) of Exam Buddy is available.`,
         detail: `Would you like to download it now? It will be installed the next time you restart the application.`,
         buttons: ['Download Update', 'Remind Me Later'],
         defaultId: 0,
@@ -154,7 +179,7 @@ autoUpdater.on('update-downloaded', (info) => {
     dialog.showMessageBox({
         type: 'info',
         title: 'Update Ready to Install',
-        message: 'The new version of Exam Proctor has been downloaded.',
+        message: 'The new version of Exam Buddy has been downloaded.',
         detail: 'Restart the application now to apply the updates.',
         buttons: ['Restart Now', 'Later'],
         defaultId: 0,
@@ -167,6 +192,12 @@ autoUpdater.on('update-downloaded', (info) => {
     });
 });
 
+ipcMain.on('enter-fullscreen', () => {
+    if (mainWindow) {
+        console.log("IPC: Received signal to enter fullscreen mode.");
+        mainWindow.setFullScreen(true);
+    }
+});
 ipcMain.on('react-app-ready', () => {
     console.log("React app has signaled it is ready.");
     if (splashWindow) {

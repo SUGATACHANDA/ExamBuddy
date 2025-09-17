@@ -32,6 +32,10 @@ const LoginScreen = () => {
             // If the API call is successful, update the global auth state
             login(data);
 
+            if (window.electronAPI) {
+                window.electronAPI.enterFullscreen();
+            }
+
             // --- CRITICAL: Multi-Role Redirection Logic ---
             // Navigate the user to the correct dashboard based on their role.
             if (data.role === 'admin') {
