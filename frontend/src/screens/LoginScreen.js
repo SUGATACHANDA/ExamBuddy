@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
@@ -20,6 +20,13 @@ const LoginScreen = () => {
      * Handles the form submission process when the user clicks "Login".
      * @param {React.FormEvent} e - The form submission event.
      */
+    useEffect(() => {
+        if (window.electronAPI && window.electronAPI.sendLoginScreenReady) {
+            console.log("Login Screen UI has rendered. Signaling to main process...");
+            // Send the signal to the Electron main process.
+            window.electronAPI.sendLoginScreenReady();
+        }
+    }, []);
     const handleSubmit = async (e) => {
         e.preventDefault(); // Prevent the default browser form submission (page reload)
         setLoading(true);   // Disable the button and show a loading state

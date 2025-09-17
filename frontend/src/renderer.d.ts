@@ -28,6 +28,8 @@ export interface IElectronAPI {
     getReleaseNotes: () => Promise<{ version: string; notes: string; } | null>;
     releaseNotesShown: () => void;
 
+    sendLoginScreenReady: () => void;
+
     enterFullscreen: () => void;
     onShowReleaseNotes: (callback: (data: { version: string, notes: string }) => void) => void;
 }

@@ -19,6 +19,7 @@ autoUpdater.autoInstallOnAppQuit = true;
 
 let mainWindow;
 let isExamInProgress = false;
+let isMainWindowReady = false;
 
 let splashWindow;
 
@@ -67,11 +68,8 @@ function createWindow() {
     mainWindow.loadURL(startUrl);
 
     mainWindow.once('ready-to-show', () => {
-        if (splashWindow) {
-            splashWindow.close();
-        }
-        mainWindow.show();
-        // mainWindow.webContents.openDevTools();
+        console.log("Electron reports: Main window is ready to show.");
+        isMainWindowReady = true; // Mark our side of the handshake as complete
     });
 
     // Security Listeners
@@ -190,6 +188,33 @@ autoUpdater.on('update-downloaded', (info) => {
             autoUpdater.quitAndInstall();
         }
     });
+});
+
+ipcMain.on('login-screen-ready', () => {
+    console.log("React reports: Login screen has mounted.");
+
+    // Only proceed if BOTH sides of the handshake are complete.
+    // This is the failsafe against race conditions.
+    if (isMainWindowReady) {
+        console.log("Handshake complete. Closing splash and showing main window.");
+        if (splashWindow) {
+            splashWindow.close();
+        }
+        mainWindow.show();
+        handlePostUpdateLaunch(); // Check for release notes now
+
+    } else {
+        // This is an edge case, but good to have. If React is ready before Electron, we wait.
+        console.log("React is ready, but waiting for Electron window...");
+        mainWindow.once('ready-to-show', () => {
+            console.log("...Electron window is now ready. Handshake complete.");
+            if (splashWindow) {
+                splashWindow.close();
+            }
+            mainWindow.show();
+            handlePostUpdateLaunch();
+        });
+    }
 });
 
 ipcMain.on('enter-fullscreen', () => {
