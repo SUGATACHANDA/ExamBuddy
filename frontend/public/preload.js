@@ -32,6 +32,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // New listener to get the result back from the main process
     onKillProcessesResult: (callback) => ipcRenderer.on('kill-processes-result', (event, result) => callback(result)),
 
+    exitApp: () => ipcRenderer.send('exit-app'),
+
+
     // --- Security: Detect and prevent copy/paste ---
     setupSecurityListeners: () => {
         const eventsToBlock = ['copy', 'cut', 'paste'];

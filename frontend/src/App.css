@@ -1642,3 +1642,13 @@ th.sortable.desc::after {
 .release-notes-content li {
   margin-bottom: 8px;
 }
+.exit-app-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 100;
+}
+
+.exit-button {
+    background-color: var(--secondary-color);
+}

@@ -72,6 +72,12 @@ const LoginScreen = () => {
         }
     };
 
+    const handleExitApp = () => {
+        if (window.electronAPI && window.electronAPI.exitApp) {
+            window.electronAPI.exitApp();
+        }
+    };
+
     return (
         <div className="container login-container">
             <div className="login-box">
@@ -108,6 +114,11 @@ const LoginScreen = () => {
                         {loading ? 'Logging in...' : 'Login'}
                     </button>
                 </form>
+            </div>
+            <div className="exit-app-container">
+                <button onClick={handleExitApp} className="btn-secondary exit-button">
+                    Exit Application
+                </button>
             </div>
         </div>
     );

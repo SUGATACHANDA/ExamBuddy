@@ -30,6 +30,8 @@ export interface IElectronAPI {
 
     sendLoginScreenReady: () => void;
 
+    exitApp: () => void;
+
     enterFullscreen: () => void;
     onShowReleaseNotes: (callback: (data: { version: string, notes: string }) => void) => void;
 }

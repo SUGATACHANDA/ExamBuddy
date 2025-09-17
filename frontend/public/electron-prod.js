@@ -48,6 +48,7 @@ function createWindow() {
         height: 800,
         minWidth: 1024,
         minHeight: 768,
+        fullscreen: true,
         show: false, // Window will be created hidden.
         frame: true, // Show the normal window frame for login.
         // kiosk and alwaysOnTop are now handled programmatically.
@@ -76,6 +77,23 @@ function createWindow() {
     mainWindow.on('blur', () => { if (isExamInProgress) mainWindow.webContents.send('violation', 'TAB_SWITCH'); });
     mainWindow.on('close', (e) => { if (isExamInProgress) e.preventDefault(); });
     mainWindow.on('closed', () => (mainWindow = null));
+}
+
+function handlePostUpdateLaunch() {
+    try {
+        if (fs.existsSync(updateInfoPath)) {
+            const data = JSON.parse(fs.readFileSync(updateInfoPath, 'utf8'));
+            if (data && data.showOnNextLaunch) {
+                console.log(`First launch after update. Sending release notes to UI for version ${data.version}.`);
+                // This message is sent to the React app to trigger the modal.
+                mainWindow.webContents.send('show-release-notes', data);
+
+                // Immediately update the flag so it doesn't show again.
+                data.showOnNextLaunch = false;
+                fs.writeFileSync(updateInfoPath, JSON.stringify(data));
+            }
+        }
+    } catch (err) { console.error("Error in handlePostUpdateLaunch:", err); }
 }
 
 // == App Lifecycle ==
@@ -108,6 +126,7 @@ app.whenReady().then(() => {
 
     createSplashWindow();
     createWindow();
+    handlePostUpdateLaunch()
     setTimeout(() => {
         autoUpdater.checkForUpdates();
     }, 3000);
@@ -118,26 +137,7 @@ app.whenReady().then(() => {
     }, 1000 * 60 * 60 * 4);
 });
 
-function handlePostUpdateLaunch() {
-    try {
-        if (fs.existsSync(updateInfoPath)) {
-            const data = JSON.parse(fs.readFileSync(updateInfoPath, 'utf8'));
 
-            // Check if we need to show the "What's New" dialog
-            if (data && data.showOnNextLaunch) {
-                console.log(`First launch after updating to ${data.version}. Sending release notes to UI.`);
-                // Send the release notes to the frontend to be displayed.
-                mainWindow.webContents.send('show-release-notes', data);
-
-                // Now, immediately update the flag to false so it doesn't show again.
-                data.showOnNextLaunch = false;
-                fs.writeFileSync(updateInfoPath, JSON.stringify(data));
-            }
-        }
-    } catch (err) {
-        console.error("Error handling post-update launch:", err);
-    }
-}
 
 // ------------------------------------------
 
