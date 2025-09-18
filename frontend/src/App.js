@@ -36,41 +36,43 @@ import HODViewExams from 'screens/hod/HODViewExams';
 
 import WhatsNewModal from './components/WhatsNewModal';
 
+import { ipcRenderer } from "electron";
+
 
 function App() {
-  const [releaseInfo, setReleaseInfo] = useState(null);
-  const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);
+  const [releaseNotes, setReleaseNotes] = useState(null);
 
   useEffect(() => {
-    if (window.electronAPI) {
-      // Listen for a message from the main process
-      window.electronAPI.onShowReleaseNotes((data) => {
-        console.log("Received release notes from main process:", data);
-        setReleaseInfo(data);
-        setIsWhatsNewOpen(true);
-      });
-    }
+    ipcRenderer.on("show-release-notes", (_, data) => {
+      setReleaseNotes(data);
+    });
 
-    // It's good practice to have a cleanup function, though not strictly needed here
-    // if onShowReleaseNotes doesn't return a remover function.
-  }, []); // Empty dependency array means this runs only once on startup.
+    // Ask proactively too, in case the event was sent before React was ready
+    ipcRenderer.invoke("get-release-notes").then((data) => {
+      if (data) {
+        setReleaseNotes(data);
+      }
+    });
 
-  const handleCloseWhatsNew = () => {
-    setIsWhatsNewOpen(false);
-    if (window.electronAPI) {
-      window.electronAPI.releaseNotesShown();
-    }
+    return () => {
+      ipcRenderer.removeAllListeners("show-release-notes");
+    };
+  }, []);
+
+  const handleCloseModal = () => {
+    setReleaseNotes(null);
+    ipcRenderer.send("release-notes-shown");
   };
   return (
     <AuthProvider>
       <Router>
         <div className="App">
           {/* --- RENDER THE MODAL IF NEEDED --- */}
-          {isWhatsNewOpen && releaseInfo && (
+          {releaseNotes && (
             <WhatsNewModal
-              version={releaseInfo.version}
-              notes={releaseInfo.notes}
-              onClose={handleCloseWhatsNew}
+              version={releaseNotes.version}
+              notes={releaseNotes.notes}
+              onClose={handleCloseModal}
             />
           )}
           <Routes>

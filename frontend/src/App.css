@@ -1645,10 +1645,9 @@ th.sortable.desc::after {
 .exit-app-container {
     position: fixed;
     bottom: 20px;
-    right: 20px;
     z-index: 100;
 }
 
 .exit-button {
-    background-color: var(--secondary-color);
+    background-color: var(--danger-color);
 }
