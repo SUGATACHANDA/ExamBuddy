@@ -73,8 +73,8 @@ const LoginScreen = () => {
     };
 
     const handleExitApp = () => {
-        if (window.electronAPI && window.electronAPI.exitApp) {
-            window.electronAPI.exitApp();
+        if (window.electronAPI && window.electronAPI.closeApp) {
+            window.electronAPI.closeApp();
         }
     };
 

@@ -20,6 +20,8 @@ autoUpdater.autoInstallOnAppQuit = true;
 let mainWindow;
 let isExamInProgress = false;
 let isMainWindowReady = false;
+let updateDialogQueue = [];
+let isMainWindowVisible = false;
 
 let splashWindow;
 
@@ -85,12 +87,7 @@ function handlePostUpdateLaunch() {
             const data = JSON.parse(fs.readFileSync(updateInfoPath, 'utf8'));
             if (data && data.showOnNextLaunch) {
                 console.log(`First launch after update. Sending release notes to UI for version ${data.version}.`);
-                // This message is sent to the React app to trigger the modal.
                 mainWindow.webContents.send('show-release-notes', data);
-
-                // Immediately update the flag so it doesn't show again.
-                data.showOnNextLaunch = false;
-                fs.writeFileSync(updateInfoPath, JSON.stringify(data));
             }
         }
     } catch (err) { console.error("Error in handlePostUpdateLaunch:", err); }
@@ -153,41 +150,58 @@ autoUpdater.on('update-not-available', () => {
 autoUpdater.on('update-available', (info) => {
     log.info(`Update found: version ${info.version}. Prompting user to download.`);
 
-    dialog.showMessageBox({
-        type: 'info',
-        title: 'Update Available',
-        message: `A new version (${info.version}) of Exam Buddy is available.`,
-        detail: `Would you like to download it now? It will be installed the next time you restart the application.`,
-        buttons: ['Download Update', 'Remind Me Later'],
-        defaultId: 0,
-        cancelId: 1
-    }).then(result => {
-        if (result.response === 0) { // 'Download Update' was clicked
-            log.info('User approved download. Starting download...');
-            autoUpdater.downloadUpdate();
-        } else {
-            log.info('User deferred the update.');
-        }
-    });
+    const showDownloadPrompt = () => {
+        dialog.showMessageBox({
+            type: 'info',
+            title: 'Update Available',
+            message: `A new version (${info.version}) of Exam Buddy is available.`,
+            detail: `Would you like to download it now? It will be installed the next time you restart the application.`,
+            buttons: ['Download Update', 'Remind Me Later'],
+            defaultId: 0,
+            cancelId: 1
+        }).then(result => {
+            if (result.response === 0) { // 'Download Update' was clicked
+                log.info('User approved download. Starting download...');
+                autoUpdater.downloadUpdate();
+            } else {
+                log.info('User deferred the update.');
+            }
+        });
+    }
+    if (isMainWindowVisible) {
+        showDownloadPrompt(); // If the window is already visible, show the dialog now.
+    } else {
+        // Otherwise, add the function to our queue to be shown later.
+        console.log("Update found, but window not visible yet. Queuing dialog.");
+        updateDialogQueue.push(showDownloadPrompt);
+    }
 });
 
 autoUpdater.on('update-downloaded', (info) => {
     log.info(`Update ${info.version} downloaded. Prompting user to restart.`);
 
-    dialog.showMessageBox({
-        type: 'info',
-        title: 'Update Ready to Install',
-        message: 'The new version of Exam Buddy has been downloaded.',
-        detail: 'Restart the application now to apply the updates.',
-        buttons: ['Restart Now', 'Later'],
-        defaultId: 0,
-        cancelId: 1
-    }).then(result => {
-        if (result.response === 0) { // 'Restart Now' was clicked
-            log.info('User approved restart. Quitting and installing...');
-            autoUpdater.quitAndInstall();
-        }
-    });
+    const showRestartPrompt = () => {
+        dialog.showMessageBox({
+            type: 'info',
+            title: 'Update Ready to Install',
+            message: 'The new version of Exam Buddy has been downloaded.',
+            detail: 'Restart the application now to apply the updates.',
+            buttons: ['Restart Now', 'Later'],
+            defaultId: 0,
+            cancelId: 1
+        }).then(result => {
+            if (result.response === 0) { // 'Restart Now' was clicked
+                log.info('User approved restart. Quitting and installing...');
+                autoUpdater.quitAndInstall();
+            }
+        });
+    }
+    if (isMainWindowVisible) {
+        showRestartPrompt();
+    } else {
+        console.log("Update downloaded, but window not visible. Queuing restart dialog.");
+        updateDialogQueue.push(showRestartPrompt);
+    }
 });
 
 ipcMain.on('login-screen-ready', () => {
@@ -202,6 +216,14 @@ ipcMain.on('login-screen-ready', () => {
         }
         mainWindow.show();
         handlePostUpdateLaunch(); // Check for release notes now
+        isMainWindowVisible = true;
+        console.log("Gatekeeper: Main window is now visible. Dialogs are allowed.");
+
+        if (updateDialogQueue.length > 0) {
+            console.log("Processing queued update dialog...");
+            const showDialog = updateDialogQueue.shift(); // Get the first dialog in the queue
+            showDialog(); // Execute it now that the window is visible
+        }
 
     } else {
         // This is an edge case, but good to have. If React is ready before Electron, we wait.
@@ -223,6 +245,7 @@ ipcMain.on('enter-fullscreen', () => {
         mainWindow.setFullScreen(true);
     }
 });
+
 ipcMain.on('react-app-ready', () => {
     console.log("React app has signaled it is ready.");
     if (splashWindow) {
@@ -252,7 +275,7 @@ ipcMain.on('release-notes-shown', () => {
     try {
         if (fs.existsSync(updateInfoPath)) {
             const data = JSON.parse(fs.readFileSync(updateInfoPath, 'utf8'));
-            data.showOnNextLaunch = false; // Set the flag to false
+            data.showOnNextLaunch = false;
             fs.writeFileSync(updateInfoPath, JSON.stringify(data));
         }
     } catch (err) {
@@ -290,6 +313,7 @@ ipcMain.on('exam-finished', () => {
         mainWindow.setAlwaysOnTop(false);
     }
 });
+
 ipcMain.on('force-expel-student', () => { if (mainWindow) mainWindow.webContents.send('exam-expelled-by-proctor'); });
 
 app.on('ready', createWindow);
