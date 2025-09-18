@@ -42,26 +42,27 @@ import { ipcRenderer } from "electron";
 function App() {
   const [releaseNotes, setReleaseNotes] = useState(null);
 
+  // ⬇️ add your useEffect right here
   useEffect(() => {
-    ipcRenderer.on("show-release-notes", (_, data) => {
+    // listen for IPC event from Electron
+    window.electronAPI.onShowReleaseNotes((_, data) => {
       setReleaseNotes(data);
     });
 
-    // Ask proactively too, in case the event was sent before React was ready
-    ipcRenderer.invoke("get-release-notes").then((data) => {
-      if (data) {
-        setReleaseNotes(data);
-      }
+    // also check proactively on app startup
+    window.electronAPI.getReleaseNotes().then((data) => {
+      if (data) setReleaseNotes(data);
     });
 
+    // optional cleanup (removes event listener if App unmounts)
     return () => {
-      ipcRenderer.removeAllListeners("show-release-notes");
+      window.electronAPI.onShowReleaseNotes(() => { });
     };
   }, []);
 
   const handleCloseModal = () => {
     setReleaseNotes(null);
-    ipcRenderer.send("release-notes-shown");
+    window.electronAPI.markReleaseNotesShown();
   };
   return (
     <AuthProvider>

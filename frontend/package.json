@@ -1,6 +1,6 @@
 {
   "name": "exambuddy",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "productName": "Exam Buddy",
   "author": {
     "name": "SUGATA CHANDA",
@@ -26,6 +26,7 @@
     "electron-is-dev": "^3.0.1",
     "electron-log": "^5.4.3",
     "electron-updater": "^6.6.2",
+    "fs": "^0.0.1-security",
     "lucide-react": "^0.544.0",
     "node-powershell": "^5.0.1",
     "ps-list": "^8.1.1",
