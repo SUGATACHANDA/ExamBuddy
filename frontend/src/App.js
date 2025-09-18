@@ -36,9 +36,6 @@ import HODViewExams from 'screens/hod/HODViewExams';
 
 import WhatsNewModal from './components/WhatsNewModal';
 
-import { ipcRenderer } from "electron";
-
-
 function App() {
   const [releaseNotes, setReleaseNotes] = useState(null);
 
