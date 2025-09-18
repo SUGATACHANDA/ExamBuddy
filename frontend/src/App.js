@@ -41,19 +41,24 @@ function App() {
 
   // ⬇️ add your useEffect right here
   useEffect(() => {
-    // listen for IPC event from Electron
-    window.electronAPI.onShowReleaseNotes((_, data) => {
-      setReleaseNotes(data);
-    });
+    let isMounted = true;
 
-    // also check proactively on app startup
+    // 1. Always ask for release notes once React is ready
     window.electronAPI.getReleaseNotes().then((data) => {
-      if (data) setReleaseNotes(data);
+      if (isMounted && data) {
+        setReleaseNotes(data);
+      }
     });
 
-    // optional cleanup (removes event listener if App unmounts)
+    // 2. Also listen for async "show-release-notes" events
+    window.electronAPI.onShowReleaseNotes((_, data) => {
+      if (isMounted && data) {
+        setReleaseNotes(data);
+      }
+    });
+
     return () => {
-      window.electronAPI.onShowReleaseNotes(() => { });
+      isMounted = false;
     };
   }, []);
 

@@ -86,12 +86,22 @@ function handlePostUpdateLaunch() {
         if (fs.existsSync(updateInfoPath)) {
             const data = JSON.parse(fs.readFileSync(updateInfoPath, 'utf8'));
             if (data && data.showOnNextLaunch) {
-                console.log(`First launch after update. Sending release notes to UI for version ${data.version}.`);
-                mainWindow.webContents.send('show-release-notes', data);
+                if (isMainWindowVisible && mainWindow) {
+                    console.log(`First launch after update. Sending release notes to UI for version ${data.version}.`);
+                    mainWindow.webContents.send('show-release-notes', data);
+                } else {
+                    console.log("Release notes pending until main window is visible.");
+                    updateDialogQueue.push(() => {
+                        if (mainWindow) {
+                            mainWindow.webContents.send('show-release-notes', data);
+                        }
+                    });
+                }
             }
         }
     } catch (err) { console.error("Error in handlePostUpdateLaunch:", err); }
 }
+
 
 // == App Lifecycle ==
 
@@ -215,9 +225,9 @@ ipcMain.on('login-screen-ready', () => {
             splashWindow.close();
         }
         mainWindow.show();
-        handlePostUpdateLaunch(); // Check for release notes now
         isMainWindowVisible = true;
         console.log("Gatekeeper: Main window is now visible. Dialogs are allowed.");
+        handlePostUpdateLaunch(); // Check for release notes now
 
         if (updateDialogQueue.length > 0) {
             console.log("Processing queued update dialog...");
