@@ -1,6 +1,6 @@
 {
   "name": "exambuddy",
-  "version": "1.1.8",
+  "version": "1.1.9",
   "productName": "Exam Buddy",
   "author": {
     "name": "SUGATA CHANDA",
@@ -70,6 +70,7 @@
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
+    "conventional-changelog-cli": "^5.0.0",
     "cross-env": "^10.0.0",
     "electron": "^37.4.0",
     "electron-builder": "^26.0.12",
@@ -86,6 +87,9 @@
       "repo": "ExamBuddy",
       "releaseType": "release"
     },
+    "releaseInfo": {
+    "releaseNotesFile": "CHANGELOG.md"
+  },
     "asar": false,
     "npmRebuild": false,
     "directories": {

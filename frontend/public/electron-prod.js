@@ -190,6 +190,18 @@ autoUpdater.on('update-available', (info) => {
 autoUpdater.on('update-downloaded', (info) => {
     log.info(`Update ${info.version} downloaded. Prompting user to restart.`);
 
+    try {
+        const updateData = {
+            version: info.version,
+            notes: info.releaseNotes || "No release notes provided.",
+            showOnNextLaunch: true
+        };
+        fs.writeFileSync(updateInfoPath, JSON.stringify(updateData));
+        log.info("Saved update-info.json for release notes:", updateData);
+    } catch (err) {
+        log.error("Could not save update-info.json:", err);
+    }
+
     const showRestartPrompt = () => {
         dialog.showMessageBox({
             type: 'info',
