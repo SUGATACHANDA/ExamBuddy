@@ -1,1 +1,2 @@
-Release 1.1.10
+### Fixed
+- Fixed the **Release Notes publishing to Github**.

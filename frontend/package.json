@@ -48,7 +48,7 @@
     "eject": "react-scripts eject",
     "electron:start": "npx concurrently -k \"npm run start\" \"npx wait-on http://localhost:3000 && npx electron .\"",
     "electron:package": "node ./scripts/publish-with-changelog.js && npm run build && npm run postbuild && npx cross-env NODE_ENV=production electron-builder",
-    "publish": "npx dotenv -e ./.env -- npm run electron:package -- --publish always"
+    "publish": "npm run electron:package -- --publish always"
   },
   "eslintConfig": {
     "extends": [
@@ -88,8 +88,9 @@
       "releaseType": "release"
     },
     "releaseInfo": {
-    "releaseNotesFile": "CHANGELOG.md"
-  },
+      "releaseNotesFile": "CHANGELOG.md",
+      "releaseNotes": "### Fixed\r\n- Fixed the **Release Notes publishing to Github**."
+    },
     "asar": false,
     "npmRebuild": false,
     "directories": {

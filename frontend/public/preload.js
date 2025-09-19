@@ -30,6 +30,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     enterFullscreen: () => ipcRenderer.send('enter-fullscreen'), // For LoginScreen
     onShowReleaseNotes: (callback) => ipcRenderer.on("show-release-notes", callback),
 
+    getLatestChangelog: () => ipcRenderer.invoke("get-latest-changelog"),
+    markChangelogShown: () => ipcRenderer.send("release-notes-shown"),
+
     // New listener to get the result back from the main process
     onKillProcessesResult: (callback) => ipcRenderer.on('kill-processes-result', (event, result) => callback(result)),
 

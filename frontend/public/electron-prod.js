@@ -102,6 +102,32 @@ function handlePostUpdateLaunch() {
     } catch (err) { console.error("Error in handlePostUpdateLaunch:", err); }
 }
 
+// public/electron-prod.js
+function getLatestChangelog() {
+    try {
+        const changelogPath = path.join(__dirname, "..", "CHANGELOG.md");
+        if (fs.existsSync(changelogPath)) {
+            const changelog = fs.readFileSync(changelogPath, "utf8");
+
+            // Match first changelog section: "## [x.y.z] - date" until next "---"
+            const regex = /##\s*\[(.*?)\][^\n]*\n([\s\S]*?)(?=\n---)/m;
+            const match = changelog.match(regex);
+
+            if (match) {
+                return {
+                    version: match[1],
+                    notes: match[2].trim(),
+                    showOnNextLaunch: true
+                };
+            }
+        }
+    } catch (err) {
+        console.error("Error reading latest changelog:", err);
+    }
+    return null;
+}
+
+
 
 // == App Lifecycle ==
 
@@ -303,6 +329,10 @@ ipcMain.on('release-notes-shown', () => {
     } catch (err) {
         console.error("Could not mark release notes as shown:", err);
     }
+});
+
+ipcMain.handle("get-latest-changelog", () => {
+    return getLatestChangelog();
 });
 
 app.on('window-all-closed', () => {

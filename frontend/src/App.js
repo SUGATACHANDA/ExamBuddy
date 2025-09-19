@@ -41,30 +41,16 @@ function App() {
 
   // ⬇️ add your useEffect right here
   useEffect(() => {
-    let isMounted = true;
-
-    // 1. Always ask for release notes once React is ready
-    window.electronAPI.getReleaseNotes().then((data) => {
-      if (isMounted && data) {
+    window.electronAPI.getLatestChangelog().then((data) => {
+      if (data && data.showOnNextLaunch) {
         setReleaseNotes(data);
       }
     });
-
-    // 2. Also listen for async "show-release-notes" events
-    window.electronAPI.onShowReleaseNotes((_, data) => {
-      if (isMounted && data) {
-        setReleaseNotes(data);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-    };
   }, []);
 
   const handleCloseModal = () => {
     setReleaseNotes(null);
-    window.electronAPI.markReleaseNotesShown();
+    window.electronAPI.releaseNotesShown();
   };
   return (
     <AuthProvider>

@@ -4,20 +4,21 @@
 
 ---
 
-## [1.1.10] - 2025-09-19
+## [1.1.11] - 2025-09-19
+### Fixed
+- Fixed the display of **Latest Modification on WhatsNewModal**.
+---
 
+## [1.1.10] - 2025-09-19
 ### Fixed
 - Fixed the **Release Notes publishing to Github**.
-
-
 ---
-## [1.1.9] - 2025-09-19
 
+## [1.1.9] - 2025-09-19
 ### Fixed
 - Fixed the **appearance of WhatsNewModal**.
-
-
 ---
+
 ## [1.1.5] - 2025-09-19
 ### Added
 - Introduced **WhatsNewModal** to show release notes after updates.
