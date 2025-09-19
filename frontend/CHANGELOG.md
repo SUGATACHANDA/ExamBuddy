@@ -4,6 +4,13 @@
 
 ---
 
+## [1.1.10] - 2025-09-19
+
+### Fixed
+- Fixed the **Release Notes publishing to Github**.
+
+
+---
 ## [1.1.9] - 2025-09-19
 
 ### Fixed
