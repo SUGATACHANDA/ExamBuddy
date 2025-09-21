@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Open ExamBuddy</title>
+    <script>
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get("token");
+
+            if (token) {
+                // Try to open your Electron app using custom protocol
+                window.location.href = `exam-buddy://reset-password/${token}`;
+
+                // Fallback after 1 second if the app is not installed
+                setTimeout(() => {
+                    document.body.innerHTML = `
+            <h2>Could not open ExamBuddy</h2>
+            <p>Please make sure the app is installed. 
+            If not, <a href="https://github.com/SUGATACHANDA/ExamBuddy/releases">download it here</a>.</p>
+          `;
+                }, 1000);
+            } else {
+                document.body.innerHTML = "<p>Invalid reset link.</p>";
+            }
+        };
+    </script>
+</head>
+
+<body>
+    <p>Opening ExamBuddy...</p>
+</body>
+
+</html>
