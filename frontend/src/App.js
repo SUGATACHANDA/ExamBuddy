@@ -35,38 +35,53 @@ import HODManageUsers from './screens/hod/HODManageUsers';
 import HODViewExams from 'screens/hod/HODViewExams';
 
 import WhatsNewModal from './components/WhatsNewModal';
+import ForgotPasswordScreen from 'screens/ForgotPasswordScreen';
+import ResetPasswordScreen from 'screens/ResetPasswordScreen';
 
 function App() {
-  const [releaseNotes, setReleaseNotes] = useState(null);
+  // const [releaseNotes, setReleaseNotes] = useState(null);
 
-  // ⬇️ add your useEffect right here
+  // // ⬇️ add your useEffect right here
+  // useEffect(() => {
+  //   window.electronAPI.getLatestChangelog().then((data) => {
+  //     if (data && data.showOnNextLaunch) {
+  //       setReleaseNotes(data);
+  //     }
+  //   });
+  // }, []);
+
+  // const handleCloseModal = () => {
+  //   setReleaseNotes(null);
+  //   window.electronAPI.releaseNotesShown();
+  // };
+
   useEffect(() => {
-    window.electronAPI.getLatestChangelog().then((data) => {
-      if (data && data.showOnNextLaunch) {
-        setReleaseNotes(data);
-      }
-    });
+    if (window.electronAPI) {
+      window.electronAPI.onResetToken((token) => {
+        console.log("Received reset token:", token);
+        // Navigate to reset password page with token
+        Navigate(`/reset-password/${token}`); // using react-router
+      });
+    }
   }, []);
-
-  const handleCloseModal = () => {
-    setReleaseNotes(null);
-    window.electronAPI.releaseNotesShown();
-  };
   return (
     <AuthProvider>
       <Router>
         <div className="App">
-          {/* --- RENDER THE MODAL IF NEEDED --- */}
+          {/* --- RENDER THE MODAL IF NEEDED ---
           {releaseNotes && (
             <WhatsNewModal
               version={releaseNotes.version}
               notes={releaseNotes.notes}
               onClose={handleCloseModal}
             />
-          )}
+          )} */}
           <Routes>
             <Route path="/login" element={<LoginScreen />} />
             <Route path="/" element={<LoginScreen />} />
+
+            <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
+            <Route path="/reset-password/:token" element={<ResetPasswordScreen />} />
 
             {/* Student Routes */}
             <Route path="/student/dashboard" element={<ProtectedRoute role="student"><StudentDashboard /></ProtectedRoute>} />

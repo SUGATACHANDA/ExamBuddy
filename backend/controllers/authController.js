@@ -1,6 +1,15 @@
 const asyncHandler = require('express-async-handler');
 const User = require('../models/User');
+const Token = require('../models/Token');
 const generateToken = require('../utils/generateToken');
+const PasswordResetEmail = require("../emails/PasswordResetEmail");
+const PasswordResetSuccessEmail = require("../emails/PasswordResetSuccessEmail");
+
+const crypto = require("crypto");
+const { render } = require("@react-email/components");
+const React = require("react");
+const sendEmail = require("../utils/mailer");
+
 
 /**
  * @desc    Authenticate a user (student, teacher, or admin) & get a JWT token
@@ -58,4 +67,111 @@ const authUser = asyncHandler(async (req, res) => {
         throw new Error('Invalid College ID or password.');
     }
 });
-module.exports = { authUser };
+
+const changePassword = asyncHandler(async (req, res) => {
+    const { oldPassword, newPassword } = req.body;
+
+    // The `protect` middleware gives us `req.user`
+    const user = await User.findById(req.user._id).select('+password');
+
+    if (!user || !(await user.matchPassword(oldPassword))) {
+        res.status(401);
+        throw new Error('Invalid old password.');
+    }
+
+    // The pre-save hook on the User model will automatically hash this new password
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json({ message: 'Password updated successfully.' });
+});
+
+
+// --- 2. FORGOT PASSWORD (Step 1: Request a reset) ---
+/**
+ * @desc    Forgot password - send reset email
+ * @route   POST /api/auth/forgot-password
+ * @access  Public
+ */
+const forgotPassword = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        res.status(404);
+        throw new Error('No user found with that email address.');
+    }
+
+    if (user.role === 'admin') {
+        res.status(400);
+        throw new Error('Password reset for admin is not allowed via this method.');
+    }
+
+    // Remove old tokens
+    await Token.deleteMany({ userId: user._id });
+
+    // Generate secure token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    await new Token({
+        userId: user._id,
+        token: hashedToken,
+        createdAt: Date.now() // optional TTL
+    }).save();
+
+    // Generate Electron deep link
+    const resetUrl = `exam-buddy://reset-password/${resetToken}`;
+    console.log("Reset URL for email:", resetUrl);
+
+    // Render email HTML using React Email
+    const html = PasswordResetEmail({ name: user.name, resetUrl });
+
+
+    // Send email
+    try {
+        await sendEmail(user.email, 'Reset Your Password', html);
+        console.log(`Password reset email sent to ${user.email}`);
+    } catch (err) {
+        console.error('Error sending email:', err);
+        res.status(500);
+        throw new Error('Failed to send password reset email.');
+    }
+
+    res.status(200).json({
+        message: 'Password reset link has been sent to your email.'
+    });
+});
+
+// --- 3. RESET PASSWORD (Step 2: Submit a new password) ---
+const resetPassword = asyncHandler(async (req, res) => {
+    const { password } = req.body;
+
+    // Hash the token from the URL params to match the one in the DB
+    const resetToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+
+    const token = await Token.findOne({ token: resetToken });
+
+    if (!token) {
+        res.status(400);
+        throw new Error('Invalid or expired password reset token.');
+    }
+
+    const user = await User.findById(token.userId);
+    if (!user) {
+        res.status(400); throw new Error('User not found.');
+    }
+
+    user.password = password; // The pre-save hook will hash this
+    await user.save();
+
+    await token.deleteOne(); // The token has been used, delete it.
+
+    const successEmailHtml = render(
+        React.createElement(PasswordResetSuccessEmail, { user })
+    );
+    await sendEmail(user.email, "Your Password Has Been Reset", successEmailHtml);
+
+    res.status(200).json({ message: 'Password has been reset successfully.' });
+});
+module.exports = { authUser, changePassword, resetPassword, forgotPassword };

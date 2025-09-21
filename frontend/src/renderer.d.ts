@@ -34,6 +34,8 @@ export interface IElectronAPI {
 
     enterFullscreen: () => void;
     onShowReleaseNotes: (callback: (data: { version: string, notes: string }) => void) => void;
+
+    onResetToken: (callback: (token: string) => void) => void;
 }
 
 // Now, we augment the global Window interface to include our `electronAPI` property

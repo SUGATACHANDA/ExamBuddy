@@ -1,6 +1,6 @@
 // server.js
 const express = require('express');
-const dotenv = require('dotenv');
+require("dotenv").config();
 const cors = require('cors');
 const http = require('http');
 const connectDB = require('../config/db.js');
@@ -18,7 +18,6 @@ const dataRoutes = require('../routes/dataRoutes');
 const universityAffairsRoutes = require('../routes/universityAffairsRoutes');
 const hodRoutes = require('../routes/hodRoutes');
 
-dotenv.config();
 const startServer = async () => {
     await connectDB(); // Connect to the database
     await seedData();  // THEN, seed the initial data

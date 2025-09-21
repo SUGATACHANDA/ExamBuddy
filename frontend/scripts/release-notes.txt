@@ -1,2 +1,2 @@
 ### Fixed
-- Fixed the **Release Notes publishing to Github**.
+- Fixed the display of **Latest Modification on WhatsNewModal**.

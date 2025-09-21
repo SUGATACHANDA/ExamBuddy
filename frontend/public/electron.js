@@ -175,7 +175,7 @@
 // public/electron.js
 // This is the SINGLE main entry file for both Development and Production.
 
-const { app, BrowserWindow, ipcMain, screen, session } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, session, protocol } = require('electron');
 const path = require('path');
 const url = require('url');
 const isDev = require('electron-is-dev');
@@ -231,10 +231,39 @@ function createWindow() {
 
 // --- App Lifecycle ---
 app.whenReady().then(() => {
+    const defaultSession = session.defaultSession;
     if (!isDev) {
-        session.defaultSession.protocol.registerSchemesAsPrivileged([
-            { scheme: 'file', privileges: { secure: true, standard: true } }
+        if (defaultSession && defaultSession.protocol && defaultSession.protocol.registerSchemesAsPrivileged) {
+            defaultSession.protocol.registerSchemesAsPrivileged([
+                {
+                    scheme: 'file',
+                    privileges: {
+                        secure: true,
+                        standard: true,
+                        corsEnabled: true,
+                        allowServiceWorkers: true,
+                        supportFetchAPI: true
+                    }
+                }
+            ]);
+        }
+
+        // --- Register custom protocol for deep links ---
+        protocol.registerSchemesAsPrivileged([
+            { scheme: 'exam-buddy', privileges: { standard: true, secure: true } }
         ]);
+
+        protocol.registerFileProtocol('exam-buddy', (request, callback) => {
+            const token = request.url.split('/').pop();
+            console.log("Received deep link token:", token);
+
+            if (mainWindow) {
+                mainWindow.webContents.send('reset-token', token); // send token to renderer
+                mainWindow.show();
+            }
+
+            callback(path.join(__dirname, 'index.html'));
+        });
     }
     createWindow();
 });

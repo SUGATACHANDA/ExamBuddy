@@ -1651,3 +1651,91 @@ th.sortable.desc::after {
 .exit-button {
     background-color: var(--danger-color);
 }
+
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
+    background-color: var(--background-light); /* Apply bg to the whole page */
+    box-shadow: none; /* Remove shadow from the outer container */
+    max-width: none;  /* Allow it to be full page */
+    border: none;
+    margin: 0;
+}
+
+.login-box {
+    background: var(--background-main);
+    padding: 40px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-color);
+    width: 100%;
+    max-width: 450px;
+    text-align: center;
+}
+.login-box h1, .login-box h2 {
+    margin-top: 0;
+}
+.login-box .subtitle {
+    color: var(--text-secondary);
+    margin-bottom: 30px;
+}
+.login-form {
+    gap: 16px;
+}
+.full-width-btn {
+    width: 100%;
+}
+.form-links {
+    text-align: right;
+    margin: -8px 0 12px 0; /* Adjust spacing */
+    font-size: 0.9rem;
+}
+.form-links a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+.form-links a:hover {
+    text-decoration: underline;
+}
+
+/* Exit button position fix (used by Login and Forgot Password screens) */
+.exit-app-container-tr {
+    position: fixed; /* Fixed position relative to the viewport */
+    top: 20px;
+    right: 20px;
+    z-index: 100;
+}
+.exit-button {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    padding: 0;
+    font-size: 1.75rem;
+    line-height: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #ff0000; /* Lighter gray for less emphasis */
+    color: var(--primary-color);
+    box-shadow: var(--shadow-sm);
+}
+.exit-button:hover {
+    background-color: #D1D5DB;
+}
+
+/* Success message styling for ForgotPasswordScreen */
+.form-success-message {
+    padding: 20px 0;
+}
+.success-icon {
+    color: var(--success-color);
+    margin-bottom: 16px;
+}
+.form-success-message h2 {
+    color: var(--success-color);
+}

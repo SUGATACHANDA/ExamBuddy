@@ -1,124 +1,97 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom'; // <-- Make sure to import Link
 import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 
 const LoginScreen = () => {
-    // State hooks to manage the form's input fields
+    // --- STATE MANAGEMENT ---
     const [collegeId, setCollegeId] = useState('');
     const [password, setPassword] = useState('');
-
-    // State for providing user feedback (loading and error messages)
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    // Hooks from libraries for navigation and authentication
+    // --- HOOKS ---
     const navigate = useNavigate();
-    const { login } = useAuth(); // Get the login function from our global AuthContext
+    const { login } = useAuth();
 
-    /**
-     * Handles the form submission process when the user clicks "Login".
-     * @param {React.FormEvent} e - The form submission event.
-     */
+    // --- EFFECT ---
+    // Signal to main process that the UI is ready, so the splash screen can close.
     useEffect(() => {
         if (window.electronAPI && window.electronAPI.sendLoginScreenReady) {
-            console.log("Login Screen UI has rendered. Signaling to main process...");
-            // Send the signal to the Electron main process.
             window.electronAPI.sendLoginScreenReady();
         }
-    }, []);
+    }, []); // Empty dependency array `[]` ensures this runs only once.
+
+
+    // --- HANDLERS ---
+
     const handleSubmit = async (e) => {
-        e.preventDefault(); // Prevent the default browser form submission (page reload)
-        setLoading(true);   // Disable the button and show a loading state
-        setError('');       // Clear any previous error messages
-
+        e.preventDefault();
+        setLoading(true);
+        setError('');
         try {
-            // Send the login credentials to the backend API
             const { data } = await api.post('/auth/login', { collegeId, password });
-
-            // If the API call is successful, update the global auth state
             login(data);
+            if (window.electronAPI) window.electronAPI.enterFullscreen();
 
-            if (window.electronAPI) {
-                window.electronAPI.enterFullscreen();
-            }
-
-            // --- CRITICAL: Multi-Role Redirection Logic ---
-            // Navigate the user to the correct dashboard based on their role.
-            if (data.role === 'admin') {
-                navigate('/admin/dashboard');
-            } else if (data.role === 'university_affairs') {
-                navigate('/ua/dashboard');
-            } else if (data.role === 'HOD') {
-                navigate('/hod/dashboard');
-            } else if (data.role === 'teacher') {
-                navigate('/teacher/dashboard');
-            } else if (data.role === 'student') {
-                navigate('/student/dashboard');
-            } else {
-                // Fallback for any unknown roles, though this should not happen
-                navigate('/');
-            }
-
+            // Multi-Role Redirection Logic
+            if (data.role === 'admin') navigate('/admin/dashboard');
+            else if (data.role === 'university_affairs') navigate('/ua/dashboard');
+            else if (data.role === 'HOD') navigate('/hod/dashboard');
+            else if (data.role === 'teacher') navigate('/teacher/dashboard');
+            else if (data.role === 'student') navigate('/student/dashboard');
+            else navigate('/');
         } catch (err) {
-            // If the API call fails, display a user-friendly error message.
-            const message = err.response?.data?.message || 'Login failed. Please check your credentials and try again.';
+            const message = err.response?.data?.message || 'Login failed. Please check your credentials.';
             setError(message);
-            console.error("Login Error:", err);
         } finally {
-            // This block runs regardless of whether the try or catch block succeeded.
-            // It's crucial for re-enabling the form button.
             setLoading(false);
         }
     };
 
+    // Handler for the Exit Application button.
     const handleExitApp = () => {
-        if (window.electronAPI && window.electronAPI.closeApp) {
-            window.electronAPI.closeApp();
+        if (window.electronAPI && window.electronAPI.exitApp) {
+            window.electronAPI.exitApp();
         }
     };
 
     return (
         <div className="container login-container">
+            {/* --- THIS IS THE FIX for the EXIT BUTTON --- */}
+            {/* Move the container to the top of the component's JSX. */}
+            <div className="exit-app-container-tr">
+                <button onClick={handleExitApp} className="btn-secondary exit-button" title="Exit Application">
+                    &times; {/* A simple 'X' for the close icon */}
+                </button>
+            </div>
+            {/* ------------------------------------------- */}
+
             <div className="login-box">
                 <h1>Exam Proctoring System</h1>
-                <p>Please enter your login credentials to proceed.</p>
+                <p>Please enter your credentials to proceed.</p>
+
                 <form onSubmit={handleSubmit} className="login-form">
-
                     {error && <p className="error">{error}</p>}
-
                     <div className="form-group">
                         <label htmlFor="collegeId">College ID / Employee ID</label>
-                        <input
-                            type="text"
-                            id="collegeId"
-                            value={collegeId}
-                            onChange={(e) => setCollegeId(e.target.value)}
-                            placeholder="Enter your assigned ID"
-                            required
-                        />
+                        <input id="collegeId" type="text" value={collegeId} onChange={(e) => setCollegeId(e.target.value)} required />
                     </div>
                     <div className="form-group">
                         <label htmlFor="password">Password</label>
-                        <input
-                            type="password"
-                            id="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Enter your password"
-                            required
-                        />
+                        <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
                     </div>
+
+                    {/* --- THIS IS THE FIX for FORGOT PASSWORD --- */}
+                    <div className="form-links">
+                        <Link to="/forgot-password">Forgot Password?</Link>
+                    </div>
+                    {/* ----------------------------------------- */}
 
                     <button type="submit" className="btn btn-primary" disabled={loading}>
                         {loading ? 'Logging in...' : 'Login'}
                     </button>
                 </form>
-            </div>
-            <div className="exit-app-container">
-                <button onClick={handleExitApp} className="btn-secondary exit-button">
-                    Exit Application
-                </button>
             </div>
         </div>
     );

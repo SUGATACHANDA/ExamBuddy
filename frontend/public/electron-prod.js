@@ -3,7 +3,7 @@
 // This is the MAIN entry file for the PACKAGED PRODUCTION application.
 
 // `session` is the key module we need to import for this fix
-const { app, BrowserWindow, ipcMain, screen, session, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, session, dialog, protocol } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const url = require('url');
@@ -331,9 +331,9 @@ ipcMain.on('release-notes-shown', () => {
     }
 });
 
-ipcMain.handle("get-latest-changelog", () => {
-    return getLatestChangelog();
-});
+// ipcMain.handle("get-latest-changelog", () => {
+//     return getLatestChangelog();
+// });
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {

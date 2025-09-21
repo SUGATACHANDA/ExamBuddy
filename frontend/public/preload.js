@@ -57,5 +57,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
         if (type === 'COPY_PASTE_ATTEMPT') {
             callback();
         }
-    })
+    }),
+    onResetToken: (callback) => {
+        ipcRenderer.on('reset-token', (event, token) => callback(token));
+    }
 });

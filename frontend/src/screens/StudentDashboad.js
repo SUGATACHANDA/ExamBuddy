@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import api from '../api/axiosConfig';
-import PermissionModal from '../components/PermissionModal';
+import React, { useState, useEffect, useCallback } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import api from "../api/axiosConfig";
+import PermissionModal from "../components/PermissionModal";
+import ChangePasswordModal from "components/ui/ChangePasswordModal";
 
 // --- A self-contained, reusable Clock component ---
 export const Clock = () => {
@@ -24,6 +25,7 @@ export const Clock = () => {
 const StudentDashboard = () => {
     // State for the list of exams to display
     const [exams, setExams] = useState([]);
+    const [isChangePassModalOpen, setIsChangePassModalOpen] = useState(false);
 
     // State to hold the IDs of exams the student has already completed
     const [completedExamIds, setCompletedExamIds] = useState(new Set());
@@ -47,8 +49,8 @@ const StudentDashboard = () => {
         try {
             // Use Promise.all to fetch both lists of data concurrently for better performance.
             const [allExamsResponse, completedExamsResponse] = await Promise.all([
-                api.get('/exams/student/all'),
-                api.get('/results/my-completed') // New endpoint to get completed exam IDs
+                api.get("/exams/student/all"),
+                api.get("/results/my-completed"), // New endpoint to get completed exam IDs
             ]);
 
             // 1. Store the set of completed exam IDs. Using a Set is efficient for lookups.
@@ -57,18 +59,21 @@ const StudentDashboard = () => {
 
             // 2. Filter the general list of exams to show only those within the login window.
             const now = new Date();
-            const timeAvailableExams = allExamsResponse.data.filter(exam => {
+            const timeAvailableExams = allExamsResponse.data.filter((exam) => {
                 const scheduledTime = new Date(exam.scheduledAt);
-                const windowStartTime = new Date(scheduledTime.getTime() - (exam.loginWindowStart || 10) * 60000);
-                const windowEndTime = new Date(scheduledTime.getTime() + (exam.lateEntryWindowEnd || 5) * 60000);
+                const windowStartTime = new Date(
+                    scheduledTime.getTime() - (exam.loginWindowStart || 10) * 60000
+                );
+                const windowEndTime = new Date(
+                    scheduledTime.getTime() + (exam.lateEntryWindowEnd || 5) * 60000
+                );
                 // Return true only if "now" is between the start and end times.
                 return now >= windowStartTime && now <= windowEndTime;
             });
 
             setExams(timeAvailableExams);
-
         } catch (error) {
-            console.error('Failed to fetch dashboard data', error);
+            console.error("Failed to fetch dashboard data", error);
             // In a real app, you might set an error state here.
         } finally {
             setLoading(false);
@@ -115,48 +120,75 @@ const StudentDashboard = () => {
                     <p>Student Dashboard</p>
                 </div>
                 <Clock />
-                <button onClick={logout} className="btn-secondary">Logout</button>
+                <div>
+                    <button
+                        onClick={() => setIsChangePassModalOpen(true)}
+                        className="btn-secondary"
+                    >
+                        Change Password
+                    </button>
+                    <button onClick={logout} className="btn-danger">
+                        Logout
+                    </button>
+                </div>
             </header>
+            {isChangePassModalOpen && (
+                <ChangePasswordModal onClose={() => setIsChangePassModalOpen(false)} />
+            )}
 
             <h2>Exams Ready for Immediate Start</h2>
-            <button onClick={handleRefresh} disabled={isRefreshing} className="btn-secondary">
-                {isRefreshing ? 'Refreshing...' : 'Refresh List'}
+            <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="btn-secondary"
+            >
+                {isRefreshing ? "Refreshing..." : "Refresh List"}
             </button>
 
-            {loading ? <p>Loading available exams...</p> : (
-                exams.length > 0 ? (
-                    <ul className="exam-list">
-                        {exams.map(exam => {
-                            // Check if the current exam's ID is in our Set of completed IDs
-                            const isCompleted = completedExamIds.has(exam._id);
+            {loading ? (
+                <p>Loading available exams...</p>
+            ) : exams.length > 0 ? (
+                <ul className="exam-list">
+                    {exams.map((exam) => {
+                        // Check if the current exam's ID is in our Set of completed IDs
+                        const isCompleted = completedExamIds.has(exam._id);
 
-                            return (
-                                <li key={exam._id} className={isCompleted ? 'exam-completed' : ''}>
-                                    <h3>{exam.title} ({exam.subject})</h3>
+                        return (
+                            <li
+                                key={exam._id}
+                                className={isCompleted ? "exam-completed" : ""}
+                            >
+                                <h3>
+                                    {exam.title} ({exam.subject})
+                                </h3>
 
-                                    {isCompleted ? (
-                                        // If the student has already taken this exam, show a clear status message.
-                                        <p className="status-completed"><strong>Status:</strong> Already Completed</p>
-                                    ) : (
-                                        // Otherwise, if it's available, show the start button.
-                                        <div className="exam-status">
-                                            <p>This exam's login window is currently open.</p>
-                                            <button
-                                                onClick={() => handleStartExamClick(exam._id)}
-                                                className="btn btn-primary"
-                                            >
-                                                Proceed to Security Checks
-                                            </button>
-                                        </div>
-                                    )}
-                                </li>
-                            );
-                        })}
-                    </ul>
-                ) : (
-                    // This message shows if no exams are within their login window right now.
-                    <p>There are no exams available for you to start at this time. Please check the schedule and return when the login window opens.</p>
-                )
+                                {isCompleted ? (
+                                    // If the student has already taken this exam, show a clear status message.
+                                    <p className="status-completed">
+                                        <strong>Status:</strong> Already Completed
+                                    </p>
+                                ) : (
+                                    // Otherwise, if it's available, show the start button.
+                                    <div className="exam-status">
+                                        <p>This exam's login window is currently open.</p>
+                                        <button
+                                            onClick={() => handleStartExamClick(exam._id)}
+                                            className="btn btn-primary"
+                                        >
+                                            Proceed to Security Checks
+                                        </button>
+                                    </div>
+                                )}
+                            </li>
+                        );
+                    })}
+                </ul>
+            ) : (
+                // This message shows if no exams are within their login window right now.
+                <p>
+                    There are no exams available for you to start at this time. Please
+                    check the schedule and return when the login window opens.
+                </p>
             )}
 
             <div className="dashboard-actions">
