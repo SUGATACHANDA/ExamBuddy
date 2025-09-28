@@ -1,11 +1,15 @@
 // src/context/AuthContext.js
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
     const [userInfo, setUserInfo] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [examSubmitHandler, setExamSubmitHandler] = useState(null);
+    const [submitExamHandler, setSubmitExamHandler] = useState(null);
+
+
 
     useEffect(() => {
         const userFromStorage = localStorage.getItem('userInfo');
@@ -23,10 +27,24 @@ export const AuthProvider = ({ children }) => {
     const logout = () => {
         localStorage.removeItem('userInfo');
         setUserInfo(null);
+        setSubmitExamHandler(null);
     };
 
+    const storeSubmitHandler = useCallback((handler) => {
+        // We store the function directly. The handler is a function that returns a function.
+        setSubmitExamHandler(() => handler);
+    }, []);
+
+    const clearContextSubmitHandler = useCallback(() => {
+        setSubmitExamHandler(null);
+    }, []);
+
     return (
-        <AuthContext.Provider value={{ userInfo, login, logout }}>
+        <AuthContext.Provider value={{
+            userInfo, login, logout, submitExamHandler,
+            storeSubmitHandler,
+            clearContextSubmitHandler
+        }}>
             {!loading && children}
         </AuthContext.Provider>
     );

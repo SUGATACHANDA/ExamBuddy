@@ -36,6 +36,10 @@ export interface IElectronAPI {
     onShowReleaseNotes: (callback: (data: { version: string, notes: string }) => void) => void;
 
     onResetToken: (callback: (token: string) => void) => void;
+
+
+    toggleKeyboardLock: (lock: boolean) => void;
+    onShowWarningDialog: (callback: (data: { strike: number, max: number, type: string }) => void) => void;
 }
 
 // Now, we augment the global Window interface to include our `electronAPI` property

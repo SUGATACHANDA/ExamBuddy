@@ -20,6 +20,7 @@ const ManageExams = () => {
     const [activeTab, setActiveTab] = useState('view');
     const [currentPage, setCurrentPage] = useState(1);
     const examsPerPage = 5; // You can adjust how many exams show per page
+    const [sections, setSections] = useState([{ title: 'Section A', questions: [] }]);
 
     // --- State for the "Schedule New Exam" form ---
     const [title, setTitle] = useState('');
@@ -29,13 +30,93 @@ const ManageExams = () => {
     const [scheduledAt, setScheduledAt] = useState('');
     const [examType, setExamType] = useState('timed');
     const [duration, setDuration] = useState(60);
-    const [selectedQuestions, setSelectedQuestions] = useState([]);
+    // const [selectedQuestions, setSelectedQuestions] = useState([]);
     const [isScheduling, setIsScheduling] = useState(false);
 
     // --- State for the "Edit Exam" modal ---
     const [editingExam, setEditingExam] = useState(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+    const addSection = () => {
+        setSections(prevSections => [
+            ...prevSections,
+            { title: `Section ${String.fromCharCode(65 + prevSections.length)}`, questions: [] }
+        ]);
+    };
+
+    const removeSection = (index) => {
+        if (sections.length <= 1) {
+            alert("An exam must have at least one section.");
+            return;
+        }
+        setSections(prevSections => prevSections.filter((_, i) => i !== index));
+    };
+
+    const addQuestionToSection = (sectionIndex, questionId) => {
+        // First, check if this question is already in ANY section to prevent duplicates
+        const isAlreadyAdded = sections.some(sec => sec.questions.includes(questionId));
+        if (isAlreadyAdded) {
+            alert("This question has already been added to a section.");
+            return;
+        }
+
+        const updatedSections = [...sections];
+        updatedSections[sectionIndex].questions.push(questionId);
+        setSections(updatedSections);
+    };
+
+    const removeQuestionFromSection = (sectionIndex, questionId) => {
+        const updatedSections = [...sections];
+        updatedSections[sectionIndex].questions = updatedSections[sectionIndex].questions.filter(id => id !== questionId);
+        setSections(updatedSections);
+    };
+
+    const getQuestionById = (id) => myQuestions.find(q => q._id === id);
+
+
+    // --- UPDATED Exam Submission Handler ---
+    const handleScheduleExam = async (e) => {
+        e.preventDefault();
+        setError('');
+        // Validate that every section has at least one question
+        if (sections.some(sec => sec.questions.length === 0)) {
+            return setError("Every section must contain at least one question.");
+        }
+        setIsScheduling(true);
+        try {
+            // This is the new, correct payload structure for the backend
+            const payload = {
+                title, subject, semester: selectedSemester,
+                scheduledAt: new Date(scheduledAt).toISOString(),
+                examType,
+                duration: examType === 'timed' ? Number(duration) : undefined,
+                // Send the sections array, ensuring question objects are just IDs
+                sections: sections.map(sec => ({
+                    title: sec.title,
+                    questions: sec.questions // These are already just IDs
+                })),
+            };
+
+            await api.post('/exams', payload);
+
+            // Reset the entire form state after successful creation
+            setTitle(''); setSubject(''); setSelectedDepartment(''); setSelectedSemester('');
+            setScheduledAt(''); setExamType('timed'); setDuration(60);
+            setSections([{ title: 'Section A', questions: [] }]);
+
+            await fetchData();
+            setActiveTab('view');
+            setCurrentPage(1);
+
+        } catch (err) { setError(err.response?.data?.message || 'Failed to schedule exam.'); }
+        finally { setIsScheduling(false); }
+    };
+
+    const handleSectionTitleChange = (index, newTitle) => {
+        const updatedSections = [...sections];
+        updatedSections[index].title = newTitle;
+        setSections(updatedSections);
+    };
 
     // --- DATA FETCHING LOGIC ---
 
@@ -99,45 +180,6 @@ const ManageExams = () => {
     // --- CRUD EVENT HANDLERS ---
 
     // CREATE: Schedules a new exam
-    const handleScheduleExam = async (e) => {
-        e.preventDefault();
-        setError('');
-        if (!selectedSemester || selectedQuestions.length === 0) {
-            return setError("Please fill all fields, including target semester and questions.");
-        }
-        setIsScheduling(true);
-        try {
-            const payload = {
-                title,
-                subject,
-                semester: selectedSemester,
-                scheduledAt: new Date(scheduledAt).toISOString(),
-                examType,
-                duration: examType === 'timed' ? Number(duration) : undefined,
-                questionIds: selectedQuestions
-            };
-
-            // AGGRESSIVE DEBUGGING: This will now show the correct, filled-in values.
-            console.log("--- FINAL PAYLOAD SENT TO BACKEND ---", payload);
-
-            // The API call will now succeed.
-            await api.post('/exams', payload);
-
-            // Reset the form after success
-            setTitle(''); setSubject(''); setSelectedDepartment(''); setSelectedSemester('');
-            setScheduledAt(''); setSelectedQuestions([]); setExamType('timed'); setDuration(60);
-
-            await fetchData();
-            setActiveTab('view');
-            setCurrentPage(1);
-
-        } catch (err) {
-            console.error("Exam scheduling failed:", err.response || err);
-            setError(err.response?.data?.message || 'Failed to schedule exam.');
-        } finally {
-            setIsScheduling(false);
-        }
-    };
 
     // DELETE: Removes an exam and its results
     const handleDeleteExam = async (id) => {
@@ -224,12 +266,48 @@ const ManageExams = () => {
                             <div className="form-group"><label>Schedule At (in your local time)</label><input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)} required /></div>
                             <div className="form-group"><label>Exam Type</label><select value={examType} onChange={e => setExamType(e.target.value)}><option value="timed">Timed</option><option value="untimed">Untimed</option></select></div>
                             {examType === 'timed' && <div className="form-group"><label>Duration (in minutes)</label><input type="number" value={duration} onChange={e => setDuration(Number(e.target.value))} required min="1" /></div>}
-                            <div className="form-group">
-                                <label>Select Questions from your Question Bank ({selectedQuestions.length} selected)</label>
-                                <select multiple value={selectedQuestions} onChange={e => setSelectedQuestions(Array.from(e.target.selectedOptions, option => option.value))} style={{ height: "250px" }} required>
-                                    {myQuestions.map(q => <option key={q._id} value={q._id}>{q.questionText}</option>)}
-                                </select>
+                            <hr />
+                            <h2>Question Allocation</h2>
+                            {/* --- NEW Two-Panel Question Allocator --- */}
+                            <div className="question-allocator">
+                                <div className="question-bank-panel">
+                                    <h3>Your Question Bank ({myQuestions.length})</h3>
+                                    <div className="question-bank-list">
+                                        {myQuestions.map(q => (
+                                            <div key={q._id} className="question-bank-item">
+                                                <span>{q.questionText.substring(0, 80)}...</span>
+                                                <div className="add-to-section-buttons">
+                                                    {sections.map((sec, secIndex) => (
+                                                        <button key={secIndex} type="button" onClick={() => addQuestionToSection(secIndex, q._id)} title={`Add to ${sec.title}`}>
+                                                            {String.fromCharCode(65 + secIndex)}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="exam-sections-panel">
+                                    <h3>Exam Sections</h3>
+                                    {sections.map((section, secIndex) => (
+                                        <div key={secIndex} className="exam-section-item">
+                                            <input type="text" value={section.title} onChange={(e) => handleSectionTitleChange(secIndex, e.target.value)} placeholder="Section Title" />
+                                            <button type="button" className="btn-danger" onClick={() => removeSection(secIndex)}>X</button>
+                                            <ul className="allocated-questions-list">
+                                                {section.questions.map(qId => (
+                                                    <li key={qId}>
+                                                        <span>{getQuestionById(qId)?.questionText.substring(0, 50)}...</span>
+                                                        <button type="button" onClick={() => removeQuestionFromSection(secIndex, qId)}>remove</button>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    ))}
+                                    <button type="button" onClick={addSection} className="btn-secondary">+ Add Another Section</button>
+                                </div>
                             </div>
+
+                            <hr />
                             <button type="submit" className="btn btn-submit" disabled={isScheduling}>{isScheduling ? 'Scheduling...' : 'Schedule Exam'}</button>
                         </form>
                     </div>

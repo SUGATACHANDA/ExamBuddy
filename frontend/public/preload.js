@@ -1,6 +1,54 @@
 // public/preload.js
 const { contextBridge, ipcRenderer } = require('electron');
 
+const keydownHandler = (e) => {
+    // --- Determine if the shortcut is forbidden ---
+    let isForbidden = false;
+    let violationType = '';
+
+    // 1. Check for F-keys (F1-F12)
+    if (e.key.startsWith('F') && e.key.length > 1 && parseInt(e.key.substring(1), 10) > 0) {
+        isForbidden = true;
+        violationType = `FORBIDDEN_KEY (${e.key})`;
+    }
+
+    // 2. Check for combinations with Ctrl, Alt, or Meta (Cmd/Win) keys
+    if (e.ctrlKey || e.altKey || e.metaKey) {
+        const key = e.key.toLowerCase();
+
+        // This is a WHITELIST of shortcuts we might allow ONLY inside text boxes
+        const allowedInInputs = ['a', 'c', 'x', 'v', 'z']; // select all, copy, cut, paste, undo
+        const targetIsInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+
+        if (targetIsInput && allowedInInputs.includes(key)) {
+            // Let the event through for inputs but we will still monitor it
+            // The main process can decide if copy/paste itself is a violation
+        } else {
+            // If it's any other combo, it's forbidden.
+            isForbidden = true;
+
+            let modifier = '';
+            if (e.ctrlKey) modifier = 'Ctrl';
+            if (e.altKey) modifier = 'Alt';
+            if (e.metaKey) modifier = 'Meta';
+
+            violationType = `FORBIDDEN_SHORTCUT (${modifier}+${e.key.toUpperCase()})`;
+        }
+    }
+
+    // --- Take Action if a Violation is Found ---
+    if (isForbidden) {
+        // 1. Prevent the browser's default action (e.g., refresh, print)
+        e.preventDefault();
+        e.stopPropagation(); // Stop it from bubbling up to other listeners
+
+        // 2. THIS IS THE DEFINITIVE FIX:
+        // Send a message to the main process, informing it of the specific violation.
+        console.warn(`[EXAM SECURITY] Violation Detected. Sending IPC message: 'ipc-violation' with type: ${violationType}`);
+        ipcRenderer.send('ipc-violation', violationType);
+    }
+};
+
 contextBridge.exposeInMainWorld('electronAPI', {
     // --- Functions called FROM React ---
     examStarted: () => ipcRenderer.send('exam-started'),
@@ -60,5 +108,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }),
     onResetToken: (callback) => {
         ipcRenderer.on('reset-token', (event, token) => callback(token));
-    }
+    },
+
+    toggleKeyboardLock: (lock) => {
+        if (lock) {
+            console.log("Preload: Enabling keyboard shortcut monitor.");
+            window.addEventListener('keydown', keydownHandler, true);
+        } else {
+            console.log("Preload: Disabling keyboard shortcut monitor.");
+            window.removeEventListener('keydown', keydownHandler, true);
+        }
+    },
+    onShowWarningDialog: (callback) => ipcRenderer.on('show-warning-dialog', (event, data) => callback(data)),
 });

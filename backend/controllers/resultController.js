@@ -4,46 +4,83 @@ const Result = require('../models/Result');
 const Exam = require('../models/Exam');
 const Question = require('../models/Question');
 
-// @desc    Submit an exam
-// @route   POST /api/results/submit
-// @access  Private/Student
+/**
+ * @desc    Submit an exam for final evaluation
+ * @route   POST /api/results/submit
+ * @access  Private/Student
+ */
 const submitExam = asyncHandler(async (req, res) => {
-    const { examId, answers } = req.body;
+    const { examId, answers: studentAnswers } = req.body;
     const studentId = req.user._id;
 
-    const exam = await Exam.findById(examId).populate('questions');
+    // 1. Fetch the exam document WITH the correct answers to evaluate against.
+    // Deep populate is crucial here.
+    const exam = await Exam.findById(examId)
+        .populate('sections.questions'); // This gets the full question objects, including correct answers
+
     if (!exam) {
-        res.status(404);
-        throw new Error('Exam not found');
+        res.status(404); throw new Error('Exam not found.');
     }
 
-    // Check if already submitted
-    const existingResult = await Result.findOne({ exam: examId, student: studentId });
-    if (existingResult) {
-        res.status(400);
-        throw new Error("You have already submitted this exam.");
-    }
+    // Flatten the exam's questions into a single map for easy lookup
+    const questionMap = new Map();
+    exam.sections.forEach(section => {
+        section.questions.forEach(q => {
+            questionMap.set(q._id.toString(), q.correctAnswer);
+        });
+    });
 
     let score = 0;
-    const totalMarks = exam.questions.length;
+    const totalMarks = questionMap.size;
 
-    exam.questions.forEach(question => {
-        const studentAnswer = answers.find(ans => ans.questionId === question._id.toString());
-        if (studentAnswer && studentAnswer.submittedAnswer === question.correctAnswer) {
-            score++;
+    // 2. Iterate through the student's provided answers for evaluation
+    studentAnswers.forEach(studentAnswer => {
+        // Evaluate ONLY if the status is 'answered' or 'answeredAndMarked'
+        if (studentAnswer.status === 'answered' || studentAnswer.status === 'answeredAndMarked') {
+            const correctAnswer = questionMap.get(studentAnswer.questionId);
+            if (correctAnswer && studentAnswer.submittedAnswer === correctAnswer) {
+                score += 1; // Increment score (assumes 1 mark per question)
+            }
         }
     });
 
-    const result = await Result.create({
-        exam: examId,
-        student: studentId,
-        score,
-        totalMarks,
-        answers,
-        status: 'completed',
-    });
+    // 3. Update or create the final Result document in the database
+    const finalResult = await Result.findOneAndUpdate(
+        { exam: examId, student: studentId },
+        {
+            exam: examId,
+            student: studentId,
+            score: score,
+            totalMarks: totalMarks,
+            answers: studentAnswers, // Save the full state of their palette and answers
+            status: 'completed'      // Mark as completed
+        },
+        { upsert: true, new: true }
+    );
 
-    res.status(201).json(result);
+    res.status(201).json({
+        message: 'Exam submitted for evaluation successfully!',
+        result: finalResult
+    });
+});
+
+
+/**
+ * @desc    Save the student's current progress without submitting for final evaluation.
+ * @route   PUT /api/results/progress
+ * @access  Private/Student
+ */
+const saveProgress = asyncHandler(async (req, res) => {
+    const { examId, answers } = req.body;
+    const studentId = req.user._id;
+
+    const result = await Result.findOneAndUpdate(
+        { exam: examId, student: studentId },
+        { answers: answers, status: 'ongoing' }, // Update the entire answers array
+        { upsert: true, new: true, runValidators: true } // Upsert: Create if it doesn't exist
+    );
+
+    res.status(200).json({ message: 'Progress saved successfully.' });
 });
 
 /**
@@ -183,4 +220,4 @@ const expelStudent = asyncHandler(async (req, res) => {
 });
 
 
-module.exports = { submitExam, getResultsForExam, addProctoringLog, getMyCompletedExams, getMyResults, expelStudent };
+module.exports = { submitExam, saveProgress, getResultsForExam, addProctoringLog, getMyCompletedExams, getMyResults, expelStudent };

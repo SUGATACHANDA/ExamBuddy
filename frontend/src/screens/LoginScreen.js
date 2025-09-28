@@ -61,8 +61,8 @@ const LoginScreen = () => {
             {/* --- THIS IS THE FIX for the EXIT BUTTON --- */}
             {/* Move the container to the top of the component's JSX. */}
             <div className="exit-app-container-tr">
-                <button onClick={handleExitApp} className="btn-secondary exit-button" title="Exit Application">
-                    &times; {/* A simple 'X' for the close icon */}
+                <button onClick={handleExitApp} className="btn-secondary" title="Exit Application">
+                    Exit App
                 </button>
             </div>
             {/* ------------------------------------------- */}

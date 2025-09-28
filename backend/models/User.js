@@ -54,6 +54,9 @@ const userSchema = new mongoose.Schema(
                 return this.role === "student";
             },
         },
+        resetOTP: { type: String },
+        resetOTPExpiry: { type: Date },
+        resetOTPResendAfter: { type: Date },
     },
     { timestamps: true }
 );

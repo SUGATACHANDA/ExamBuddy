@@ -22,6 +22,8 @@ let isExamInProgress = false;
 let isMainWindowReady = false;
 let updateDialogQueue = [];
 let isMainWindowVisible = false;
+let violationStrikes = 0;
+const MAX_STRIKES = 3;
 
 let splashWindow;
 
@@ -348,23 +350,6 @@ app.on('activate', () => {
 });
 
 // == Inter-Process Communication (IPC) ==
-ipcMain.on('exam-started', () => {
-    console.log('IPC: Exam started. Entering kiosk mode.');
-    isExamInProgress = true;
-    if (mainWindow) {
-        mainWindow.setKiosk(true);
-        mainWindow.setAlwaysOnTop(true);
-    }
-});
-
-ipcMain.on('exam-finished', () => {
-    console.log('IPC: Exam finished. Exiting kiosk mode.');
-    isExamInProgress = false;
-    if (mainWindow) {
-        mainWindow.setKiosk(false);
-        mainWindow.setAlwaysOnTop(false);
-    }
-});
 
 ipcMain.on('force-expel-student', () => { if (mainWindow) mainWindow.webContents.send('exam-expelled-by-proctor'); });
 
@@ -465,4 +450,47 @@ ipcMain.on('kill-app-list', (event, appList) => {
 ipcMain.on('close-app', () => {
     console.log('IPC: Received signal to quit the application.');
     app.quit();
+});
+ipcMain.on('exam-started', () => {
+    console.log('IPC: Exam started. Lockdowns enabled. Strike count reset to 0.');
+    isExamInProgress = true;
+    violationStrikes = 0; // Reset for every new exam attempt
+});
+
+// The 'exam-finished' handler can also reset it as a failsafe.
+ipcMain.on('exam-finished', () => {
+    console.log('IPC: Exam finished. Lockdowns disabled. Resetting strike count.');
+    isExamInProgress = false;
+    violationStrikes = 0;
+});
+
+
+// --- THE NEW, DEFINITIVE VIOLATION HANDLER with 3-STRIKES LOGIC ---
+ipcMain.on('ipc-violation', (event, violationType) => {
+    if (!isExamInProgress) return; // Ignore violations if exam is not active
+
+    // 1. Increment the strike count
+    violationStrikes++;
+    console.log(`Violation detected. Type: ${violationType}. Strike count is now: ${violationStrikes}`);
+
+    // 2. Check the strike count
+    if (violationStrikes >= MAX_STRIKES) {
+        // --- EXPULSION ---
+        console.log("Maximum strikes reached. Sending final expulsion signal to renderer.");
+        // We send the standard 'violation' message which ExamScreen is already listening for to trigger expulsion.
+        if (mainWindow) {
+            mainWindow.webContents.send('violation', `Maximum warnings (${MAX_STRIKES}) reached due to: ${violationType}`);
+        }
+    } else {
+        // --- SHOW A WARNING ---
+        console.log("Sending warning signal to renderer.");
+        // Send a new, specific message to the renderer to show a warning dialog.
+        if (mainWindow) {
+            mainWindow.webContents.send('show-warning-dialog', {
+                strike: violationStrikes,
+                max: MAX_STRIKES,
+                type: violationType
+            });
+        }
+    }
 });

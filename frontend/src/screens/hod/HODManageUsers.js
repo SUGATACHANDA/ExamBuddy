@@ -17,6 +17,7 @@ const HODManageUsers = () => {
     const [teachers, setTeachers] = useState([]);
     const [courses, setCourses] = useState([]);
     const [semesters, setSemesters] = useState([]);
+    const [semestersInDept, setSemestersInDept] = useState([]);
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -26,6 +27,7 @@ const HODManageUsers = () => {
 
     const [studentPage, setStudentPage] = useState(1);
     const [teacherPage, setTeacherPage] = useState(1);
+    const [selectedSemesterFilter, setSelectedSemesterFilter] = useState("all");
     const usersPerPage = 6;
 
     const resetForm = useCallback((role) => {
@@ -43,25 +45,51 @@ const HODManageUsers = () => {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            // --- FIX: Add the /api/ prefix to all API calls ---
-            const [studentsRes, teachersRes, coursesRes] = await Promise.all([
+            const [studentsRes, teachersRes, coursesRes, semestersRes] = await Promise.all([
                 api.get("/hod/students"),
                 api.get("/hod/teachers"),
                 api.get("/hod/my-courses"),
+                api.get(`/data/semesters?department=${userInfo.department?._id}`)
             ]);
             setStudents(studentsRes.data);
             setTeachers(teachersRes.data);
             setCourses(coursesRes.data);
+            setSemestersInDept(semestersRes.data);
         } catch (e) {
             setError("Failed to load required data.");
             console.error(e);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [userInfo?.department?._id]);
+
+    const fetchStudents = useCallback(async () => {
+        try {
+            let url = "/hod/students";
+            if (selectedSemesterFilter !== "all") {
+                url += `?semester=${selectedSemesterFilter}`;
+            }
+            const { data } = await api.get(url);
+            setStudents(data);
+        } catch (e) {
+            setError("Failed to load student list.");
+        }
+    }, [selectedSemesterFilter]);
+
+    // Initial load
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+
+    // Refetch students when semester filter changes
+    useEffect(() => {
+        fetchStudents();
+    }, [selectedSemesterFilter, fetchStudents]);
+
+    const handleSemesterFilterChange = (e) => {
+        setStudentPage(1);
+        setSelectedSemesterFilter(e.target.value);
+    };
 
     useEffect(() => {
         setSemesters([]);
@@ -69,7 +97,6 @@ const HODManageUsers = () => {
         if (newFormState.course) {
             const courseData = courses.find((c) => c._id === newFormState.course);
             if (courseData && courseData.department) {
-                // --- FIX: Add the /api/ prefix ---
                 api
                     .get(`/data/semesters?department=${courseData.department}`)
                     .then((res) => setSemesters(res.data))
@@ -87,7 +114,7 @@ const HODManageUsers = () => {
             formRole === "student"
                 ? "/hod/users/register-student"
                 : "/hod/users/register-teacher";
-
+        setLoading(true);
         try {
             await api.post(endpoint, { ...formState, role: formRole });
             setSuccess(`Successfully registered ${formRole}: ${formState.name}!`);
@@ -95,17 +122,14 @@ const HODManageUsers = () => {
             resetForm(formRole);
         } catch (err) {
             setError(err.response?.data?.message || "Registration failed.");
+        } finally {
+            setLoading(false);
         }
     };
 
     const handleDeleteUser = async (id) => {
-        if (
-            window.confirm(
-                "Are you sure you want to delete this user? This is permanent."
-            )
-        ) {
+        if (window.confirm("Are you sure you want to delete this user? This is permanent.")) {
             try {
-                // --- FIX: Add the /api/ prefix ---
                 await api.delete(`/hod/users/${id}`);
                 await fetchData();
             } catch (e) {
@@ -114,9 +138,7 @@ const HODManageUsers = () => {
         }
     };
 
-    const openEditModal = (user) => {
-        setEditingUser(user);
-    };
+    const openEditModal = (user) => setEditingUser(user);
 
     const handleFormRoleChange = (role) => {
         setFormRole(role);
@@ -148,6 +170,7 @@ const HODManageUsers = () => {
             ),
         [teachers, teacherPage]
     );
+
     const totalStudentPages = Math.ceil(students.length / usersPerPage);
     const totalTeacherPages = Math.ceil(teachers.length / usersPerPage);
 
@@ -165,15 +188,13 @@ const HODManageUsers = () => {
 
             <div className="tabs-container">
                 <button
-                    className={`tab-button ${activeTab === "viewStudents" ? "active" : ""
-                        }`}
+                    className={`tab-button ${activeTab === "viewStudents" ? "active" : ""}`}
                     onClick={() => handleTabChange("viewStudents")}
                 >
                     View Students ({students.length})
                 </button>
                 <button
-                    className={`tab-button ${activeTab === "viewTeachers" ? "active" : ""
-                        }`}
+                    className={`tab-button ${activeTab === "viewTeachers" ? "active" : ""}`}
                     onClick={() => handleTabChange("viewTeachers")}
                 >
                     View Teachers ({teachers.length})
@@ -221,6 +242,7 @@ const HODManageUsers = () => {
                                 onChange={handleChange}
                                 placeholder="Full Name"
                                 required
+                                disabled={loading}
                             />
                             <input
                                 name="collegeId"
@@ -230,6 +252,7 @@ const HODManageUsers = () => {
                                     formRole === "student" ? "Univ. Roll No." : "Employee ID"
                                 }
                                 required
+                                disabled={loading}
                             />
                             <input
                                 name="email"
@@ -238,6 +261,7 @@ const HODManageUsers = () => {
                                 onChange={handleChange}
                                 placeholder="Email"
                                 required
+                                disabled={loading}
                             />
                             <input
                                 name="password"
@@ -247,6 +271,7 @@ const HODManageUsers = () => {
                                 placeholder="Create Password"
                                 required
                                 autoComplete="new-password"
+                                disabled={loading}
                             />
                             {formRole === "student" && (
                                 <>
@@ -255,6 +280,7 @@ const HODManageUsers = () => {
                                         value={formState.course || ""}
                                         onChange={handleChange}
                                         required
+                                        disabled={loading}
                                     >
                                         <option value="" disabled>
                                             -- Assign Course --
@@ -270,47 +296,72 @@ const HODManageUsers = () => {
                                         value={formState.semester || ""}
                                         onChange={handleChange}
                                         required
-                                        disabled={!formState.course || semesters.length === 0}
+                                        disabled={!formState.course || semesters.length === 0 || loading}
                                     >
                                         <option value="" disabled>
                                             -- Assign Semester --
                                         </option>
                                         {semesters.map((s) => (
                                             <option key={s._id} value={s._id}>
-                                                {s.number}
+                                                Semester {s.number}
                                             </option>
                                         ))}
                                     </select>
                                 </>
                             )}
-                            <button type="submit" className="btn btn-primary">
-                                Register {formRole}
+                            <button type="submit" disabled={loading} className="btn btn-primary">
+                                {loading ? `Registering...` : `Register ${formRole.charAt(0).toUpperCase() + formRole.slice(1)}`}
                             </button>
                         </form>
                     </div>
                 )}
 
-                {/* --- THIS IS THE DEFINITIVE FIX FOR THE LISTS --- */}
                 {activeTab === "viewStudents" &&
                     (loading ? (
                         <p>Loading...</p>
                     ) : (
                         <>
-                            <div className="user-grid">
-                                {paginatedStudents.map((user) => (
-                                    <UserCard
-                                        key={user._id}
-                                        user={user}
-                                        onEdit={openEditModal}
-                                        onDelete={handleDeleteUser}
-                                    />
-                                ))}
+                            <div className="filter-bar flex items-center gap-3">
+                                <label htmlFor="semesterFilter" className="filter-label">
+                                    Sort by Semester:
+                                </label>
+                                <select
+                                    id="semesterFilter"
+                                    value={selectedSemesterFilter}
+                                    onChange={handleSemesterFilterChange}
+                                    className="filter-select"
+                                >
+                                    <option value="all">All Semesters</option>
+                                    {semestersInDept
+                                        .sort((a, b) => a.number - b.number)
+                                        .map((sem) => (
+                                            <option key={sem._id} value={sem._id}>
+                                                Semester {sem.number}
+                                            </option>
+                                        ))}
+                                </select>
                             </div>
-                            <Pagination
-                                currentPage={studentPage}
-                                totalPages={totalStudentPages}
-                                onPageChange={setStudentPage}
-                            />
+                            {paginatedStudents.length > 0 ? (
+                                <>
+                                    <div className="user-grid">
+                                        {paginatedStudents.map((user) => (
+                                            <UserCard
+                                                key={user._id}
+                                                user={user}
+                                                onEdit={openEditModal}
+                                                onDelete={handleDeleteUser}
+                                            />
+                                        ))}
+                                    </div>
+                                    <Pagination
+                                        currentPage={studentPage}
+                                        totalPages={totalStudentPages}
+                                        onPageChange={setStudentPage}
+                                    />
+                                </>
+                            ) : (
+                                <p className="no-data">No students found for this semester.</p>
+                            )}
                         </>
                     ))}
 
@@ -341,14 +392,14 @@ const HODManageUsers = () => {
             {editingUser && (
                 <EditUserModal
                     user={editingUser}
+                    semesters={semestersInDept}
                     onClose={() => setEditingUser(null)}
                     onSave={fetchData}
-                    // --- THIS IS THE CRITICAL FIX ---
-                    // An HOD must use their own authorized endpoint to update their users.
                     updateUrl={`/hod/users/${editingUser._id}`}
                 />
             )}
         </div>
     );
 };
+
 export default HODManageUsers;

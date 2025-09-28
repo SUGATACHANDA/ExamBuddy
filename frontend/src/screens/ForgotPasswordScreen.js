@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/axiosConfig';
 
 const ForgotPasswordScreen = () => {
@@ -7,13 +7,17 @@ const ForgotPasswordScreen = () => {
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const navigate = useNavigate()
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true); setMessage(''); setError('');
         try {
-            const { data } = await api.post('/auth/forgot-password', { email });
+            const { data } = await api.post('/auth/request-otp', { email });
             setMessage(data.message);
+            localStorage.setItem("resetEmail", email);
+            localStorage.setItem("resendTimer", data.resendTimer);
+            navigate("/verify-otp");
         } catch (err) { setError(err.response?.data?.message || 'An error occurred.'); }
         finally { setLoading(false); }
     };

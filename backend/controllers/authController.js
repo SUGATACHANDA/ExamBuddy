@@ -9,6 +9,8 @@ const crypto = require("crypto");
 const { render } = require("@react-email/components");
 const React = require("react");
 const sendEmail = require("../utils/mailer");
+const { generateOTP } = require("../utils/otp");
+const PasswordResetOTPEmail = require('../emails/PasswordResetOTPEmail');
 
 
 /**
@@ -121,7 +123,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
     }).save();
 
     // Generate Electron deep link
-    const resetUrl = `exam-buddy://reset-password/${resetToken}`;
+    const resetUrl = `https://exam-buddy-indol.vercel.app?token=${resetToken}`;
     console.log("Reset URL for email:", resetUrl);
 
     // Render email HTML using React Email
@@ -174,4 +176,68 @@ const resetPassword = asyncHandler(async (req, res) => {
 
     res.status(200).json({ message: 'Password has been reset successfully.' });
 });
-module.exports = { authUser, changePassword, resetPassword, forgotPassword };
+
+const requestPasswordResetOTP = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        res.status(404);
+        throw new Error("No user found with that email address.");
+    }
+
+    const now = new Date();
+    if (user.resetOTPResendAfter && user.resetOTPResendAfter > now) {
+        const waitSec = Math.ceil((user.resetOTPResendAfter - now) / 1000);
+        res.status(429);
+        throw new Error(`Please wait ${waitSec} seconds before resending OTP.`);
+    }
+
+    const otp = generateOTP();
+    user.resetOTP = otp;
+    user.resetOTPExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 min validity
+    user.resetOTPResendAfter = new Date(Date.now() + 4 * 60 * 1000); // resend in 4 min
+    await user.save();
+
+    // Send OTP email
+    const html = PasswordResetOTPEmail({ name: user.name, otp });
+    await sendEmail(user.email, "Your OTP for Password Reset", html);
+
+    res.status(200).json({ message: "OTP sent to your email.", resendTimer: 120, });
+});
+
+// STEP 2: Verify OTP
+const verifyPasswordResetOTP = asyncHandler(async (req, res) => {
+    const { email, otp } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user || user.resetOTP !== otp || !user.resetOTPExpiry || user.resetOTPExpiry < Date.now()) {
+        res.status(400);
+        throw new Error("Invalid or expired OTP.");
+    }
+
+    res.status(200).json({ message: "OTP verified successfully." });
+});
+
+// STEP 3: Reset Password
+const resetPasswordWithOTP = asyncHandler(async (req, res) => {
+    const { email, otp, newPassword } = req.body;
+    const user = await User.findOne({ email }).select("+password");
+
+    if (!user || user.resetOTP !== otp || !user.resetOTPExpiry || user.resetOTPExpiry < Date.now()) {
+        res.status(400);
+        throw new Error("Invalid or expired OTP.");
+    }
+
+    user.password = newPassword;
+    user.resetOTP = undefined;
+    user.resetOTPExpiry = undefined;
+    user.resetOTPResendAfter = undefined;
+    await user.save();
+
+    const html = PasswordResetSuccessEmail({ name: user.name });
+    await sendEmail(user.email, "Password Reset Confirmation", html);
+
+    res.status(200).json({ message: "Password has been reset successfully." });
+});
+module.exports = { authUser, changePassword, resetPassword, forgotPassword, requestPasswordResetOTP, resetPasswordWithOTP, verifyPasswordResetOTP };

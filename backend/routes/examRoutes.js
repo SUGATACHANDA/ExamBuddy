@@ -18,8 +18,8 @@ const { protect, authorize } = require('../middlewares/authMiddleware');
 // --- Teacher-specific routes for general exam management ---
 // GET /api/exams/ and POST /api/exams/
 router.route('/')
-    .post(protect, authorize('teacher'), createExam)
-    .get(protect, authorize('teacher'), getMyExams);
+    .get(protect, authorize('teacher', 'HOD'), getMyExams)
+    .post(protect, authorize('teacher', 'HOD'), createExam);
 
 
 // --- Student-specific routes ---
@@ -40,8 +40,9 @@ router.get('/start/:id', protect, authorize('student'), getExamForStudent);
 // These routes handle actions on a single exam identified by its ID.
 // GET, PUT, and DELETE /api/exams/:id
 router.route('/:id')
-    .put(protect, authorize('teacher'), updateExam)
-    .delete(protect, authorize('teacher'), deleteExam);
+    .get(protect, authorize('student'), getExamForStudent)
+    .put(protect, authorize('teacher', 'HOD'), updateExam)
+    .delete(protect, authorize('teacher', 'HOD'), deleteExam);
 
 // Note: The original `.get()` on this route was for students,
 // but the `/start/:id` route is a much clearer and less ambiguous endpoint for that purpose.

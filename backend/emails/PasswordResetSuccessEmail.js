@@ -1,48 +1,25 @@
-const React = require("react");
-const {
-    Html,
-    Head,
-    Preview,
-    Body,
-    Container,
-    Section,
-    Text,
-} = require("@react-email/components");
-
-function PasswordResetSuccessEmail({ user }) {
-    return React.createElement(
-        Html,
-        null,
-        React.createElement(Head, null),
-        React.createElement(Preview, null, "Password Reset Successful"),
-        React.createElement(
-            Body,
-            { style: { backgroundColor: "#f4f7f9", fontFamily: "Arial, sans-serif" } },
-            React.createElement(
-                Container,
-                { style: { maxWidth: "600px", margin: "0 auto", padding: "20px" } },
-                React.createElement(
-                    Section,
-                    { style: { backgroundColor: "#ffffff", borderRadius: "10px", padding: "30px" } },
-                    React.createElement(
-                        Text,
-                        { style: { fontSize: "20px", fontWeight: "bold", color: "#333", marginBottom: "20px" } },
-                        `Hi ${user.name},`
-                    ),
-                    React.createElement(
-                        Text,
-                        { style: { fontSize: "16px", color: "#555", marginBottom: "20px" } },
-                        "Your password has been successfully reset. You can now log in to your ExamBuddy account with your new password."
-                    ),
-                    React.createElement(
-                        Text,
-                        { style: { fontSize: "14px", color: "#999", marginTop: "30px" } },
-                        "If you didn’t reset your password, please contact support immediately."
-                    )
-                )
-            )
-        )
-    );
-}
+// backend/emails/PasswordResetSuccessEmail.js
+const PasswordResetSuccessEmail = ({ name }) => {
+    return `
+  <div style="max-width:600px;margin:auto;background:#f9fafb;padding:30px;border-radius:12px;
+              font-family:Arial,sans-serif;color:#111827;line-height:1.6;">
+    <div style="text-align:center;">
+      <h1 style="color:#16a34a;">✅ Password Reset Successful</h1>
+      <p style="font-size:16px;">Hello <b>${name}</b>,</p>
+      <p>Your password has been successfully reset.</p>
+      <div style="margin:20px 0;padding:15px;background:#ecfdf5;border:1px solid #6ee7b7;
+                  border-radius:10px;color:#065f46;font-weight:bold;">
+        If you did not perform this action, please <a href="mailto:support@exambuddy.com"
+        style="color:#dc2626;text-decoration:none;">contact support immediately</a>.
+      </div>
+      <p>You can now log in with your new password.</p>
+    </div>
+    <hr style="margin:30px 0;border:none;border-top:1px solid #e5e7eb;">
+    <p style="text-align:center;font-size:12px;color:#9ca3af;">
+      © ${new Date().getFullYear()} ExamBuddy. All rights reserved.
+    </p>
+  </div>
+  `;
+};
 
 module.exports = PasswordResetSuccessEmail;

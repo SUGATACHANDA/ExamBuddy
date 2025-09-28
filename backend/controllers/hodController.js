@@ -6,6 +6,8 @@ const Degree = require('../models/Degree'); // For populating ancestry if needed
 const Semester = require('../models/Semester')
 const Result = require('../models/Result');
 const Exam = require('../models/Exam');
+const UserRegistrationEmail = require('../emails/UserRegistrationEmail');
+const sendEmail = require('../utils/mailer');
 
 // =========================================================================
 // == USER REGISTRATION (BY HOD)
@@ -14,7 +16,7 @@ const Exam = require('../models/Exam');
 /** @desc    Register a new Teacher in the HOD's own department */
 /** @route   POST /api/hod/users/register-teacher */
 exports.registerTeacher = asyncHandler(async (req, res) => {
-    const { collegeId, name, email, password } = req.body;
+    const { collegeId, name, email, password, role } = req.body;
 
     // The HOD's own college and department are the single source of truth.
     const { college, department } = req.user;
@@ -27,6 +29,13 @@ exports.registerTeacher = asyncHandler(async (req, res) => {
 
     // Create the user, automatically scoping them to the HOD's context.
     const user = await User.create({ collegeId, name, email, password, role: 'teacher', college, department });
+    const html = UserRegistrationEmail({
+        name: user.name,
+        role: user.role,
+        collegeId: user.collegeId,
+        password: password, // temporary password
+    });
+    await sendEmail(user.email, "Welcome to ExamBuddy – Your Account Details", html);
     res.status(201).json({ _id: user._id, name: user.name });
 });
 
@@ -68,6 +77,13 @@ exports.registerStudent = asyncHandler(async (req, res) => {
     };
 
     const user = await User.create(payload);
+    const html = UserRegistrationEmail({
+        name: user.name,
+        role: user.role,
+        collegeId: user.collegeId,
+        password: password, // temporary password
+    });
+    await sendEmail(user.email, "Welcome to ExamBuddy – Your Account Details", html);
     res.status(201).json({ _id: user._id, name: user.name });
 });
 
@@ -78,8 +94,28 @@ exports.registerStudent = asyncHandler(async (req, res) => {
 
 /** @desc    Get all students in the HOD's department */
 /** @route   GET /api/hod/students */
+/** @desc    Get all students in the HOD's department */
+/** @route   GET /api/hod/students */
 exports.getStudentsInDepartment = asyncHandler(async (req, res) => {
-    res.json(await User.find({ role: 'student', department: req.user.department }).select('-password'));
+    const { semester } = req.query;
+    const query = { role: 'student', department: req.user.department };
+
+    if (semester && semester !== 'all') {
+        query.semester = semester;
+    }
+
+    const students = await User.find(query)
+        .populate('semester', 'number')
+        .populate('course', 'name')
+        .select('-password');
+
+    // Optional: sort by semester number ascending
+    students.sort((a, b) => {
+        if (!a.semester || !b.semester) return 0;
+        return a.semester.number - b.semester.number;
+    });
+
+    res.json(students);
 });
 
 /** @desc    Get all teachers in the HOD's department */
@@ -106,11 +142,19 @@ exports.updateUserByHOD = asyncHandler(async (req, res) => {
     user.email = req.body.email || user.email;
     user.collegeId = req.body.collegeId || user.collegeId;
 
-    // Password updates should be handled separately. HOD can update core details here.
+    // ✅ allow semester updates for students
+    if (user.role === 'student' && req.body.semester) {
+        user.semester = req.body.semester;
+    }
 
     const updatedUser = await user.save();
-    // Return only non-sensitive data
-    res.json({ _id: updatedUser._id, name: updatedUser.name, email: updatedUser.email, collegeId: updatedUser.collegeId });
+    res.json({
+        _id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        collegeId: updatedUser.collegeId,
+        semester: updatedUser.semester
+    });
 });
 
 /** @desc    Delete a user within the HOD's department */

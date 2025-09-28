@@ -1,6 +1,14 @@
 // models/Exam.js
 const mongoose = require('mongoose');
 
+const sectionSchema = new mongoose.Schema({
+    title: { type: String, required: true },
+    questions: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Question',
+    }]
+});
+
 const examSchema = new mongoose.Schema({
     title: {
         type: String,
@@ -8,10 +16,11 @@ const examSchema = new mongoose.Schema({
     },
     subject: { type: String, required: true },
     semester: { type: mongoose.Schema.Types.ObjectId, ref: 'Semester', required: true },
-    questions: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Question',
-    }],
+    sections: [sectionSchema],
+    // questions: [{
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: 'Question',
+    // }],
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
@@ -31,10 +40,10 @@ const examSchema = new mongoose.Schema({
         enum: ['timed', 'untimed'],
         default: 'untimed',
     },
-    // The login window before the scheduled time (in minutes)
+
     loginWindowStart: {
         type: Number,
-        default: 1,
+        default: 0,
     },
     // The late entry window after the scheduled time (in minutes)
     lateEntryWindowEnd: {

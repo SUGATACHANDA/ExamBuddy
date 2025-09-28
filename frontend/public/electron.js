@@ -184,6 +184,9 @@ const { exec } = require('child_process');
 let mainWindow;
 let isExamInProgress = false;
 
+let violationStrikes = 0;
+const MAX_STRIKES = 3;
+
 // --- Function to Create the Application Window ---
 function createWindow() {
     console.log(`--- Running in ${isDev ? 'DEVELOPMENT' : 'PRODUCTION'} mode ---`);
@@ -268,6 +271,14 @@ app.whenReady().then(() => {
     createWindow();
 });
 
+app.on("open-url", (event, url) => {
+    event.preventDefault();
+    const token = url.split("exam-buddy://reset-password/")[1];
+    if (token) {
+        // Send token to renderer
+        mainWindow.webContents.send("reset-token", token);
+    }
+});
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 app.on('activate', () => { if (mainWindow === null) createWindow(); });
 
@@ -370,8 +381,48 @@ ipcMain.on('kill-app-list', (event, appList) => {
         });
     });
 });
-
-ipcMain.on('exam-started', () => { isExamInProgress = true; });
-ipcMain.on('exam-finished', () => { isExamInProgress = false; if (!isDev) app.quit(); });
 ipcMain.on('close-app', () => { app.quit(); });
 ipcMain.on('force-expel-student', () => { if (mainWindow) mainWindow.webContents.send('exam-expelled-by-proctor'); });
+ipcMain.on('exam-started', () => {
+    console.log('IPC: Exam started. Lockdowns enabled. Strike count reset to 0.');
+    isExamInProgress = true;
+    violationStrikes = 0; // Reset for every new exam attempt
+});
+
+// The 'exam-finished' handler can also reset it as a failsafe.
+ipcMain.on('exam-finished', () => {
+    console.log('IPC: Exam finished. Lockdowns disabled. Resetting strike count.');
+    isExamInProgress = false;
+    violationStrikes = 0;
+});
+
+
+// --- THE NEW, DEFINITIVE VIOLATION HANDLER with 3-STRIKES LOGIC ---
+ipcMain.on('ipc-violation', (event, violationType) => {
+    if (!isExamInProgress) return; // Ignore violations if exam is not active
+
+    // 1. Increment the strike count
+    violationStrikes++;
+    console.log(`Violation detected. Type: ${violationType}. Strike count is now: ${violationStrikes}`);
+
+    // 2. Check the strike count
+    if (violationStrikes >= MAX_STRIKES) {
+        // --- EXPULSION ---
+        console.log("Maximum strikes reached. Sending final expulsion signal to renderer.");
+        // We send the standard 'violation' message which ExamScreen is already listening for to trigger expulsion.
+        if (mainWindow) {
+            mainWindow.webContents.send('violation', `Maximum warnings (${MAX_STRIKES}) reached due to: ${violationType}`);
+        }
+    } else {
+        // --- SHOW A WARNING ---
+        console.log("Sending warning signal to renderer.");
+        // Send a new, specific message to the renderer to show a warning dialog.
+        if (mainWindow) {
+            mainWindow.webContents.send('show-warning-dialog', {
+                strike: violationStrikes,
+                max: MAX_STRIKES,
+                type: violationType
+            });
+        }
+    }
+});

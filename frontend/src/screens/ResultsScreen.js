@@ -24,6 +24,7 @@ const ResultsScreen = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [sortConfig, setSortConfig] = useState({ key: 'score', direction: 'descending' });
+    const [searchTerm, setSearchTerm] = useState('');
     const { userInfo } = useAuth();
 
     const getBackUrl = () => {
@@ -56,7 +57,6 @@ const ResultsScreen = () => {
         return {
             averageScore: (totalScore / results.length).toFixed(2),
             highestScore: highestScore,
-            // The total possible marks should be the same for all results, so we can safely take it from the first entry.
             totalMarks: results[0].totalMarks
         };
     }, [results]);
@@ -103,30 +103,37 @@ const ResultsScreen = () => {
 
 
     // --- Sorting Logic (Memoized for performance) ---
-    const sortedResults = useMemo(() => {
-        let sortableItems = [...results];
-        if (sortConfig.key !== null) {
-            sortableItems.sort((a, b) => {
-                let aValue = a[sortConfig.key];
-                let bValue = b[sortConfig.key];
+    const filteredAndSortedResults = useMemo(() => {
+        let filteredItems = [...results];
 
-                // Handle nested properties like student.name
-                if (sortConfig.key === 'student.name') {
-                    aValue = a.student?.name || '';
-                    bValue = b.student?.name || '';
-                }
+        // 1. Apply the search filter first
+        if (searchTerm.trim() !== '') {
+            filteredItems = filteredItems.filter(result =>
+                // Check student name or college ID. Using `?.` for safety.
+                result.student?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                result.student?.collegeId.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+        }
 
-                if (aValue < bValue) {
-                    return sortConfig.direction === 'ascending' ? -1 : 1;
-                }
-                if (aValue > bValue) {
-                    return sortConfig.direction === 'ascending' ? 1 : -1;
-                }
+        // 2. Then, sort the already filtered list
+        if (sortConfig.key) {
+            filteredItems.sort((a, b) => {
+                let aValue = a;
+                let bValue = b;
+                // Allow sorting by nested properties like student.name
+                sortConfig.key.split('.').forEach(keyPart => {
+                    aValue = aValue?.[keyPart];
+                    bValue = bValue?.[keyPart];
+                });
+
+                if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+                if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
                 return 0;
             });
         }
-        return sortableItems;
-    }, [results, sortConfig]);
+
+        return filteredItems;
+    }, [results, searchTerm, sortConfig]);;
 
     const handleSort = useCallback((key) => {
         let direction = 'ascending';
@@ -135,15 +142,6 @@ const ResultsScreen = () => {
         }
         setSortConfig({ key, direction });
     }, [sortConfig]);
-
-
-    // --- Summary Calculations ---
-    // const averageScore = useMemo(() => {
-    //     if (results.length === 0) return 0;
-    //     const totalScore = results.reduce((acc, result) => acc + result.score, 0);
-    //     return (totalScore / results.length).toFixed(2);
-    // }, [results]);
-
 
     if (loading) {
         return <div className="container"><p>Loading results...</p></div>;
@@ -179,8 +177,18 @@ const ResultsScreen = () => {
                 </div>
             </div>
 
+            <div className="search-bar-container">
+                <input
+                    type="search" // Use type="search" for better semantics
+                    placeholder="Search by student name or college ID..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    className="search-input"
+                />
+            </div>
+
             {/* --- Results Table --- */}
-            {sortedResults.length > 0 ? (
+            {filteredAndSortedResults.length > 0 ? (
                 <table className="results-table">
                     <thead>
                         <tr>
@@ -196,15 +204,19 @@ const ResultsScreen = () => {
                             <SortableHeader sortConfig={sortConfig} onSort={handleSort} columnKey="updatedAt">
                                 Submission Time
                             </SortableHeader>
+                            <SortableHeader sortConfig={sortConfig} onSort={handleSort} columnKey="status">
+                                Status
+                            </SortableHeader>
                         </tr>
                     </thead>
                     <tbody>
-                        {sortedResults.map((result) => (
+                        {filteredAndSortedResults.map((result) => (
                             <tr key={result._id}>
                                 <td>{result.student?.name || 'N/A'}</td>
                                 <td>{result.student?.collegeId || 'N/A'}</td>
                                 <td>{result.score} / {result.totalMarks}</td>
                                 <td>{new Date(result.updatedAt).toLocaleString()}</td>
+                                <td className={result.status === 'completed' ? 'success-status' : 'failure-status'}>{(result.status).toUpperCase()}</td>
                             </tr>
                         ))}
                     </tbody>

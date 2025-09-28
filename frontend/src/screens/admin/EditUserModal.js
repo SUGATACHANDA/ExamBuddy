@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/axiosConfig';
 
-// This is now a generic, reusable modal.
-// It REQUIRES an `updateUrl` prop to know which API endpoint to call.
-const EditUserModal = ({ user, onClose, onSave, updateUrl }) => {
-    const [formData, setFormData] = useState({ name: '', email: '', collegeId: '' });
+// Generic reusable modal for editing a user
+const EditUserModal = ({ user, onClose, onSave, updateUrl, semesters = [] }) => {
+    const [formData, setFormData] = useState({ name: '', email: '', collegeId: '', semester: '' });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
     useEffect(() => {
         if (user) {
             setFormData({
-                name: user.name,
-                email: user.email,
-                collegeId: user.collegeId,
+                name: user.name || '',
+                email: user.email || '',
+                collegeId: user.collegeId || '',
+                semester: user.semester?._id || '' // prefill semester if student
             });
         }
     }, [user]);
@@ -27,20 +27,16 @@ const EditUserModal = ({ user, onClose, onSave, updateUrl }) => {
         setLoading(true);
         setError('');
 
-        // --- THIS IS THE DEFINITIVE FIX ---
-        // We first check if a specific updateUrl was provided. This is a critical guard.
         if (!updateUrl) {
             setError("Configuration Error: No update URL was provided to the modal.");
             setLoading(false);
             return;
         }
-        // ------------------------------------
 
         try {
-            console.log(`Submitting user update to the provided URL: ${updateUrl}`);
-            await api.put(updateUrl, formData); // Use the provided URL
-            onSave(); // Refresh parent component's list
-            onClose(); // Close modal
+            await api.put(updateUrl, formData);
+            onSave();   // Refresh parent list
+            onClose();  // Close modal
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to update user.');
         } finally {
@@ -58,18 +54,60 @@ const EditUserModal = ({ user, onClose, onSave, updateUrl }) => {
                 <form onSubmit={handleUpdate}>
                     <div className="form-group">
                         <label>Full Name</label>
-                        <input name="name" value={formData.name} onChange={handleChange} required />
+                        <input
+                            name="name"
+                            value={formData.name}
+                            onChange={handleChange}
+                            required
+                        />
                     </div>
                     <div className="form-group">
                         <label>Email Address</label>
-                        <input name="email" type="email" value={formData.email} onChange={handleChange} required />
+                        <input
+                            name="email"
+                            type="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            required
+                        />
                     </div>
                     <div className="form-group">
                         <label>College ID / Roll No.</label>
-                        <input name="collegeId" value={formData.collegeId} onChange={handleChange} required />
+                        <input
+                            name="collegeId"
+                            value={formData.collegeId}
+                            onChange={handleChange}
+                            required
+                        />
                     </div>
+
+                    {/* ✅ Semester dropdown for students */}
+                    {user.role === 'student' && (
+                        <div className="form-group">
+                            <label>Semester</label>
+                            <select
+                                name="semester"
+                                value={formData.semester}
+                                onChange={handleChange}
+                                className="filter-select"
+                                required
+                            >
+                                <option value="">-- Select Semester --</option>
+                                {semesters
+                                    .sort((a, b) => a.number - b.number)
+                                    .map((s) => (
+                                        <option key={s._id} value={s._id}>
+                                            Semester {s.number}
+                                        </option>
+                                    ))}
+                            </select>
+                        </div>
+                    )}
+
                     <div className="modal-actions">
-                        <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
+                        <button type="button" onClick={onClose} className="btn-secondary">
+                            Cancel
+                        </button>
                         <button type="submit" className="btn-primary" disabled={loading}>
                             {loading ? 'Saving...' : 'Save Changes'}
                         </button>
@@ -79,4 +117,5 @@ const EditUserModal = ({ user, onClose, onSave, updateUrl }) => {
         </div>
     );
 };
+
 export default EditUserModal;

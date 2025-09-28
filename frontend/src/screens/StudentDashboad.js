@@ -1,103 +1,89 @@
-import React, { useState, useEffect, useCallback } from "react";
+// src/screens/StudentDashboard.js
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/axiosConfig";
 import PermissionModal from "../components/PermissionModal";
 import ChangePasswordModal from "components/ui/ChangePasswordModal";
-
-// --- A self-contained, reusable Clock component ---
+import Countdown from "../components/Countdown";
+// --- Clock component ---
 export const Clock = () => {
     const [time, setTime] = useState(new Date());
-
     useEffect(() => {
-        // Set up an interval that updates the time every second.
         const timerId = setInterval(() => setTime(new Date()), 1000);
-
-        // Clean up the interval when the component unmounts to prevent memory leaks.
         return () => clearInterval(timerId);
     }, []);
-
-    // Format the time to a user-friendly, locale-specific string (e.g., 10:25:08 PM).
     return <div className="clock">{time.toLocaleTimeString()}</div>;
 };
 
-// --- The Main Student Dashboard Component ---
 const StudentDashboard = () => {
-    // State for the list of exams to display
-    const [exams, setExams] = useState([]);
-    const [isChangePassModalOpen, setIsChangePassModalOpen] = useState(false);
-
-    // State to hold the IDs of exams the student has already completed
+    const [allFetchedExams, setAllFetchedExams] = useState([]);
     const [completedExamIds, setCompletedExamIds] = useState(new Set());
+    const [loading, setLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    // State for loading and error UI
-    const [loading, setLoading] = useState(true);
-    const { userInfo, logout } = useAuth();
-    const navigate = useNavigate();
-
-    // State for the pre-exam permission modal
+    const [isChangePassModalOpen, setIsChangePassModalOpen] = useState(false);
     const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
     const [targetExamId, setTargetExamId] = useState(null);
 
-    // This function fetches all necessary data from the backend.
-    // It's wrapped in `useCallback` so it can be used in useEffect without causing re-renders.
+    const { userInfo, logout } = useAuth();
+    const navigate = useNavigate();
+
+    // ✅ Fetch exams + completed exams
     const fetchData = useCallback(async () => {
-        if (!isRefreshing) {
-            setLoading(true);
-        }
+        if (!isRefreshing) setLoading(true);
         try {
-            // Use Promise.all to fetch both lists of data concurrently for better performance.
-            const [allExamsResponse, completedExamsResponse] = await Promise.all([
+            const [examsRes, completedRes] = await Promise.all([
                 api.get("/exams/student/all"),
-                api.get("/results/my-completed"), // New endpoint to get completed exam IDs
+                api.get("/results/my-completed")
             ]);
-
-            // 1. Store the set of completed exam IDs. Using a Set is efficient for lookups.
-            const completedIds = new Set(completedExamsResponse.data);
-            setCompletedExamIds(completedIds);
-
-            // 2. Filter the general list of exams to show only those within the login window.
-            const now = new Date();
-            const timeAvailableExams = allExamsResponse.data.filter((exam) => {
-                const scheduledTime = new Date(exam.scheduledAt);
-                const windowStartTime = new Date(
-                    scheduledTime.getTime() - (exam.loginWindowStart || 10) * 60000
-                );
-                const windowEndTime = new Date(
-                    scheduledTime.getTime() + (exam.lateEntryWindowEnd || 5) * 60000
-                );
-                // Return true only if "now" is between the start and end times.
-                return now >= windowStartTime && now <= windowEndTime;
-            });
-
-            setExams(timeAvailableExams);
+            setAllFetchedExams(examsRes.data);
+            setCompletedExamIds(new Set(completedRes.data));
         } catch (error) {
             console.error("Failed to fetch dashboard data", error);
-            // In a real app, you might set an error state here.
         } finally {
             setLoading(false);
             setIsRefreshing(false);
         }
     }, [isRefreshing]);
 
-    // This effect runs when the component first mounts, and then sets up an interval.
     useEffect(() => {
-        fetchData(); // Fetch immediately when the component loads.
-
-        // Set up an interval to refetch data every 30 seconds.
-        // This ensures the dashboard stays up-to-date without needing a manual refresh.
-        const interval = setInterval(fetchData, 30000);
-
-        // Clean up the interval when the component is unmounted.
+        fetchData();
+        const interval = setInterval(fetchData, 15000);
         return () => clearInterval(interval);
     }, [fetchData]);
 
     const handleRefresh = () => {
-        console.log("Manual refresh triggered.");
-        setIsRefreshing(true); // Set the refreshing state
-        fetchData(); // Immediately call fetch
+        setIsRefreshing(true);
+        fetchData();
     };
+
+    // ✅ categorize exams into active and upcoming
+    const { activeExams, upcomingExams } = useMemo(() => {
+        const now = new Date();
+        const active = [];
+        const upcoming = [];
+
+        allFetchedExams.forEach((exam) => {
+            if (completedExamIds.has(exam._id)) return;
+
+            const scheduledTime = new Date(exam.scheduledAt);
+            const windowStartTime = new Date(
+                scheduledTime.getTime() - (exam.loginWindowStart) * 60000
+            );
+            const windowEndTime = new Date(scheduledTime.getTime() + (exam.lateEntryWindowEnd || 5) * 60000);
+            if (now >= windowStartTime && now <= windowEndTime) {
+                active.push({ ...exam, windowEndTime });
+            }
+            else if (now >= windowStartTime) {
+                active.push(exam);
+            } else {
+                upcoming.push(exam);
+            }
+        });
+
+        return { activeExams: active, upcomingExams: upcoming };
+    }, [allFetchedExams, completedExamIds]);
 
     const handleStartExamClick = (examId) => {
         setTargetExamId(examId);
@@ -107,13 +93,13 @@ const StudentDashboard = () => {
     const handleConfirmPermissions = () => {
         setIsPermissionModalOpen(false);
         if (targetExamId) {
-            // Navigate to the first question of the exam using the robust URL-based routing.
             navigate(`/exam/${targetExamId}/question/0`);
         }
     };
 
     return (
         <div className="container">
+            {/* --- HEADER --- */}
             <header className="dashboard-header">
                 <div>
                     <h1>Welcome, {userInfo?.name}</h1>
@@ -123,7 +109,7 @@ const StudentDashboard = () => {
                 <div>
                     <button
                         onClick={() => setIsChangePassModalOpen(true)}
-                        className="btn-secondary"
+                        className="changePasswordButton btn-secondary"
                     >
                         Change Password
                     </button>
@@ -132,11 +118,15 @@ const StudentDashboard = () => {
                     </button>
                 </div>
             </header>
+
             {isChangePassModalOpen && (
-                <ChangePasswordModal onClose={() => setIsChangePassModalOpen(false)} />
+                <ChangePasswordModal
+                    onClose={() => setIsChangePassModalOpen(false)}
+                />
             )}
 
-            <h2>Exams Ready for Immediate Start</h2>
+            {/* --- ACTIVE EXAMS SECTION --- */}
+            <h2>Exams Open for Entry</h2>
             <button
                 onClick={handleRefresh}
                 disabled={isRefreshing}
@@ -144,50 +134,69 @@ const StudentDashboard = () => {
             >
                 {isRefreshing ? "Refreshing..." : "Refresh List"}
             </button>
-
             {loading ? (
-                <p>Loading available exams...</p>
-            ) : exams.length > 0 ? (
+                <p>Loading...</p>
+            ) : activeExams.length > 0 ? (
                 <ul className="exam-list">
-                    {exams.map((exam) => {
-                        // Check if the current exam's ID is in our Set of completed IDs
-                        const isCompleted = completedExamIds.has(exam._id);
-
+                    {activeExams.map((exam) => {
                         return (
-                            <li
-                                key={exam._id}
-                                className={isCompleted ? "exam-completed" : ""}
-                            >
-                                <h3>
-                                    {exam.title} ({exam.subject})
-                                </h3>
-
-                                {isCompleted ? (
-                                    // If the student has already taken this exam, show a clear status message.
-                                    <p className="status-completed">
-                                        <strong>Status:</strong> Already Completed
-                                    </p>
-                                ) : (
-                                    // Otherwise, if it's available, show the start button.
-                                    <div className="exam-status">
-                                        <p>This exam's login window is currently open.</p>
-                                        <button
-                                            onClick={() => handleStartExamClick(exam._id)}
-                                            className="btn btn-primary"
-                                        >
-                                            Proceed to Security Checks
-                                        </button>
-                                    </div>
-                                )}
+                            <li key={exam._id} className="exam-card-active">
+                                <h3>{exam.title}</h3>
+                                <p>
+                                    This exam is open for entry now. Please proceed to the
+                                    security checks.
+                                </p>
+                                <Countdown
+                                    targetDate={exam.windowEndTime}
+                                    prefixText="Entry window closes in:"
+                                />
+                                <button
+                                    onClick={() => handleStartExamClick(exam._id)}
+                                    className="btn-primary"
+                                >
+                                    Start Exam
+                                </button>
                             </li>
                         );
                     })}
                 </ul>
             ) : (
-                // This message shows if no exams are within their login window right now.
+                <p>There are no exams open for entry at this moment.</p>
+            )}
+
+            <hr className="divider" />
+
+            {/* --- UPCOMING EXAMS SECTION --- */}
+            <h2>Exams Starting Soon</h2>
+            {loading ? (
+                <p>Loading...</p>
+            ) : upcomingExams.length > 0 ? (
+                <ul className="exam-list">
+                    {upcomingExams.map((exam) => {
+                        const windowStartTime = new Date(
+                            new Date(exam.scheduledAt).getTime() -
+                            (exam.loginWindowStart) * 60000
+                        );
+                        return (
+                            <li key={exam._id} className="exam-card-upcoming">
+                                <h3>{exam.title}</h3>
+                                <p>
+                                    Scheduled for:{" "}
+                                    {new Date(
+                                        exam.scheduledAt
+                                    ).toLocaleString()}
+                                </p>
+                                <div className="countdown-container">
+                                    <span>Entry opens in:</span>
+                                    <Countdown targetDate={windowStartTime} />
+                                </div>
+                            </li>
+                        );
+                    })}
+                </ul>
+            ) : (
                 <p>
-                    There are no exams available for you to start at this time. Please
-                    check the schedule and return when the login window opens.
+                    There are no other exams scheduled for you at this time.
                 </p>
             )}
 
