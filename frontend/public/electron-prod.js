@@ -105,29 +105,7 @@ function handlePostUpdateLaunch() {
 }
 
 // public/electron-prod.js
-function getLatestChangelog() {
-    try {
-        const changelogPath = path.join(__dirname, "..", "CHANGELOG.md");
-        if (fs.existsSync(changelogPath)) {
-            const changelog = fs.readFileSync(changelogPath, "utf8");
 
-            // Match first changelog section: "## [x.y.z] - date" until next "---"
-            const regex = /##\s*\[(.*?)\][^\n]*\n([\s\S]*?)(?=\n---)/m;
-            const match = changelog.match(regex);
-
-            if (match) {
-                return {
-                    version: match[1],
-                    notes: match[2].trim(),
-                    showOnNextLaunch: true
-                };
-            }
-        }
-    } catch (err) {
-        console.error("Error reading latest changelog:", err);
-    }
-    return null;
-}
 
 
 
@@ -160,11 +138,15 @@ app.whenReady().then(() => {
     // Now that the protocol is configured, we can create our main window.
 
     createSplashWindow();
-    createWindow();
-    handlePostUpdateLaunch()
     setTimeout(() => {
-        autoUpdater.checkForUpdates();
-    }, 3000);
+        createWindow();
+        handlePostUpdateLaunch();
+
+        // Perform update check after main window has initialized
+        setTimeout(() => {
+            autoUpdater.checkForUpdates();
+        }, 3000);
+    }, 1500);
 
     setInterval(() => {
         log.info("Performing periodic update check...");

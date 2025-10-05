@@ -1,6 +1,6 @@
 {
   "name": "exambuddy",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "productName": "Exam Buddy",
   "author": {
     "name": "SUGATA CHANDA",
@@ -89,7 +89,7 @@
     },
     "releaseInfo": {
       "releaseNotesFile": "CHANGELOG.md",
-      "releaseNotes": "### Fixed\r\n- Fixed the display of **Latest Modification on WhatsNewModal**."
+      "releaseNotes": "Release 1.2.0"
     },
     "asar": false,
     "npmRebuild": false,

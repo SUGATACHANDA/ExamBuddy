@@ -1,2 +1,1 @@
-### Fixed
-- Fixed the display of **Latest Modification on WhatsNewModal**.
+Release 1.2.0
