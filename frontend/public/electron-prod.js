@@ -197,9 +197,23 @@ autoUpdater.on('update-available', (info) => {
     }
 });
 
+autoUpdater.on('download-progress', (progressObj) => {
+    const log_message = `Downloading update... ${Math.floor(progressObj.percent)}%`;
+    console.log(log_message);
+
+    if (mainWindow) {
+        // Shows native progress bar on Windows/Linux/macOS dock icon
+        mainWindow.setProgressBar(progressObj.percent / 100);
+
+        // Sends progress info to the renderer (React app)
+        mainWindow.webContents.send('update-progress', progressObj);
+    }
+});
+
 autoUpdater.on('update-downloaded', (info) => {
     log.info(`Update ${info.version} downloaded. Prompting user to restart.`);
 
+    if (mainWindow) mainWindow.setProgressBar(-1);
     try {
         const updateData = {
             version: info.version,

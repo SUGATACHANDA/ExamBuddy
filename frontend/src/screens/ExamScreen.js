@@ -206,6 +206,8 @@ const ExamScreen = () => {
     const [appList, setAppList] = useState([]);
     const [error, setError] = useState('');
     const localVideoRef = useRef(null);
+    const [showInstructionDialog, setShowInstructionDialog] = useState(false);
+    const [agreeChecked, setAgreeChecked] = useState(false);
 
     // ✅ Clear stale sessionStorage of other students
     useEffect(() => {
@@ -349,6 +351,14 @@ const ExamScreen = () => {
                     }
 
                     dispatch({ type: examActionTypes.SET_EXAM, payload: data });
+                    const examInstructionKey = `examInstructionsShown_${examId}`;
+                    const hasSeenInstructions = sessionStorage.getItem(examInstructionKey);
+
+                    if (!hasSeenInstructions) {
+                        setShowInstructionDialog(true); // show instructions if not seen
+                    } else {
+                        setScreenState("IN_PROGRESS"); // start directly if already seen
+                    }
                     if (finalAnswers) {
                         dispatch({ type: "LOAD_SAVED_ANSWERS", payload: finalAnswers });
                     }
@@ -402,6 +412,41 @@ const ExamScreen = () => {
             }
         };
     }, [screenState]);
+    if (showInstructionDialog) {
+        return (
+            <div className="instruction-overlay">
+                <div className="instruction-dialog">
+                    <h2>Exam Instructions</h2>
+                    <ul className="instruction-list">
+                        <li>✅ Keep your camera & mic ON during the exam.</li>
+                        <li>🚫 Do not minimize, switch windows, or open other apps.</li>
+                        <li>🕒 Timer runs continuously once the exam begins.</li>
+                        <li>⚠️ Any suspicious activity may lead to expulsion.</li>
+                    </ul>
+                    <div className="checkbox-row">
+                        <input
+                            type="checkbox"
+                            id="agreeCheck"
+                            checked={agreeChecked}
+                            onChange={(e) => setAgreeChecked(e.target.checked)}
+                        />
+                        <label htmlFor="agreeCheck">I understand and agree with the above instructions.</label>
+                    </div>
+                    <button
+                        className="proceed-btn"
+                        disabled={!agreeChecked}
+                        onClick={() => {
+                            sessionStorage.setItem(`examInstructionsShown_${examId}`, "true"); // ✅ mark as seen
+                            setShowInstructionDialog(false);
+                            setScreenState("IN_PROGRESS");
+                        }}
+                    >
+                        Proceed to Exam
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     // --- RENDER LOGIC ---
     if (screenState !== 'IN_PROGRESS') {

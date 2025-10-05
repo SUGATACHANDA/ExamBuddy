@@ -72,7 +72,7 @@ const QuestionPalette = ({ section, answers, currentQuestionId, onNavigate }) =>
                             key={question._id}
                             className={`palette-button-final ${status} ${isCurrent ? 'current' : ''}`}
                             onClick={() => onNavigate(qIndex)}
-                            title={`Go to Question ${questionNumber}`}
+                            title={status.replace(/([A-Z])/g, ' $1').trim().toUpperCase()}
                         >
                             {questionNumber}
                         </button>

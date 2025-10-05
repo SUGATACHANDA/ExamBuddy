@@ -1,6 +1,6 @@
 {
   "name": "exambuddy",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "productName": "Exam Buddy",
   "author": {
     "name": "SUGATA CHANDA",
@@ -89,7 +89,7 @@
     },
     "releaseInfo": {
       "releaseNotesFile": "CHANGELOG.md",
-      "releaseNotes": "Release 1.2.0"
+      "releaseNotes": "Release 1.2.1"
     },
     "asar": false,
     "npmRebuild": false,

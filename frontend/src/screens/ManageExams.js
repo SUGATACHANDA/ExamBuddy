@@ -19,7 +19,7 @@ const ManageExams = () => {
     const [error, setError] = useState('');
     const [activeTab, setActiveTab] = useState('view');
     const [currentPage, setCurrentPage] = useState(1);
-    const examsPerPage = 5; // You can adjust how many exams show per page
+    const examsPerPage = 2; // You can adjust how many exams show per page
     const [sections, setSections] = useState([{ title: 'Section A', questions: [] }]);
 
     // --- State for the "Schedule New Exam" form ---

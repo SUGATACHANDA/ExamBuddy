@@ -1947,7 +1947,7 @@ th.sortable.desc::after {
   padding: 14px 18px;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-1);
-  border: 1px solid rgba(33, 37, 41, 0.04);
+  border-bottom: 1px solid var(--text-primary);
 }
 
 .exam-title {
@@ -2123,7 +2123,7 @@ button:active {
   border-radius: var(--radius-lg);
   padding: 14px;
   box-shadow: var(--shadow-1);
-  border: 1px solid rgba(15, 23, 36, 0.04);
+  border-left: 1px solid var(--text-primary);
   height: 100%;
   min-height: 420px;
   display: flex;
@@ -2245,21 +2245,25 @@ button:active {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  margin-top: 0;
-  padding: 12px;
-  border-radius: 10px;
-  background: transparent;
+  padding: 16px 20px;
+  background: #fff;
+  border-top: 1px solid var(--text-primary);
+  position: sticky; /* ✅ keeps it visible at bottom */
+  bottom: 0;
+  z-index: 100; /* ✅ ensures it's above question content & watermark */
 }
 
 .footer-left-actions {
   display: flex;
   gap: 10px;
   align-items: center;
+  z-index: 101;
 }
 .footer-right-actions {
   display: flex;
   gap: 10px;
   align-items: center;
+  z-index: 101;
 }
 
 /* generic btns */
@@ -2339,6 +2343,7 @@ button:active {
     align-items: flex-start;
     gap: 8px;
     padding: 12px;
+    border-bottom: 1px solid var(--text-primary);
   }
   .student-name {
     font-size: 12px;
@@ -2646,5 +2651,151 @@ button:focus,
   to {
     opacity: 1;
     transform: translate(-50%, 0);
+  }
+}
+
+.instruction-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(
+    circle at center,
+    rgba(0, 0, 0, 0.65),
+    rgba(0, 0, 0, 0.85)
+  );
+  backdrop-filter: blur(6px);
+  z-index: 9999;
+  animation: overlayFade 0.3s ease-in-out;
+}
+
+.instruction-dialog {
+  background: linear-gradient(145deg, #ffffff, #f8fafc);
+  border-radius: 20px;
+  max-width: 600px;
+  width: 90%;
+  padding: 40px 50px;
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.25);
+  color: #1f2937;
+  animation: slideUp 0.35s ease-out;
+  text-align: center;
+  position: relative;
+}
+
+.instruction-dialog::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  padding: 2px;
+  background: linear-gradient(135deg, #3b82f6, #9333ea);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.instruction-dialog h2 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 20px;
+  letter-spacing: 0.3px;
+}
+
+.instruction-list {
+  list-style: none;
+  margin: 0 0 25px 0;
+  padding: 0;
+  text-align: left;
+}
+
+.instruction-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #f1f5f9;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 15.5px;
+  color: #374151;
+  margin-bottom: 12px;
+  line-height: 1.5;
+  transition: background 0.2s ease;
+}
+
+.instruction-list li:hover {
+  background: #e0f2fe;
+}
+
+.instruction-list li::before {
+  content: "✔️";
+  font-size: 16px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 25px 0 30px 0;
+  font-size: 15px;
+  color: #374151;
+  justify-content: center;
+}
+
+.checkbox-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #2563eb;
+  cursor: pointer;
+}
+
+.proceed-btn {
+  width: 100%;
+  padding: 14px 0;
+  background: linear-gradient(135deg, #2563eb, #9333ea);
+  color: #fff;
+  font-weight: 600;
+  font-size: 16px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.5px;
+}
+
+.proceed-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1d4ed8, #7e22ce);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(37, 99, 235, 0.3);
+}
+
+.proceed-btn:disabled {
+  background: #cbd5e1;
+  color: #475569;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes overlayFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
