@@ -51,8 +51,8 @@ const LoginScreen = () => {
 
     // Handler for the Exit Application button.
     const handleExitApp = () => {
-        if (window.electronAPI && window.electronAPI.exitApp) {
-            window.electronAPI.exitApp();
+        if (window.electronAPI && window.electronAPI.closeApp) {
+            window.electronAPI.closeApp();
         }
     };
 
