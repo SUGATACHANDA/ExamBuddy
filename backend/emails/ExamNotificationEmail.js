@@ -12,7 +12,7 @@ const ExamNotificationEmail = ({ name, examTitle, subject, startTime, duration, 
   });
 
   // IMPORTANT: Replace this with your actual backend server's base URL
-  const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:5000';
+  const API_BASE_URL = process.env.API_BASE_URL;
 
   const countdownImageUrl = `${API_BASE_URL}/api/exams/countdown/${examId}.gif`;
 

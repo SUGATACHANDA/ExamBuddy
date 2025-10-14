@@ -8,6 +8,7 @@ const { notFound, errorHandler } = require('../middlewares/errorMiddleware.js');
 const seedData = require('../utils/seed.js');
 const { createCanvas } = require('canvas');
 const Exam = require('../models/Exam.js');
+const path = require('path');
 
 // Route Imports
 const authRoutes = require('../routes/authRoutes.js');
@@ -52,64 +53,53 @@ app.use('/api/hod', hodRoutes);
  * @route   GET /api/exams/countdown/:examId.gif
  * @access  Public
  */
+try {
+    const fontPath = path.join(__dirname, 'backend', 'assets', 'fonts', 'Poppins-Bold.ttf');
+    registerFont(fontPath, { family: 'Poppins' });
+    console.log('Custom font "Poppins" registered successfully for image generation.');
+} catch (error) {
+    // If the font can't be loaded, log a critical error and continue.
+    // The server will run, but generated images will have rendering issues.
+    console.error('CRITICAL ERROR: Failed to load custom font. Text on countdown images will not render correctly.', error);
+}
 app.get('/api/exams/countdown/:examId.gif', async (req, res) => {
+    // --- Set headers IMMEDIATELY ---
+    // This tells the email client this is an image and that it should NOT be cached.
+    res.setHeader('Content-Type', 'image/png'); // Using PNG for better quality than GIF
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
     try {
         const exam = await Exam.findById(req.params.examId).lean();
 
         if (!exam) {
-            // Send a 1x1 transparent pixel if exam not found
-            res.setHeader('Content-Type', 'image/gif');
-            res.send(Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'));
-            return;
+            console.error(`Countdown Error: Exam not found for ID: ${req.params.examId}`);
+            return res.send(createErrorImage('Exam not found.'));
         }
 
-        const width = 300;
-        const height = 80;
-        const canvas = createCanvas(width, height);
+        const canvas = createCanvas(300, 80);
         const ctx = canvas.getContext('2d');
 
-        const now = new Date().getTime();
-        const examTime = new Date(exam.scheduledAt).getTime();
-        const distance = examTime - now;
+        // Draw Background
+        ctx.fillStyle = '#f3f4f6'; // Light gray background to match email card
+        ctx.fillRect(0, 0, 300, 80);
 
-        let displayText = "Time's up!";
-        if (distance > 0) {
-            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-            displayText = `${days}d ${hours}h ${minutes}m ${seconds}s`;
-        }
+        // Calculate time remaining and format it
+        const distance = new Date(exam.scheduledAt).getTime() - new Date().getTime();
+        const displayText = formatDistance(distance);
 
-        // --- Drawing the image ---
-
-        // Background
-        ctx.fillStyle = '#f3f4f6'; // Light gray background to match card
-        ctx.fillRect(0, 0, width, height);
-
-        // Text Styling
-        ctx.font = 'bold 32px "Segoe UI", Tahoma, Geneva, Verdana, sans-serif';
-        ctx.fillStyle = '#1d4ed8'; // Blue text color
+        // Draw Text (using the registered 'Poppins' font)
+        ctx.font = '32px Poppins'; // <--- THIS USES THE LOADED FONT
+        ctx.fillStyle = '#1d4ed8'; // Dark blue text
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+        ctx.fillText(displayText, 150, 40);
 
-        // Draw the text in the center of the canvas
-        ctx.fillText(displayText, width / 2, height / 2);
-
-        // --- Send the response ---
-        res.setHeader('Content-Type', 'image/gif');
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); // Important: prevent caching
-        res.setHeader('Pragma', 'no-cache');
-        res.setHeader('Expires', '0');
-
-        const buffer = canvas.toBuffer('image/png'); // Using PNG for better quality, but sending as GIF
-        res.send(buffer);
-
+        res.send(canvas.toBuffer('image/png'));
     } catch (error) {
-        console.error('Failed to generate countdown image:', error);
-        // Fallback to a 1x1 pixel in case of an error
-        res.setHeader('Content-Type', 'image/gif');
-        res.send(Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'));
+        console.error(`Failed to generate countdown image for exam ${req.params.examId}:`, error);
+        res.status(500).send(createErrorImage('Error generating timer.'));
     }
 });
 
@@ -125,6 +115,42 @@ const PORT = process.env.PORT || 5000;
 
 // Setup for Socket.IO
 const server = http.createServer(app);
+
+const formatDistance = (distance) => {
+    if (distance <= 0) return "Starting Now!";
+
+    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+    // If more than a day left, show days, hours, and minutes.
+    if (days > 0) {
+        return `${days}d ${hours}h ${minutes}m`;
+    }
+
+    // If less than a day, show HH:MM:SS format
+    const pad = (num) => (num < 10 ? '0' + num : num); // Pads with leading zero
+    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+};
+
+/**
+ * Creates a fallback PNG image buffer to send in case of an error.
+ * @param {string} text - The error message to display on the image.
+ * @returns {Buffer} - A PNG image buffer.
+ */
+const createErrorImage = (text) => {
+    const canvas = createCanvas(300, 80);
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fee2e2'; // Light red background
+    ctx.fillRect(0, 0, 300, 80);
+    ctx.font = '16px sans-serif'; // Use a generic fallback font for the error image itself
+    ctx.fillStyle = '#b91c1c'; // Dark red text
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 150, 40);
+    return canvas.toBuffer('image/png');
+};
 
 
 server.listen(PORT, console.log(`Server running on port ${PORT}`));
