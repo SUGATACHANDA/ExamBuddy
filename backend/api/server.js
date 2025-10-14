@@ -63,7 +63,7 @@ app.get('/api/exams/countdown/:examId.gif', async (req, res) => {
         const fontPath = path.join(__dirname, '..', 'assets', 'font', 'Poppins-Bold.fnt');
         const font = await Jimp.loadFont(fontPath);
 
-        const image = new Jimp(300, 80, '#f3f4f6');
+        const image = await Jimp.create(300, 80, '#f3f4f6');
         const distance = new Date(exam.scheduledAt).getTime() - new Date().getTime();
         const displayText = formatDistance(distance);
 
@@ -106,7 +106,7 @@ const formatDistance = (distance) => {
     return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 };
 const createErrorImage = async (text) => {
-    const image = new Jimp(300, 80, '#fee2e2');
+    const image = await Jimp.create(300, 80, '#fee2e2');
     const font = await Jimp.loadFont(Jimp.FONT_SANS_16_BLACK);
     image.print(font, 0, 0, { text, alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER, alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE }, 300, 80);
     return await image.getBufferAsync(Jimp.MIME_PNG);
