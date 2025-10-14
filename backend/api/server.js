@@ -6,9 +6,9 @@ const http = require('http');
 const connectDB = require('../config/db.js');
 const { notFound, errorHandler } = require('../middlewares/errorMiddleware.js');
 const seedData = require('../utils/seed.js');
-const { createCanvas } = require('canvas');
 const Exam = require('../models/Exam.js');
 const path = require('path');
+const Jimp = require('jimp');
 
 // Route Imports
 const authRoutes = require('../routes/authRoutes.js');
@@ -48,58 +48,54 @@ app.use('/api/data', dataRoutes);
 app.use('/api/university-affairs', universityAffairsRoutes);
 app.use('/api/hod', hodRoutes);
 
-/**
- * @desc    Generate a live countdown GIF for an exam
- * @route   GET /api/exams/countdown/:examId.gif
- * @access  Public
- */
-try {
-    const fontPath = path.join(__dirname, 'backend', 'assets', 'fonts', 'Poppins-Bold.ttf');
-    registerFont(fontPath, { family: 'Poppins' });
-    console.log('Custom font "Poppins" registered successfully for image generation.');
-} catch (error) {
-    // If the font can't be loaded, log a critical error and continue.
-    // The server will run, but generated images will have rendering issues.
-    console.error('CRITICAL ERROR: Failed to load custom font. Text on countdown images will not render correctly.', error);
-}
 app.get('/api/exams/countdown/:examId.gif', async (req, res) => {
-    // --- Set headers IMMEDIATELY ---
-    // This tells the email client this is an image and that it should NOT be cached.
-    res.setHeader('Content-Type', 'image/png'); // Using PNG for better quality than GIF
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
+    const examId = req.params.examId;
+    console.log(`\n--- REQUEST RECEIVED FOR COUNTDOWN IMAGE ---`);
+    console.log(`Timestamp: ${new Date().toISOString()}`);
+    console.log(`Requested Exam ID: ${examId}`);
 
     try {
-        const exam = await Exam.findById(req.params.examId).lean();
+        const exam = await Exam.findById(examId).lean();
 
         if (!exam) {
-            console.error(`Countdown Error: Exam not found for ID: ${req.params.examId}`);
-            return res.send(createErrorImage('Exam not found.'));
+            console.error(`[ERROR] Exam with ID "${examId}" was not found in the database.`);
+            const errorImage = await createErrorImage('Exam Not Found');
+            return res.status(404).type('image/png').send(errorImage);
         }
 
-        const canvas = createCanvas(300, 80);
-        const ctx = canvas.getContext('2d');
+        console.log(`[SUCCESS] Found exam: "${exam.title}" scheduled at ${exam.scheduledAt}`);
 
-        // Draw Background
-        ctx.fillStyle = '#f3f4f6'; // Light gray background to match email card
-        ctx.fillRect(0, 0, 300, 80);
+        // 1. Create a blank image
+        const image = new Jimp(300, 80, '#f3f4f6');
 
-        // Calculate time remaining and format it
+        // 2. Load the font file. **This path must be correct.**
+        const fontPath = path.join(__dirname, '..', 'assets', 'font', 'Poppins-Bold.fnt');
+        console.log(`Attempting to load font from: ${fontPath}`);
+        const font = await Jimp.loadFont(fontPath);
+        console.log(`[SUCCESS] Font loaded successfully.`);
+
+        // 3. Calculate and format the time
         const distance = new Date(exam.scheduledAt).getTime() - new Date().getTime();
         const displayText = formatDistance(distance);
+        console.log(`Calculated display text: "${displayText}"`);
 
-        // Draw Text (using the registered 'Poppins' font)
-        ctx.font = '32px Poppins'; // <--- THIS USES THE LOADED FONT
-        ctx.fillStyle = '#1d4ed8'; // Dark blue text
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(displayText, 150, 40);
+        // 4. Print text onto the image
+        image.print(font, 0, 0, { text: displayText, alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER, alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE }, 300, 80);
 
-        res.send(canvas.toBuffer('image/png'));
+        // 5. Convert to buffer and send
+        const buffer = await image.getBufferAsync(Jimp.MIME_PNG);
+        console.log(`[SUCCESS] Image buffer created. Sending response to client.`);
+
+        res.setHeader('Content-Type', 'image/png');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        res.send(buffer);
+
     } catch (error) {
-        console.error(`Failed to generate countdown image for exam ${req.params.examId}:`, error);
-        res.status(500).send(createErrorImage('Error generating timer.'));
+        console.error(`[CRITICAL ERROR] An error occurred during image generation for exam ID "${examId}":`, error);
+        const errorImage = await createErrorImage('Server Error');
+        res.status(500).type('image/png').send(errorImage);
     }
 });
 
@@ -116,41 +112,25 @@ const PORT = process.env.PORT || 5000;
 // Setup for Socket.IO
 const server = http.createServer(app);
 
-const formatDistance = (distance) => {
+const _formatDistance = (distance) => {
     if (distance <= 0) return "Starting Now!";
-
     const days = Math.floor(distance / (1000 * 60 * 60 * 24));
     const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-    // If more than a day left, show days, hours, and minutes.
-    if (days > 0) {
-        return `${days}d ${hours}h ${minutes}m`;
-    }
-
-    // If less than a day, show HH:MM:SS format
-    const pad = (num) => (num < 10 ? '0' + num : num); // Pads with leading zero
+    if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+    const pad = (num) => (num < 10 ? '0' + num : num);
     return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 };
+formatDistance = _formatDistance;
 
-/**
- * Creates a fallback PNG image buffer to send in case of an error.
- * @param {string} text - The error message to display on the image.
- * @returns {Buffer} - A PNG image buffer.
- */
-const createErrorImage = (text) => {
-    const canvas = createCanvas(300, 80);
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#fee2e2'; // Light red background
-    ctx.fillRect(0, 0, 300, 80);
-    ctx.font = '16px sans-serif'; // Use a generic fallback font for the error image itself
-    ctx.fillStyle = '#b91c1c'; // Dark red text
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, 150, 40);
-    return canvas.toBuffer('image/png');
+const _createErrorImage = async (text) => {
+    const image = new Jimp(300, 80, '#fee2e2');
+    const font = await Jimp.loadFont(Jimp.FONT_SANS_16_BLACK);
+    image.print(font, 0, 0, { text: text, alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER, alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE }, 300, 80);
+    return await image.getBufferAsync(Jimp.MIME_PNG);
 };
+createErrorImage = _createErrorImage;
 
 
 server.listen(PORT, console.log(`Server running on port ${PORT}`));
