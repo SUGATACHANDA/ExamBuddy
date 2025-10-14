@@ -6,6 +6,8 @@ const http = require('http');
 const connectDB = require('../config/db.js');
 const { notFound, errorHandler } = require('../middlewares/errorMiddleware.js');
 const seedData = require('../utils/seed.js');
+const { createCanvas } = require('canvas');
+const Exam = require('../models/Exam.js');
 
 // Route Imports
 const authRoutes = require('../routes/authRoutes.js');
@@ -44,6 +46,72 @@ app.use('/api/teacher', teacherRoutes);
 app.use('/api/data', dataRoutes);
 app.use('/api/university-affairs', universityAffairsRoutes);
 app.use('/api/hod', hodRoutes);
+
+/**
+ * @desc    Generate a live countdown GIF for an exam
+ * @route   GET /api/exams/countdown/:examId.gif
+ * @access  Public
+ */
+app.get('/api/exams/countdown/:examId.gif', async (req, res) => {
+    try {
+        const exam = await Exam.findById(req.params.examId).lean();
+
+        if (!exam) {
+            // Send a 1x1 transparent pixel if exam not found
+            res.setHeader('Content-Type', 'image/gif');
+            res.send(Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'));
+            return;
+        }
+
+        const width = 300;
+        const height = 80;
+        const canvas = createCanvas(width, height);
+        const ctx = canvas.getContext('2d');
+
+        const now = new Date().getTime();
+        const examTime = new Date(exam.scheduledAt).getTime();
+        const distance = examTime - now;
+
+        let displayText = "Time's up!";
+        if (distance > 0) {
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+            displayText = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+        }
+
+        // --- Drawing the image ---
+
+        // Background
+        ctx.fillStyle = '#f3f4f6'; // Light gray background to match card
+        ctx.fillRect(0, 0, width, height);
+
+        // Text Styling
+        ctx.font = 'bold 32px "Segoe UI", Tahoma, Geneva, Verdana, sans-serif';
+        ctx.fillStyle = '#1d4ed8'; // Blue text color
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Draw the text in the center of the canvas
+        ctx.fillText(displayText, width / 2, height / 2);
+
+        // --- Send the response ---
+        res.setHeader('Content-Type', 'image/gif');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); // Important: prevent caching
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+
+        const buffer = canvas.toBuffer('image/png'); // Using PNG for better quality, but sending as GIF
+        res.send(buffer);
+
+    } catch (error) {
+        console.error('Failed to generate countdown image:', error);
+        // Fallback to a 1x1 pixel in case of an error
+        res.setHeader('Content-Type', 'image/gif');
+        res.send(Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'));
+    }
+});
 
 app.get('/', (req, res) => {
     res.send('Exam App API is running...');

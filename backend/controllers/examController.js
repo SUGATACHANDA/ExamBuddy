@@ -5,6 +5,8 @@ const Result = require('../models/Result');
 const Question = require('../models/Question');
 const User = require('../models/User');
 const { default: mongoose } = require('mongoose');
+const ExamNotificationEmail = require('../emails/ExamNotificationEmail');
+const sendEmail = require('../utils/mailer');
 
 // @desc    Create a new exam
 // @route   POST /api/exams
@@ -43,6 +45,30 @@ const createExam = asyncHandler(async (req, res) => {
     };
 
     const createdExam = await Exam.create(examPayload);
+    const sendExamNotificationEmail = async (student, exam) => {
+        const now = new Date();
+        const start = new Date(exam.startTime);
+        const hoursLeft = Math.ceil((start - now) / (1000 * 60 * 60));
+
+        const html = ExamNotificationEmail({
+            name: student.name,
+            examTitle: exam.title,
+            subject: exam.subject,
+            startTime: exam.scheduledAt,
+            duration: exam.duration,
+            examId: exam._id
+        });
+
+        await sendEmail(student.email, `Upcoming Exam: ${exam.title}`, html);
+    };
+    const students = await User.find({ semester, role: "student" });
+
+    if (students.length > 0) {
+        // Notify all students now
+        for (const student of students) {
+            await sendExamNotificationEmail(student, createdExam, Math.ceil((new Date(createdExam.scheduledAt) - new Date()) / (1000 * 60 * 60)));
+        }
+    }
     res.status(201).json(createdExam);
 });
 

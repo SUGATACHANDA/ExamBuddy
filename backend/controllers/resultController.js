@@ -3,6 +3,8 @@ const asyncHandler = require('express-async-handler');
 const Result = require('../models/Result');
 const Exam = require('../models/Exam');
 const Question = require('../models/Question');
+const ExamResultEmail = require('../emails/ExamResultEmail');
+const sendEmail = require('../utils/mailer');
 
 /**
  * @desc    Submit an exam for final evaluation
@@ -57,6 +59,29 @@ const submitExam = asyncHandler(async (req, res) => {
         },
         { upsert: true, new: true }
     );
+
+    const student = await User.findById(studentId);
+    if (student) {
+        const percentage = ((score / totalMarks) * 100).toFixed(2);
+        const status = percentage >= 40 ? "Pass" : "Fail"; // You can adjust threshold
+
+        const html = ExamResultEmail({
+            name: student.name,
+            examTitle: exam.title,
+            score,
+            total: totalMarks,
+            percentage,
+            status,
+        });
+
+        try {
+            await sendEmail(student.email, `Your ${exam.title} Results`, html);
+            console.log(`✅ Result email sent to ${student.email}`);
+        } catch (err) {
+            console.error("❌ Failed to send result email:", err);
+        }
+    }
+
 
     res.status(201).json({
         message: 'Exam submitted for evaluation successfully!',
