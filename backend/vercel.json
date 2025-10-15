@@ -24,5 +24,9 @@
     "api/server.js": {
       "includeFiles": "backend/assets/font/**"
     }
+  },
+  "env": {
+    "NODE_ENV": "production",
+    "API_BASE_URL": "https://exam-buddy-backend.vercel.app"
   }
 }
