@@ -46,24 +46,26 @@ app.get('/api/exams/countdown/:examId.gif', async (req, res) => {
     try {
         const exam = await Exam.findById(examId).lean();
         if (!exam) {
-            console.error(`[ERROR] Exam not found in DB: ${examId}`);
             const errorImage = await createErrorImage('Exam Not Found');
             return res.status(404).type('image/png').send(errorImage);
         }
 
-        // --- Hardened Font Loading ---
-        // 1. Define path to the font file. We will use the standard 'font.fnt'.
-        const fontPath = path.join(__dirname, '..', 'assets', 'font', 'font.fnt');
+        // --- VERCEL-COMPATIBLE PATH CONSTRUCTION ---
+        // process.cwd() is the project root in Vercel's environment.
+        // It's the location from which you started the 'node' process.
+        // This is more reliable than __dirname for finding assets.
+        const projectRoot = process.cwd();
+        const fontPath = path.join(projectRoot, 'backend', 'assets', 'font', 'font.fnt');
 
-        // 2. Check if the font file physically exists BEFORE trying to load it.
+        console.log(`[INFO] Current working directory (project root): ${projectRoot}`);
+        console.log(`[INFO] Attempting to find font at absolute path: ${fontPath}`);
+
         if (!fs.existsSync(fontPath)) {
             console.error(`[CRITICAL] FONT FILE NOT FOUND AT PATH: ${fontPath}`);
-            console.error('Please ensure font.fnt & font.png from Littera (XML format) are in the /backend/assets/font/ directory.');
             const errorImage = await createErrorImage('Server Font Missing');
             return res.status(500).type('image/png').send(errorImage);
         }
 
-        // 3. If it exists, proceed to load it.
         const font = await Jimp.loadFont(fontPath);
 
         const image = await Jimp.create(300, 80, '#f3f4f6');
@@ -79,7 +81,7 @@ app.get('/api/exams/countdown/:examId.gif', async (req, res) => {
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         res.send(buffer);
     } catch (error) {
-        console.error(`[CRITICAL] Failed during image generation for ${examId}:`, error);
+        console.error(`[CRITICAL] Failed during image generation for ${examId}.`, error);
         const errorImage = await createErrorImage('Image Gen Error');
         res.status(500).type('image/png').send(errorImage);
     }
