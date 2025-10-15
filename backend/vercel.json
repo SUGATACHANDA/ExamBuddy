@@ -15,5 +15,10 @@
       "src": "/(.*)",
       "dest": "api/server.js"
     }
-  ]
+  ],
+  "functions": {
+    "backend/api/server.js": {
+      "includeFiles": "backend/assets/font/**"
+    }
+  }
 }
