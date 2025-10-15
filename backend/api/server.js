@@ -53,7 +53,7 @@ app.get('/api/exams/countdown/:examId.gif', async (req, res) => {
 
         // --- Hardened Font Loading ---
         // 1. Define path to the font file. We will use the standard 'font.fnt'.
-        const fontPath = path.join(__dirname, '..', 'assets', 'font', 'Poppins-Bold.fnt');
+        const fontPath = path.join(__dirname, '..', 'assets', 'font', 'font.fnt');
 
         // 2. Check if the font file physically exists BEFORE trying to load it.
         if (!fs.existsSync(fontPath)) {
