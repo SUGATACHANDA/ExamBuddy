@@ -126,9 +126,22 @@ const formatDistance = (distance) => {
     return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 };
 
-const createErrorImage = async (text) => {
-    const image = await Jimp.create(300, 80, '#fee2e2');
+const createErrorImage = async (message) => {
+    const image = new Jimp(400, 200, '#ffffff'); // ✅ FIXED
     const font = await Jimp.loadFont(Jimp.FONT_SANS_16_BLACK);
-    image.print(font, 0, 0, { text, alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER, alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE }, 300, 80);
+
+    image.print(
+        font,
+        10,
+        80,
+        {
+            text: message,
+            alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
+            alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE
+        },
+        380,
+        100
+    );
+
     return await image.getBufferAsync(Jimp.MIME_PNG);
 };
