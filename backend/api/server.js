@@ -55,7 +55,7 @@ app.get('/api/exams/countdown/:examId.gif', async (req, res) => {
         // It's the location from which you started the 'node' process.
         // This is more reliable than __dirname for finding assets.
         const projectRoot = process.cwd();
-        const fontPath = path.join(projectRoot, 'backend', 'assets', 'font', 'font.fnt');
+        const fontPath = path.join(__dirname, '../backend/assets/font/font.fnt');
 
         console.log(`[INFO] Current working directory (project root): ${projectRoot}`);
         console.log(`[INFO] Attempting to find font at absolute path: ${fontPath}`);
