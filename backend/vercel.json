@@ -8,13 +8,21 @@
   ],
   "routes": [
     {
+      "src": "/api/exams/countdown/.*",
+      "dest": "/api/server.js"
+    },
+    {
+      "src": "/socket.io/.*",
+      "dest": "/api/socket.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "/api/server.js"
     }
   ],
   "functions": {
-    "api/server.js": {
-      "includeFiles": "assets/**"
+    "backend/api/server.js": {
+      "includeFiles": "backend/assets/font/**"
     }
   }
 }
