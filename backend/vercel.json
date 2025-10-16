@@ -3,12 +3,10 @@
   "builds": [
     {
       "src": "api/**/*.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": "backend/assets/font/**"
-      }
+      "use": "@vercel/node"
     }
   ],
+  "files": ["backend/assets/font/Poppins-Regular.ttf"],
 
   "routes": [
     {
