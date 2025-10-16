@@ -43,7 +43,7 @@ app.use(cors({ origin: '*' }));
 //  Define the specific image route BEFORE the general /api/exams router
 // =================================================================
 
-const fontPath = path.join(__dirname, "../assets/fonts/Poppins-Regular.ttf");
+const fontPath = path.join(__dirname, "../assets/font/Poppins-Regular.ttf");
 const fontBase64 = fs.readFileSync(fontPath).toString("base64");
 async function renderFrame(text, color = "#1d4ed8") {
     const svg = `
