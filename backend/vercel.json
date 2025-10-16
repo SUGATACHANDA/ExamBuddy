@@ -6,6 +6,7 @@
       "use": "@vercel/node"
     }
   ],
+
   "routes": [
     {
       "src": "/api/exams/countdown/(.*)",
@@ -18,6 +19,13 @@
     {
       "src": "/(.*)",
       "dest": "api/server.js"
+    }
+  ],
+  "functions": [
+    {
+      "api/server.js": {
+        "includeFiles": "backend/assets/fonts/**"
+      }
     }
   ]
 }
