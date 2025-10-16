@@ -10,7 +10,7 @@ const path = require('path');
 const { GifCodec, GifFrame, BitmapImage } = require('gifwrap')
 const { Jimp, loadFont } = require('jimp')
 
-import { FONT_SANS_128_WHITE } from "jimp/fonts";
+const { FONT_SANS_128_WHITE } = require("jimp/fonts");
 
 
 const connectDB = require('../config/db.js');
