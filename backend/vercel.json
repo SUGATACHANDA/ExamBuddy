@@ -21,11 +21,9 @@
       "dest": "api/server.js"
     }
   ],
-  "functions": [
-    {
-      "api/server.js": {
-        "includeFiles": "backend/assets/fonts/**"
-      }
+  "functions": {
+    "api/server.js": {
+      "includeFiles": "backend/assets/fonts/**"
     }
-  ]
+  }
 }
