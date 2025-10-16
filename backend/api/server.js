@@ -7,8 +7,8 @@ const cors = require('cors');
 const http = require('http');
 const fs = require('fs'); // <-- Import File System for the check
 const path = require('path');
+const sharp = require('sharp')
 const { GifCodec, GifFrame, BitmapImage } = require('gifwrap')
-const { Jimp, loadFont } = require('jimp')
 
 
 
@@ -42,101 +42,61 @@ app.use(cors({ origin: '*' }));
 //                  *** CRITICAL FIX APPLIED HERE ***
 //  Define the specific image route BEFORE the general /api/exams router
 // =================================================================
+async function renderFrame(timeText, color) {
+    const svg = `
+    <svg width="400" height="120">
+      <rect width="100%" height="100%" fill="white"/>
+      <text x="200" y="60"
+            font-size="36"
+            font-family="Segoe UI, sans-serif"
+            fill="${color}"
+            text-anchor="middle"
+            dominant-baseline="middle">
+        ${timeText}
+      </text>
+    </svg>`;
+    return await sharp(Buffer.from(svg))
+        .png()
+        .toBuffer();
+}
 app.get("/api/exams/countdown/:id.gif", async (req, res) => {
     try {
-        // 1️⃣ Fetch the actual exam
         const exam = await Exam.findById(req.params.id).lean();
-        if (!exam) {
-            throw new Error("Exam not found");
-        }
+        if (!exam) throw new Error("Exam not found");
 
         const start = new Date(exam.scheduledAt);
         const now = new Date();
         let secondsLeft = Math.max(0, Math.floor((start - now) / 1000));
 
-        // 2️⃣ Setup GIF encoder
-        const width = 400;
-        const height = 120;
         const frames = [];
 
-        // Load your bitmap font
-        // const fontPath = path.join(__dirname, "../assets/font/font.fnt");
-        // if (!fs.existsSync(fontPath)) {
-        //     console.error("[CRITICAL] FONT FILE NOT FOUND AT:", fontPath);
-        //     throw new Error("Font file missing");
-        // }
-        const font = await loadFont(Jimp.FONT_SANS_128_WHITE);
-
-        // 3️⃣ Create 5 frames (1 second each)
         for (let i = 0; i < 5; i++) {
-            const img = new Jimp(width, height, "#ffffff");
-
             const mins = Math.floor(secondsLeft / 60);
             const secs = secondsLeft % 60;
-            const timeText = `${mins.toString().padStart(2, "0")}:${secs
-                .toString()
-                .padStart(2, "0")}`;
 
-            let color = "#1d4ed8"; // blue
-            if (secondsLeft <= 60) color = "#dc2626"; // red when <1min
+            const timeText =
+                secondsLeft <= 0
+                    ? "Exam Started!"
+                    : `Exam starts in ${mins}:${secs.toString().padStart(2, "0")}`;
+            const color = secondsLeft <= 60 ? "#dc2626" : "#1d4ed8"; // red if <1min
 
-            img.print(
-                font,
-                0,
-                0,
-                {
-                    text:
-                        secondsLeft > 0
-                            ? `Exam starts in\n${timeText}`
-                            : "Exam Started!",
-                    alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
-                    alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE,
-                },
-                width,
-                height
-            );
-
-            // Add border color for better visibility
-            img.scan(0, 0, width, height, (x, y, idx) => {
-                if (x === 0 || y === 0 || x === width - 1 || y === height - 1) {
-                    img.bitmap.data.writeUInt32BE(0x000000ff, idx); // black border
-                }
-            });
-
-            const bmp = new BitmapImage(await img.getBufferAsync(Jimp.MIME_PNG));
+            const pngBuffer = await renderFrame(timeText, color);
+            const bmp = new BitmapImage(pngBuffer);
             frames.push(new GifFrame(bmp, { delayCentisecs: 100 }));
 
             secondsLeft = Math.max(0, secondsLeft - 1);
         }
 
-        // 4️⃣ Encode frames into a GIF
         const codec = new GifCodec();
         const gif = await codec.encodeGif(frames, { loops: 0 });
 
         res.set("Content-Type", "image/gif");
         res.send(gif.buffer);
 
-        console.log(
-            `[info] Countdown GIF generated for Exam ID: ${req.params.id}`
-        );
+        console.log(`[info] Countdown GIF generated for exam ${req.params.id}`);
     } catch (err) {
-        console.error(
-            `[CRITICAL] Failed during image generation for ${req.params.id}:`,
-            err
-        );
-
-        // fallback image
-        const fallback = new Jimp(400, 120, "#ffffff");
-        const font = await Jimp.loadFont(Jimp.FONT_SANS_16_BLACK);
-        fallback.print(
-            font,
-            10,
-            40,
-            "Error generating countdown image"
-        );
-        const buf = await fallback.getBufferAsync(Jimp.MIME_PNG);
-        res.set("Content-Type", "image/png");
-        res.status(500).send(buf);
+        console.error("[CRITICAL] Failed during countdown generation:", err);
+        res.status(500).send("Error generating countdown");
     }
 });
 
