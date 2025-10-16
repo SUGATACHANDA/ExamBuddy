@@ -2,22 +2,22 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/**/*.js",
+      "src": "api/server.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/api/exams/countdown/(.*)",
+      "src": "/api/exams/countdown/.*",
       "dest": "/api/server.js"
     },
     {
-      "src": "/socket.io/(.*)",
+      "src": "/socket.io/.*",
       "dest": "/api/socket.js"
     },
     {
       "src": "/(.*)",
-      "dest": "api/server.js"
+      "dest": "/api/server.js"
     }
   ],
   "functions": {
