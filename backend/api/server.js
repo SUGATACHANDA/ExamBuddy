@@ -7,6 +7,7 @@ const cors = require('cors');
 const http = require('http');
 const fs = require('fs'); // <-- Import File System for the check
 const path = require('path');
+const { GifCodec, GifFrame, BitmapImage } = require('gifwrap')
 const JimpModule = require('jimp')
 const Jimp = JimpModule.Jimp || JimpModule
 
@@ -40,51 +41,101 @@ app.use(cors({ origin: '*' }));
 //                  *** CRITICAL FIX APPLIED HERE ***
 //  Define the specific image route BEFORE the general /api/exams router
 // =================================================================
-app.get('/api/exams/countdown/:examId.gif', async (req, res) => {
-    const examId = req.params.examId;
-    console.log(`[REQUEST] Image request received for Exam ID: ${examId}`);
-
+app.get("/api/exams/countdown/:id.gif", async (req, res) => {
     try {
-        const exam = await Exam.findById(examId).lean();
+        // 1️⃣ Fetch the actual exam
+        const exam = await Exam.findById(req.params.id).lean();
         if (!exam) {
-            const errorImage = await createErrorImage('Exam Not Found');
-            return res.status(404).type('image/png').send(errorImage);
+            throw new Error("Exam not found");
         }
 
-        // --- VERCEL-COMPATIBLE PATH CONSTRUCTION ---
-        // process.cwd() is the project root in Vercel's environment.
-        // It's the location from which you started the 'node' process.
-        // This is more reliable than __dirname for finding assets.
-        const projectRoot = process.cwd();
-        const fontPath = path.join(__dirname, '../assets/font/font.fnt');
+        const start = new Date(exam.scheduledAt);
+        const now = new Date();
+        let secondsLeft = Math.max(0, Math.floor((start - now) / 1000));
 
-        console.log(`[INFO] Current working directory (project root): ${projectRoot}`);
-        console.log(`[INFO] Attempting to find font at absolute path: ${fontPath}`);
+        // 2️⃣ Setup GIF encoder
+        const width = 400;
+        const height = 120;
+        const frames = [];
 
+        // Load your bitmap font
+        const fontPath = path.join(__dirname, "../assets/font/font.fnt");
         if (!fs.existsSync(fontPath)) {
-            console.error(`[CRITICAL] FONT FILE NOT FOUND AT PATH: ${fontPath}`);
-            const errorImage = await createErrorImage('Server Font Missing');
-            return res.status(500).type('image/png').send(errorImage);
+            console.error("[CRITICAL] FONT FILE NOT FOUND AT:", fontPath);
+            throw new Error("Font file missing");
         }
-
         const font = await Jimp.loadFont(fontPath);
 
-        const image = await Jimp.create(300, 80, '#f3f4f6');
-        const distance = new Date(exam.scheduledAt).getTime() - new Date().getTime();
-        const displayText = formatDistance(distance);
+        // 3️⃣ Create 5 frames (1 second each)
+        for (let i = 0; i < 5; i++) {
+            const img = new Jimp(width, height, "#ffffff");
 
-        image.print(font, 0, 0, { text: displayText, alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER, alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE }, 300, 80);
+            const mins = Math.floor(secondsLeft / 60);
+            const secs = secondsLeft % 60;
+            const timeText = `${mins.toString().padStart(2, "0")}:${secs
+                .toString()
+                .padStart(2, "0")}`;
 
-        const buffer = await image.getBufferAsync(Jimp.MIME_PNG);
-        console.log(`[SUCCESS] Sending image for Exam ID: ${examId}`);
+            let color = "#1d4ed8"; // blue
+            if (secondsLeft <= 60) color = "#dc2626"; // red when <1min
 
-        res.setHeader('Content-Type', 'image/png');
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-        res.send(buffer);
-    } catch (error) {
-        console.error(`[CRITICAL] Failed during image generation for ${examId}.`, error);
-        const errorImage = await createErrorImage('Image Gen Error');
-        res.status(500).type('image/png').send(errorImage);
+            img.print(
+                font,
+                0,
+                0,
+                {
+                    text:
+                        secondsLeft > 0
+                            ? `Exam starts in\n${timeText}`
+                            : "Exam Started!",
+                    alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
+                    alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE,
+                },
+                width,
+                height
+            );
+
+            // Add border color for better visibility
+            img.scan(0, 0, width, height, (x, y, idx) => {
+                if (x === 0 || y === 0 || x === width - 1 || y === height - 1) {
+                    img.bitmap.data.writeUInt32BE(0x000000ff, idx); // black border
+                }
+            });
+
+            const bmp = new BitmapImage(await img.getBufferAsync(Jimp.MIME_PNG));
+            frames.push(new GifFrame(bmp, { delayCentisecs: 100 }));
+
+            secondsLeft = Math.max(0, secondsLeft - 1);
+        }
+
+        // 4️⃣ Encode frames into a GIF
+        const codec = new GifCodec();
+        const gif = await codec.encodeGif(frames, { loops: 0 });
+
+        res.set("Content-Type", "image/gif");
+        res.send(gif.buffer);
+
+        console.log(
+            `[info] Countdown GIF generated for Exam ID: ${req.params.id}`
+        );
+    } catch (err) {
+        console.error(
+            `[CRITICAL] Failed during image generation for ${req.params.id}:`,
+            err
+        );
+
+        // fallback image
+        const fallback = new Jimp(400, 120, "#ffffff");
+        const font = await Jimp.loadFont(Jimp.FONT_SANS_16_BLACK);
+        fallback.print(
+            font,
+            10,
+            40,
+            "Error generating countdown image"
+        );
+        const buf = await fallback.getBufferAsync(Jimp.MIME_PNG);
+        res.set("Content-Type", "image/png");
+        res.status(500).send(buf);
     }
 });
 
@@ -112,37 +163,3 @@ const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 
 server.listen(PORT, console.log(`Server running on port ${PORT}`));
-
-// ============================================================
-//               HELPER FUNCTIONS (Unchanged)
-// ============================================================
-const formatDistance = (distance) => {
-    if (distance <= 0) return "Starting Now!";
-    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-    if (days > 0) return `${days}d ${hours}h ${minutes}m`;
-    const pad = (num) => (num < 10 ? '0' + num : num);
-    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
-};
-
-const createErrorImage = async (message) => {
-    const image = new Jimp(400, 200, '#ffffff'); // ✅ FIXED
-    const font = await Jimp.loadFont(Jimp.FONT_SANS_16_BLACK);
-
-    image.print(
-        font,
-        10,
-        80,
-        {
-            text: message,
-            alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
-            alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE
-        },
-        380,
-        100
-    );
-
-    return await image.getBufferAsync(Jimp.MIME_PNG);
-};
