@@ -61,12 +61,12 @@ app.get("/api/exams/countdown/:id.gif", async (req, res) => {
         const frames = [];
 
         // Load your bitmap font
-        const fontPath = path.join(__dirname, "../assets/font/font.fnt");
-        if (!fs.existsSync(fontPath)) {
-            console.error("[CRITICAL] FONT FILE NOT FOUND AT:", fontPath);
-            throw new Error("Font file missing");
-        }
-        const font = await loadFont(fontPath);
+        // const fontPath = path.join(__dirname, "../assets/font/font.fnt");
+        // if (!fs.existsSync(fontPath)) {
+        //     console.error("[CRITICAL] FONT FILE NOT FOUND AT:", fontPath);
+        //     throw new Error("Font file missing");
+        // }
+        const font = await loadFont(Jimp.FONT_SANS_128_WHITE);
 
         // 3️⃣ Create 5 frames (1 second each)
         for (let i = 0; i < 5; i++) {
