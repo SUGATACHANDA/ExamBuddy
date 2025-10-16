@@ -5,7 +5,7 @@
       "src": "api/**/*.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": "backend/assets/fonts/**"
+        "includeFiles": "backend/assets/font/**"
       }
     }
   ],
