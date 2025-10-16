@@ -7,7 +7,7 @@ const cors = require('cors');
 const http = require('http');
 const fs = require('fs'); // <-- Import File System for the check
 const path = require('path');
-const { Jimp } = require('jimp');
+const { Jimp } = require('jimp').Jimp;
 
 const connectDB = require('../config/db.js');
 const { notFound, errorHandler } = require('../middlewares/errorMiddleware.js');
