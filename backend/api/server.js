@@ -84,7 +84,12 @@ app.get("/api/exams/countdown/:id.gif", async (req, res) => {
             const pngBuffer = await renderFrame(timeText, color);
 
             // ✅ FIX: Decode PNG → BitmapImage correctly
-            const bmp = await BitmapImage.fromPng(pngBuffer);
+            const { data, info } = await sharp(pngBuffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+            const bmp = new BitmapImage({
+                width: info.width,
+                height: info.height,
+                data
+            });
             frames.push(new GifFrame(bmp, { delayCentisecs: 100 }));
 
             secondsLeft = Math.max(0, secondsLeft - 1);
