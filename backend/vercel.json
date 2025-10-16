@@ -8,14 +8,6 @@
   ],
   "routes": [
     {
-      "src": "/api/exams/countdown/.*",
-      "dest": "/api/server.js"
-    },
-    {
-      "src": "/socket.io/.*",
-      "dest": "/api/socket.js"
-    },
-    {
       "src": "/(.*)",
       "dest": "/api/server.js"
     }
