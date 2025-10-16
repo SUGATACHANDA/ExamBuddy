@@ -42,23 +42,24 @@ app.use(cors({ origin: '*' }));
 //                  *** CRITICAL FIX APPLIED HERE ***
 //  Define the specific image route BEFORE the general /api/exams router
 // =================================================================
-async function renderFrame(timeText, color) {
+async function renderFrame(text, color = "#1d4ed8") {
     const svg = `
-    <svg width="400" height="120">
+    <svg width="400" height="120" xmlns="http://www.w3.org/2000/svg">
       <rect width="100%" height="100%" fill="white"/>
       <text x="200" y="60"
-            font-size="36"
-            font-family="Segoe UI, sans-serif"
+            font-size="30"
+            font-family="Segoe UI, Arial, sans-serif"
             fill="${color}"
             text-anchor="middle"
             dominant-baseline="middle">
-        ${timeText}
+        ${text}
       </text>
-    </svg>`;
-    return await sharp(Buffer.from(svg))
-        .png()
-        .toBuffer();
+    </svg>
+  `;
+    return await sharp(Buffer.from(svg)).png().toBuffer();
 }
+
+// Route: Generate countdown GIF
 app.get("/api/exams/countdown/:id.gif", async (req, res) => {
     try {
         const exam = await Exam.findById(req.params.id).lean();
@@ -70,18 +71,20 @@ app.get("/api/exams/countdown/:id.gif", async (req, res) => {
 
         const frames = [];
 
+        // Generate 5 frames (one per second)
         for (let i = 0; i < 5; i++) {
             const mins = Math.floor(secondsLeft / 60);
             const secs = secondsLeft % 60;
-
             const timeText =
                 secondsLeft <= 0
                     ? "Exam Started!"
                     : `Exam starts in ${mins}:${secs.toString().padStart(2, "0")}`;
-            const color = secondsLeft <= 60 ? "#dc2626" : "#1d4ed8"; // red if <1min
+            const color = secondsLeft <= 60 ? "#dc2626" : "#1d4ed8"; // red if <1 min
 
             const pngBuffer = await renderFrame(timeText, color);
-            const bmp = new BitmapImage(pngBuffer);
+
+            // ✅ FIX: Decode PNG → BitmapImage correctly
+            const bmp = await BitmapImage.fromPng(pngBuffer);
             frames.push(new GifFrame(bmp, { delayCentisecs: 100 }));
 
             secondsLeft = Math.max(0, secondsLeft - 1);
@@ -93,7 +96,7 @@ app.get("/api/exams/countdown/:id.gif", async (req, res) => {
         res.set("Content-Type", "image/gif");
         res.send(gif.buffer);
 
-        console.log(`[info] Countdown GIF generated for exam ${req.params.id}`);
+        console.log(`[info] Countdown GIF generated for ${req.params.id}`);
     } catch (err) {
         console.error("[CRITICAL] Failed during countdown generation:", err);
         res.status(500).send("Error generating countdown");
