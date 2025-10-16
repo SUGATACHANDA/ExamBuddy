@@ -3,14 +3,12 @@
   "builds": [
     {
       "src": "api/**/*.js",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": "backend/assets/fonts/**"
+      }
     }
   ],
-  "functions": {
-    "api/server.js": {
-      "includeFiles": "backend/assets/fonts/**"
-    }
-  },
 
   "routes": [
     {
