@@ -8,8 +8,10 @@ const http = require('http');
 const fs = require('fs'); // <-- Import File System for the check
 const path = require('path');
 const { GifCodec, GifFrame, BitmapImage } = require('gifwrap')
-const JimpModule = require('jimp')
-const Jimp = JimpModule.Jimp || JimpModule
+const { Jimp, loadFont } = require('jimp')
+
+import { FONT_SANS_128_WHITE } from "jimp/fonts";
+
 
 const connectDB = require('../config/db.js');
 const { notFound, errorHandler } = require('../middlewares/errorMiddleware.js');
@@ -59,12 +61,12 @@ app.get("/api/exams/countdown/:id.gif", async (req, res) => {
         const frames = [];
 
         // Load your bitmap font
-        const fontPath = path.join(__dirname, "../assets/font/font.fnt");
-        if (!fs.existsSync(fontPath)) {
-            console.error("[CRITICAL] FONT FILE NOT FOUND AT:", fontPath);
-            throw new Error("Font file missing");
-        }
-        const font = await Jimp.loadFont(fontPath);
+        // const fontPath = path.join(__dirname, "../assets/font/font.fnt");
+        // if (!fs.existsSync(fontPath)) {
+        //     console.error("[CRITICAL] FONT FILE NOT FOUND AT:", fontPath);
+        //     throw new Error("Font file missing");
+        // }
+        const font = await loadFont(FONT_SANS_128_WHITE);
 
         // 3️⃣ Create 5 frames (1 second each)
         for (let i = 0; i < 5; i++) {
