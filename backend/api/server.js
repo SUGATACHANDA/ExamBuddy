@@ -47,13 +47,13 @@ async function renderFrame(text, color = "#1d4ed8") {
     <svg width="400" height="120" xmlns="http://www.w3.org/2000/svg">
       <rect width="100%" height="100%" fill="white"/>
       <text x="200" y="60"
-            font-size="30"
-            font-family="Segoe UI, Arial, sans-serif"
-            fill="${color}"
-            text-anchor="middle"
-            dominant-baseline="middle">
-        ${text}
-      </text>
+      font-size="30"
+      font-family="sans-serif"
+      fill="${color}"
+      text-anchor="middle"
+      dominant-baseline="middle">
+  ${text}
+</text>
     </svg>
   `;
     return await sharp(Buffer.from(svg)).png().toBuffer();
