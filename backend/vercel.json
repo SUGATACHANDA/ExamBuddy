@@ -6,6 +6,11 @@
       "use": "@vercel/node"
     }
   ],
+  "functions": {
+    "api/server.js": {
+      "includeFiles": "backend/assets/fonts/**"
+    }
+  },
 
   "routes": [
     {
@@ -20,10 +25,5 @@
       "src": "/(.*)",
       "dest": "api/server.js"
     }
-  ],
-  "functions": {
-    "api/server.js": {
-      "includeFiles": "backend/assets/fonts/**"
-    }
-  }
+  ]
 }
