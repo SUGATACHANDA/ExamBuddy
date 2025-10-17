@@ -46,28 +46,40 @@ app.use(cors({ origin: '*' }));
 const fontPath = path.join(__dirname, "../assets/font/Poppins-Regular.ttf");
 const fontBase64 = fs.readFileSync(fontPath).toString("base64");
 async function renderFrame(text, color = "#1d4ed8") {
-    const svg = `
-    <svg width="400" height="120" xmlns="http://www.w3.org/2000/svg">
-      <style>
-        @font-face {
-          font-family: 'Poppins';
-          src: url('data:font/ttf;base64,${fontBase64}') format('truetype');
+    const width = 400;
+    const height = 120;
+
+    const base = await sharp({
+        create: {
+            width,
+            height,
+            channels: 3,
+            background: { r: 255, g: 255, b: 255 }
         }
-        text {
-          font-family: 'Poppins';
-          font-weight: normal;
+    })
+        .png()
+        .toBuffer();
+
+    // draw text directly (Sharp 0.33+)
+    const img = sharp(base).composite([
+        {
+            input: {
+                text: {
+                    text,
+                    font: "sans",     // built-in fallback font
+                    width,
+                    height,
+                    align: "center",
+                    rgba: true,
+                    color
+                }
+            },
+            top: 0,
+            left: 0
         }
-      </style>
-      <rect width="100%" height="100%" fill="white"/>
-      <text x="200" y="60"
-            font-size="30"
-            fill="${color}"
-            text-anchor="middle"
-            dominant-baseline="middle">
-        ${text}
-      </text>
-    </svg>`;
-    return await sharp(Buffer.from(svg)).png().toBuffer();
+    ]);
+
+    return await img.png().toBuffer();
 }
 
 // Route: Generate countdown GIF
