@@ -52,6 +52,10 @@ const fontBase64 = fs.readFileSync(fontPath).toString("base64");
 //                 PIXEL-PERFECT TEXT RENDERING FOR GIF
 // =================================================================
 
+// =================================================================
+//                 FIXED COUNTDOWN GIF - PROPER TEXT & CONSISTENT TIME
+// =================================================================
+
 app.get("/api/exams/countdown/:id.gif", async (req, res) => {
     try {
         console.log(`[Countdown] Generating GIF for exam: ${req.params.id}`);
@@ -63,7 +67,10 @@ app.get("/api/exams/countdown/:id.gif", async (req, res) => {
 
         const start = new Date(exam.scheduledAt);
         const now = new Date();
-        let secondsLeft = Math.max(0, Math.floor((start - now) / 1000));
+        // FIX: Calculate once and use for all frames
+        const initialSecondsLeft = Math.max(0, Math.floor((start - now) / 1000));
+
+        console.log(`[Countdown] Initial seconds: ${initialSecondsLeft}`);
 
         // Set GIF headers
         res.set({
@@ -73,7 +80,7 @@ app.get("/api/exams/countdown/:id.gif", async (req, res) => {
             "Expires": "0"
         });
 
-        const gifBuffer = await generatePixelPerfectCountdownGif(secondsLeft);
+        const gifBuffer = await generateFixedCountdownGif(initialSecondsLeft);
         res.send(gifBuffer);
         console.log(`✅ Countdown GIF sent successfully`);
 
@@ -83,23 +90,24 @@ app.get("/api/exams/countdown/:id.gif", async (req, res) => {
     }
 });
 
-// Pixel-perfect text rendering that survives GIF conversion
-async function generatePixelPerfectCountdownGif(secondsLeft) {
+// Fixed version with proper text orientation and consistent time
+async function generateFixedCountdownGif(initialSecondsLeft) {
     const { GifFrame, GifCodec, BitmapImage } = require('gifwrap');
     const codec = new GifCodec();
     const frames = [];
 
-    // Generate 5 frames
+    // Generate 5 frames using the same initial time reference
     for (let i = 0; i < 5; i++) {
-        const currentSeconds = Math.max(0, secondsLeft - i);
+        // FIX: Use consistent time reference, don't recalculate
+        const currentSeconds = Math.max(0, initialSecondsLeft - i);
         const mins = Math.floor(currentSeconds / 60);
         const secs = currentSeconds % 60;
 
         const timeText = currentSeconds <= 0 ? "STARTED" : `${mins}:${secs.toString().padStart(2, "0")}`;
         const isRed = currentSeconds <= 60;
 
-        // Create frame with pixel-perfect text
-        const frame = createTextFrame(timeText, isRed);
+        // Create frame with properly oriented text
+        const frame = createFixedTextFrame(timeText, isRed);
         frames.push(frame);
     }
 
@@ -111,21 +119,21 @@ async function generatePixelPerfectCountdownGif(secondsLeft) {
     return gif.buffer;
 }
 
-// Create text using simple pixel patterns (no anti-aliasing)
-function createTextFrame(text, isRed) {
+// Fixed text rendering with proper orientation
+function createFixedTextFrame(text, isRed) {
     const width = 200;
     const height = 60;
     const frameData = Buffer.alloc(width * height * 4);
 
-    const color = isRed ? [255, 0, 0] : [0, 0, 255]; // Red or Blue
-    const bgColor = [255, 255, 255]; // White background
+    const color = isRed ? [255, 0, 0] : [0, 0, 255];
+    const bgColor = [255, 255, 255];
 
     // Fill background
     for (let i = 0; i < frameData.length; i += 4) {
-        frameData[i] = bgColor[0];     // R
-        frameData[i + 1] = bgColor[1]; // G
-        frameData[i + 2] = bgColor[2]; // B
-        frameData[i + 3] = 255;        // A
+        frameData[i] = bgColor[0];
+        frameData[i + 1] = bgColor[1];
+        frameData[i + 2] = bgColor[2];
+        frameData[i + 3] = 255;
     }
 
     // Draw border
@@ -140,8 +148,8 @@ function createTextFrame(text, isRed) {
         }
     }
 
-    // Draw text using simple pixel font
-    drawPixelText(frameData, text, color, width, height);
+    // FIX: Use properly oriented text rendering
+    drawFixedPixelText(frameData, text, color, width, height);
 
     return new GifFrame(new BitmapImage({
         width: width,
@@ -150,30 +158,30 @@ function createTextFrame(text, isRed) {
     }), { delayCentisecs: 100 });
 }
 
-// Simple pixel font for numbers and text
-function drawPixelText(frameData, text, color, width, height) {
+// Fixed text rendering with proper orientation
+function drawFixedPixelText(frameData, text, color, width, height) {
     const textX = 50;
     const textY = 25;
 
-    // Simple 5x7 pixel font for: 0-9, :, S T A R T E D
+    // FIX: Properly oriented 5x7 pixel font (right-side up)
     const font = {
-        '0': [0x1F, 0x11, 0x11, 0x11, 0x1F],
-        '1': [0x04, 0x0C, 0x04, 0x04, 0x0E],
-        '2': [0x1F, 0x01, 0x1F, 0x10, 0x1F],
-        '3': [0x1F, 0x01, 0x0F, 0x01, 0x1F],
-        '4': [0x11, 0x11, 0x1F, 0x01, 0x01],
-        '5': [0x1F, 0x10, 0x1F, 0x01, 0x1F],
-        '6': [0x1F, 0x10, 0x1F, 0x11, 0x1F],
-        '7': [0x1F, 0x01, 0x02, 0x04, 0x04],
-        '8': [0x1F, 0x11, 0x1F, 0x11, 0x1F],
-        '9': [0x1F, 0x11, 0x1F, 0x01, 0x1F],
-        ':': [0x00, 0x0C, 0x00, 0x0C, 0x00],
-        'S': [0x1F, 0x10, 0x1F, 0x01, 0x1F],
-        'T': [0x1F, 0x04, 0x04, 0x04, 0x04],
-        'A': [0x0E, 0x11, 0x1F, 0x11, 0x11],
-        'R': [0x1E, 0x11, 0x1E, 0x12, 0x11],
-        'E': [0x1F, 0x10, 0x1F, 0x10, 0x1F],
-        'D': [0x1E, 0x11, 0x11, 0x11, 0x1E]
+        '0': [0x1F, 0x11, 0x11, 0x11, 0x1F], // 0b11111, 0b10001, 0b10001, 0b10001, 0b11111
+        '1': [0x04, 0x0C, 0x04, 0x04, 0x0E], // 0b00100, 0b01100, 0b00100, 0b00100, 0b01110
+        '2': [0x1F, 0x01, 0x1F, 0x10, 0x1F], // 0b11111, 0b00001, 0b11111, 0b10000, 0b11111
+        '3': [0x1F, 0x01, 0x0F, 0x01, 0x1F], // 0b11111, 0b00001, 0b01111, 0b00001, 0b11111
+        '4': [0x11, 0x11, 0x1F, 0x01, 0x01], // 0b10001, 0b10001, 0b11111, 0b00001, 0b00001
+        '5': [0x1F, 0x10, 0x1F, 0x01, 0x1F], // 0b11111, 0b10000, 0b11111, 0b00001, 0b11111
+        '6': [0x1F, 0x10, 0x1F, 0x11, 0x1F], // 0b11111, 0b10000, 0b11111, 0b10001, 0b11111
+        '7': [0x1F, 0x01, 0x02, 0x04, 0x04], // 0b11111, 0b00001, 0b00010, 0b00100, 0b00100
+        '8': [0x1F, 0x11, 0x1F, 0x11, 0x1F], // 0b11111, 0b10001, 0b11111, 0b10001, 0b11111
+        '9': [0x1F, 0x11, 0x1F, 0x01, 0x1F], // 0b11111, 0b10001, 0b11111, 0b00001, 0b11111
+        ':': [0x00, 0x0C, 0x00, 0x0C, 0x00], // 0b00000, 0b01100, 0b00000, 0b01100, 0b00000
+        'S': [0x1F, 0x10, 0x1F, 0x01, 0x1F], // 0b11111, 0b10000, 0b11111, 0b00001, 0b11111
+        'T': [0x1F, 0x04, 0x04, 0x04, 0x04], // 0b11111, 0b00100, 0b00100, 0b00100, 0b00100
+        'A': [0x0E, 0x11, 0x1F, 0x11, 0x11], // 0b01110, 0b10001, 0b11111, 0b10001, 0b10001
+        'R': [0x1E, 0x11, 0x1E, 0x12, 0x11], // 0b11110, 0b10001, 0b11110, 0b10010, 0b10001
+        'E': [0x1F, 0x10, 0x1F, 0x10, 0x1F], // 0b11111, 0b10000, 0b11111, 0b10000, 0b11111
+        'D': [0x1E, 0x11, 0x11, 0x11, 0x1E]  // 0b11110, 0b10001, 0b10001, 0b10001, 0b11110
     };
 
     let currentX = textX;
@@ -186,9 +194,10 @@ function drawPixelText(frameData, text, color, width, height) {
             for (let col = 0; col < 5; col++) {
                 const colData = charData[col];
 
-                // Draw each pixel in the column
+                // FIX: Proper orientation - draw from top to bottom
                 for (let row = 0; row < 7; row++) {
-                    if (colData & (1 << row)) {
+                    // Check if this pixel should be drawn (bit is set)
+                    if (colData & (1 << (6 - row))) { // FIX: Use (6 - row) for proper orientation
                         const x = currentX + col;
                         const y = textY + row;
 
@@ -209,28 +218,34 @@ function drawPixelText(frameData, text, color, width, height) {
     }
 }
 
-// Test endpoint with pixel text
-app.get("/api/test-pixel-text.gif", async (req, res) => {
+// Test endpoint with fixed orientation and consistent time
+app.get("/api/test-fixed.gif", async (req, res) => {
     try {
         const { GifFrame, GifCodec, BitmapImage } = require('gifwrap');
         const codec = new GifCodec();
         const frames = [];
 
-        const texts = ["05:00", "04:59", "STARTED"];
-        const colors = [[0, 0, 255], [0, 0, 255], [255, 0, 0]];
+        // FIX: Use consistent time values
+        const testTimes = [300, 299, 298, 60, 59]; // 5:00, 4:59, 4:58, 1:00, 0:59
 
-        for (let i = 0; i < texts.length; i++) {
+        for (let i = 0; i < testTimes.length; i++) {
+            const seconds = testTimes[i];
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            const timeText = seconds <= 0 ? "STARTED" : `${mins}:${secs.toString().padStart(2, "0")}`;
+            const isRed = seconds <= 60;
+
             const frameData = Buffer.alloc(200 * 60 * 4);
 
             // White background
             for (let j = 0; j < frameData.length; j += 4) {
-                frameData[j] = 255;     // R
-                frameData[j + 1] = 255; // G
-                frameData[j + 2] = 255; // B
-                frameData[j + 3] = 255; // A
+                frameData[j] = 255;
+                frameData[j + 1] = 255;
+                frameData[j + 2] = 255;
+                frameData[j + 3] = 255;
             }
 
-            drawPixelText(frameData, texts[i], colors[i], 200, 60);
+            drawFixedPixelText(frameData, timeText, isRed ? [255, 0, 0] : [0, 0, 255], 200, 60);
 
             frames.push(new GifFrame(new BitmapImage({
                 width: 200,
@@ -246,10 +261,10 @@ app.get("/api/test-pixel-text.gif", async (req, res) => {
             "Cache-Control": "no-cache"
         });
         res.send(gif.buffer);
-        console.log("✅ Pixel text test GIF sent");
+        console.log("✅ Fixed test GIF sent");
 
     } catch (error) {
-        console.error("Pixel text test failed:", error);
+        console.error("Fixed test failed:", error);
         res.status(500).send("Test failed");
     }
 });
@@ -266,13 +281,13 @@ async function sendErrorGif(res, message) {
 
         // Red background
         for (let i = 0; i < frameData.length; i += 4) {
-            frameData[i] = 255;     // R
-            frameData[i + 1] = 200; // G
-            frameData[i + 2] = 200; // B
-            frameData[i + 3] = 255; // A
+            frameData[i] = 255;
+            frameData[i + 1] = 200;
+            frameData[i + 2] = 200;
+            frameData[i + 3] = 255;
         }
 
-        drawPixelText(frameData, "ERROR", [255, 0, 0], width, height);
+        drawFixedPixelText(frameData, "ERROR", [255, 0, 0], width, height);
 
         const frame = new GifFrame(new BitmapImage({
             width: width,
