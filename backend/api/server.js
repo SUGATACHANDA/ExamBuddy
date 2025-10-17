@@ -9,6 +9,9 @@ const fs = require('fs'); // <-- Import File System for the check
 const path = require('path');
 const sharp = require('sharp')
 const { GifCodec, GifFrame, BitmapImage } = require('gifwrap')
+const { createCanvas } = require('canvas');
+
+
 
 
 
@@ -49,81 +52,48 @@ async function renderFrame(text, color = "#1d4ed8") {
     const width = 400;
     const height = 120;
 
-    // Create SVG with text - more reliable than sharp's text rendering
-    const svgImage = `
-        <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-            <rect width="100%" height="100%" fill="white"/>
-            <text 
-                x="50%" 
-                y="50%" 
-                font-family="Arial, sans-serif" 
-                font-size="20" 
-                font-weight="bold"
-                fill="${color}" 
-                text-anchor="middle" 
-                dominant-baseline="middle"
-            >${text}</text>
-        </svg>
-    `;
+    const canvas = createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
 
-    try {
-        const buffer = await sharp(Buffer.from(svgImage))
-            .png()
-            .toBuffer();
+    // White background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
 
-        return buffer;
-    } catch (error) {
-        console.error('Error rendering frame:', error);
-        // Fallback: create a simple colored rectangle with text
-        return await sharp({
-            create: {
-                width,
-                height,
-                channels: 3,
-                background: { r: 255, g: 255, b: 255 }
-            }
-        })
-            .composite([{
-                input: {
-                    text: {
-                        text: text,
-                        width: width - 20,
-                        height: height - 20,
-                        rgba: false
-                    }
-                },
-                top: 50,
-                left: 10
-            }])
-            .png()
-            .toBuffer();
-    }
+    // Text styling
+    ctx.fillStyle = color;
+    ctx.font = 'bold 24px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Draw text
+    ctx.fillText(text, width / 2, height / 2);
+
+    // Convert to buffer
+    return canvas.toBuffer('image/png');
 }
 
-// Route: Generate countdown GIF - COMPLETELY FIXED
+// Route: Generate countdown GIF - RETURNS ONLY GIF
 app.get("/api/exams/countdown/:id.gif", async (req, res) => {
     try {
+        console.log(`[Countdown] Request for exam: ${req.params.id}`);
+
         const exam = await Exam.findById(req.params.id).lean();
         if (!exam) {
-            return res.status(404).send("Exam not found");
+            console.log(`[Countdown] Exam not found: ${req.params.id}`);
+            // Return error as GIF, not text
+            return sendErrorGif(res, "Exam not found");
         }
 
         const start = new Date(exam.scheduledAt);
         const now = new Date();
         let secondsLeft = Math.max(0, Math.floor((start - now) / 1000));
 
-        // Set headers first
-        res.set({
-            "Content-Type": "image/gif",
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            "Pragma": "no-cache",
-            "Expires": "0"
-        });
+        console.log(`[Countdown] Seconds left: ${secondsLeft} for exam ${req.params.id}`);
 
         const frames = [];
         const codec = new GifCodec();
 
-        // Generate 5 frames (one per second)
+        // Generate 5 frames
         for (let i = 0; i < 5; i++) {
             const mins = Math.floor(secondsLeft / 60);
             const secs = secondsLeft % 60;
@@ -132,12 +102,14 @@ app.get("/api/exams/countdown/:id.gif", async (req, res) => {
                     ? "Exam Started!"
                     : `Starts in ${mins}:${secs.toString().padStart(2, "0")}`;
 
-            const color = secondsLeft <= 60 ? "#dc2626" : "#1d4ed8"; // red if <1 min
+            const color = secondsLeft <= 60 ? "#dc2626" : "#1d4ed8";
+
+            console.log(`[Countdown] Frame ${i}: ${timeText}`);
 
             try {
                 const pngBuffer = await renderFrame(timeText, color);
 
-                // Convert PNG to bitmap for GIF frame
+                // Convert to GIF frame
                 const { data, info } = await sharp(pngBuffer)
                     .ensureAlpha()
                     .raw()
@@ -150,53 +122,136 @@ app.get("/api/exams/countdown/:id.gif", async (req, res) => {
                 });
 
                 frames.push(new GifFrame(bmp, {
-                    delayCentisecs: 100 // 1 second delay
+                    delayCentisecs: 100 // 1 second
                 }));
 
                 secondsLeft = Math.max(0, secondsLeft - 1);
 
             } catch (frameError) {
-                console.error(`Error generating frame ${i}:`, frameError);
-                continue; // Skip this frame but continue with others
+                console.error(`Error in frame ${i}:`, frameError);
+                // Create fallback frame as GIF
+                const fallbackText = `Error: ${i}`;
+                const fallbackBuffer = await renderFrame(fallbackText, "#ff0000");
+                const { data, info } = await sharp(fallbackBuffer)
+                    .ensureAlpha()
+                    .raw()
+                    .toBuffer({ resolveWithObject: true });
+
+                frames.push(new GifFrame(new BitmapImage({
+                    width: info.width,
+                    height: info.height,
+                    data: data
+                }), { delayCentisecs: 100 }));
             }
         }
 
-        // If no frames were created, send error
         if (frames.length === 0) {
-            return res.status(500).send("Failed to generate countdown frames");
+            throw new Error("No frames generated");
         }
 
-        // Encode GIF
+        console.log(`[Countdown] Encoding ${frames.length} frames to GIF`);
+
         const gif = await codec.encodeGif(frames, {
-            loops: 0 // Infinite looping
+            loops: 0 // Infinite loop
         });
 
+        // Set GIF headers
+        res.set({
+            "Content-Type": "image/gif",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        });
+
+        console.log(`✅ Countdown GIF successfully generated with ${frames.length} frames`);
         res.send(gif.buffer);
-        console.log(`✅ Countdown GIF successfully generated for exam ${req.params.id}`);
 
     } catch (err) {
-        console.error("[CRITICAL] Failed to generate countdown GIF:", err);
+        console.error("[CRITICAL] Countdown generation failed:", err);
+        sendErrorGif(res, "Countdown Error");
+    }
+});
 
-        // Send a simple error image instead of text
-        try {
-            const errorSvg = `
-                <svg width="400" height="120" xmlns="http://www.w3.org/2000/svg">
-                    <rect width="100%" height="100%" fill="white"/>
-                    <text x="50%" y="50%" font-family="Arial" font-size="16" fill="red" 
-                          text-anchor="middle" dominant-baseline="middle">
-                        Error Loading Countdown
-                    </text>
-                </svg>
-            `;
-            const errorImage = await sharp(Buffer.from(errorSvg))
-                .png()
-                .toBuffer();
+// Helper function to send errors as GIF (not text)
+async function sendErrorGif(res, errorMessage) {
+    try {
+        const canvas = createCanvas(400, 120);
+        const ctx = canvas.getContext('2d');
 
-            res.set("Content-Type", "image/png");
-            res.send(errorImage);
-        } catch (fallbackError) {
-            res.status(500).send("Error generating countdown");
+        // Red background for error
+        ctx.fillStyle = '#ffebee';
+        ctx.fillRect(0, 0, 400, 120);
+        ctx.fillStyle = '#d32f2f';
+        ctx.font = 'bold 20px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(errorMessage, 200, 60);
+
+        const errorBuffer = canvas.toBuffer('image/png');
+        const { data, info } = await sharp(errorBuffer)
+            .ensureAlpha()
+            .raw()
+            .toBuffer({ resolveWithObject: true });
+
+        const frame = new GifFrame(new BitmapImage({
+            width: info.width,
+            height: info.height,
+            data: data
+        }), { delayCentisecs: 500 }); // Longer delay for error
+
+        const codec = new GifCodec();
+        const errorGif = await codec.encodeGif([frame], { loops: 1 });
+
+        res.set({
+            "Content-Type": "image/gif",
+            "Cache-Control": "no-cache"
+        });
+        res.send(errorGif.buffer);
+    } catch (finalError) {
+        // Ultimate fallback - simple 1x1 pixel GIF
+        const ultimateFallbackGif = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
+        res.set("Content-Type", "image/gif");
+        res.send(ultimateFallbackGif);
+    }
+}
+
+// TEST ROUTE - ALSO RETURNS GIF, NOT PNG
+app.get("/api/test-countdown.gif", async (req, res) => {
+    try {
+        const frames = [];
+        const codec = new GifCodec();
+
+        // Generate test frames
+        for (let i = 0; i < 3; i++) {
+            const testText = `Test Frame ${i + 1}`;
+            const pngBuffer = await renderFrame(testText, "#1d4ed8");
+
+            const { data, info } = await sharp(pngBuffer)
+                .ensureAlpha()
+                .raw()
+                .toBuffer({ resolveWithObject: true });
+
+            const bmp = new BitmapImage({
+                width: info.width,
+                height: info.height,
+                data: data
+            });
+
+            frames.push(new GifFrame(bmp, { delayCentisecs: 100 }));
         }
+
+        const gif = await codec.encodeGif(frames, { loops: 0 });
+
+        res.set({
+            "Content-Type": "image/gif",
+            "Cache-Control": "no-cache"
+        });
+        res.send(gif.buffer);
+        console.log("✅ Test GIF generated successfully");
+
+    } catch (error) {
+        console.error("Test GIF failed:", error);
+        sendErrorGif(res, "Test Failed");
     }
 });
 
