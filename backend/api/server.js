@@ -79,7 +79,7 @@ app.get("/api/exams/countdown/:id.gif", async (req, res) => {
 
         const exam = await Exam.findById(req.params.id).lean();
         if (!exam) {
-            return sendSimpleErrorGif(res, "Exam Not Found");
+            return sendErrorGif(res, "Exam Not Found");
         }
 
         const start = new Date(exam.scheduledAt);
@@ -96,191 +96,103 @@ app.get("/api/exams/countdown/:id.gif", async (req, res) => {
             "Expires": "0"
         });
 
-        // Create a simple animated GIF using multiple frames
-        const gifBuffer = await generateSimpleCountdownGif(secondsLeft);
+        const gifBuffer = await generateCountdownGifWithText(secondsLeft);
         res.send(gifBuffer);
         console.log(`✅ Countdown GIF sent successfully`);
 
     } catch (err) {
         console.error("[Countdown Error]:", err);
-        sendSimpleErrorGif(res, "Server Error");
+        sendErrorGif(res, "Server Error");
     }
 });
 
-// Simple GIF generator without complex text rendering
-async function generateSimpleCountdownGif(secondsLeft) {
-    const { GifFrame, GifCodec } = require('gifwrap');
+// Working text rendering using canvas
+async function generateCountdownGifWithText(secondsLeft) {
+    const { GifFrame, GifCodec, BitmapImage } = require('gifwrap');
+    const { createCanvas } = require('canvas');
     const codec = new GifCodec();
     const frames = [];
 
-    // Generate 3 frames for simplicity
-    for (let i = 0; i < 3; i++) {
+    // Generate 5 frames
+    for (let i = 0; i < 5; i++) {
         const currentSeconds = Math.max(0, secondsLeft - i);
         const mins = Math.floor(currentSeconds / 60);
         const secs = currentSeconds % 60;
 
-        const timeText = currentSeconds <= 0 ? "STARTED!" : `${mins}:${secs.toString().padStart(2, "0")}`;
-        const color = currentSeconds <= 60 ? [255, 0, 0] : [0, 0, 255]; // Red or Blue
+        const timeText = currentSeconds <= 0 ? "EXAM STARTED!" : `${mins}:${secs.toString().padStart(2, "0")}`;
+        const color = currentSeconds <= 60 ? "#ff0000" : "#0000ff";
 
-        // Create simple frame with colored background and text
-        const frame = createSimpleFrame(timeText, color);
-        frames.push(frame);
+        // Create canvas and draw text
+        const canvas = createCanvas(300, 80);
+        const ctx = canvas.getContext('2d');
+
+        // White background
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, 300, 80);
+
+        // Draw border
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.strokeRect(5, 5, 290, 70);
+
+        // Draw text
+        ctx.fillStyle = color;
+        ctx.font = 'bold 28px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(timeText, 150, 40);
+
+        // Convert canvas to buffer and then to GIF frame
+        const buffer = canvas.toBuffer('image/png');
+
+        const { data, info } = await sharp(buffer)
+            .ensureAlpha()
+            .raw()
+            .toBuffer({ resolveWithObject: true });
+
+        frames.push(new GifFrame(new BitmapImage({
+            width: info.width,
+            height: info.height,
+            data: data
+        }), { delayCentisecs: 100 }));
     }
 
     const gif = await codec.encodeGif(frames, {
-        loops: 0, // Infinite loop
-        delayCentisecs: 100 // 1 second per frame
+        loops: 0,
+        delayCentisecs: 100
     });
 
     return gif.buffer;
 }
 
-// Create a simple frame without complex text rendering
-function createSimpleFrame(text, color) {
-    const width = 200;
-    const height = 60;
-
-    // Create a simple colored rectangle with "text" as pattern
-    const frameData = Buffer.alloc(width * height * 4);
-
-    for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-            const index = (y * width + x) * 4;
-
-            // Create a simple pattern based on text and position
-            const isTextArea = y > 20 && y < 40 && x > 50 && x < 150;
-
-            if (isTextArea) {
-                // White background for text area
-                frameData[index] = 255;     // R
-                frameData[index + 1] = 255; // G  
-                frameData[index + 2] = 255; // B
-                frameData[index + 3] = 255; // A
-            } else {
-                // Colored background
-                frameData[index] = color[0];     // R
-                frameData[index + 1] = color[1]; // G
-                frameData[index + 2] = color[2]; // B
-                frameData[index + 3] = 255;      // A
-            }
-        }
-    }
-
-    const { GifFrame, BitmapImage } = require('gifwrap');
-    return new GifFrame(new BitmapImage({
-        width: width,
-        height: height,
-        data: frameData
-    }), { delayCentisecs: 100 });
-}
-
-// Simple error GIF generator
-async function sendSimpleErrorGif(res, message) {
+// Error GIF with text
+async function sendErrorGif(res, message) {
     try {
         const { GifFrame, GifCodec, BitmapImage } = require('gifwrap');
+        const { createCanvas } = require('canvas');
         const codec = new GifCodec();
 
-        const width = 200;
-        const height = 60;
-        const frameData = Buffer.alloc(width * height * 4);
-
-        // Red background
-        for (let i = 0; i < frameData.length; i += 4) {
-            frameData[i] = 255;     // R
-            frameData[i + 1] = 200; // G
-            frameData[i + 2] = 200; // B
-            frameData[i + 3] = 255; // A
-        }
-
-        const frame = new GifFrame(new BitmapImage({
-            width: width,
-            height: height,
-            data: frameData
-        }), { delayCentisecs: 500 });
-
-        const gif = await codec.encodeGif([frame], { loops: 1 });
-
-        res.set({
-            "Content-Type": "image/gif",
-            "Cache-Control": "no-cache"
-        });
-        res.send(gif.buffer);
-    } catch (error) {
-        // Ultimate fallback - 1x1 red pixel GIF
-        const simpleGif = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
-        res.set("Content-Type", "image/gif");
-        res.send(simpleGif);
-    }
-}
-
-// TEST ENDPOINT - Simple working GIF
-app.get("/api/test-simple.gif", async (req, res) => {
-    try {
-        const { GifFrame, GifCodec, BitmapImage } = require('gifwrap');
-        const codec = new GifCodec();
-        const frames = [];
-
-        // Create 3 different colored frames
-        const colors = [
-            [255, 0, 0],    // Red
-            [0, 255, 0],    // Green  
-            [0, 0, 255]     // Blue
-        ];
-
-        for (const color of colors) {
-            const width = 100;
-            const height = 50;
-            const frameData = Buffer.alloc(width * height * 4);
-
-            // Fill with solid color
-            for (let i = 0; i < frameData.length; i += 4) {
-                frameData[i] = color[0];     // R
-                frameData[i + 1] = color[1]; // G
-                frameData[i + 2] = color[2]; // B
-                frameData[i + 3] = 255;      // A
-            }
-
-            frames.push(new GifFrame(new BitmapImage({
-                width: width,
-                height: height,
-                data: frameData
-            }), { delayCentisecs: 100 }));
-        }
-
-        const gif = await codec.encodeGif(frames, { loops: 0 });
-
-        res.set({
-            "Content-Type": "image/gif",
-            "Cache-Control": "no-cache"
-        });
-        res.send(gif.buffer);
-        console.log("✅ Simple test GIF sent");
-
-    } catch (error) {
-        console.error("Simple test failed:", error);
-        const simpleGif = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
-        res.set("Content-Type", "image/gif");
-        res.send(simpleGif);
-    }
-});
-
-// Helper function to send errors as GIF (not text)
-async function sendErrorGif(res, errorMessage) {
-    try {
-        const canvas = createCanvas(400, 120);
+        const canvas = createCanvas(300, 80);
         const ctx = canvas.getContext('2d');
 
-        // Red background for error
+        // Red background
         ctx.fillStyle = '#ffebee';
-        ctx.fillRect(0, 0, 400, 120);
+        ctx.fillRect(0, 0, 300, 80);
+
+        // Red border
+        ctx.strokeStyle = '#d32f2f';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(5, 5, 290, 70);
+
+        // Error text
         ctx.fillStyle = '#d32f2f';
         ctx.font = 'bold 20px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(errorMessage, 200, 60);
+        ctx.fillText(message, 150, 40);
 
-        const errorBuffer = canvas.toBuffer('image/png');
-        const { data, info } = await sharp(errorBuffer)
+        const buffer = canvas.toBuffer('image/png');
+        const { data, info } = await sharp(buffer)
             .ensureAlpha()
             .raw()
             .toBuffer({ resolveWithObject: true });
@@ -289,47 +201,56 @@ async function sendErrorGif(res, errorMessage) {
             width: info.width,
             height: info.height,
             data: data
-        }), { delayCentisecs: 500 }); // Longer delay for error
+        }), { delayCentisecs: 500 });
 
-        const codec = new GifCodec();
-        const errorGif = await codec.encodeGif([frame], { loops: 1 });
+        const gif = await codec.encodeGif([frame], { loops: 1 });
 
-        res.set({
-            "Content-Type": "image/gif",
-            "Cache-Control": "no-cache"
-        });
-        res.send(errorGif.buffer);
-    } catch (finalError) {
-        // Ultimate fallback - simple 1x1 pixel GIF
-        const ultimateFallbackGif = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
         res.set("Content-Type", "image/gif");
-        res.send(ultimateFallbackGif);
+        res.send(gif.buffer);
+    } catch (error) {
+        const simpleGif = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
+        res.set("Content-Type", "image/gif");
+        res.send(simpleGif);
     }
 }
 
-// TEST ROUTE - ALSO RETURNS GIF, NOT PNG
-app.get("/api/test-countdown.gif", async (req, res) => {
+// TEST ENDPOINT - Working text GIF
+app.get("/api/test-text.gif", async (req, res) => {
     try {
-        const frames = [];
+        const { GifFrame, GifCodec, BitmapImage } = require('gifwrap');
+        const { createCanvas } = require('canvas');
         const codec = new GifCodec();
+        const frames = [];
 
-        // Generate test frames
-        for (let i = 0; i < 3; i++) {
-            const testText = `Test Frame ${i + 1}`;
-            const pngBuffer = await renderFrame(testText, "#1d4ed8");
+        const texts = ["TEST 1", "TEST 2", "TEST 3"];
+        const colors = ["#ff0000", "#00ff00", "#0000ff"];
 
-            const { data, info } = await sharp(pngBuffer)
+        for (let i = 0; i < texts.length; i++) {
+            const canvas = createCanvas(250, 60);
+            const ctx = canvas.getContext('2d');
+
+            // White background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, 250, 60);
+
+            // Colored text
+            ctx.fillStyle = colors[i];
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(texts[i], 125, 30);
+
+            const buffer = canvas.toBuffer('image/png');
+            const { data, info } = await sharp(buffer)
                 .ensureAlpha()
                 .raw()
                 .toBuffer({ resolveWithObject: true });
 
-            const bmp = new BitmapImage({
+            frames.push(new GifFrame(new BitmapImage({
                 width: info.width,
                 height: info.height,
                 data: data
-            });
-
-            frames.push(new GifFrame(bmp, { delayCentisecs: 100 }));
+            }), { delayCentisecs: 200 }));
         }
 
         const gif = await codec.encodeGif(frames, { loops: 0 });
@@ -339,10 +260,10 @@ app.get("/api/test-countdown.gif", async (req, res) => {
             "Cache-Control": "no-cache"
         });
         res.send(gif.buffer);
-        console.log("✅ Test GIF generated successfully");
+        console.log("✅ Text test GIF sent");
 
     } catch (error) {
-        console.error("Test GIF failed:", error);
+        console.error("Text test failed:", error);
         sendErrorGif(res, "Test Failed");
     }
 });
