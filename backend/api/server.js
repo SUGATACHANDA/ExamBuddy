@@ -56,6 +56,10 @@ const fontBase64 = fs.readFileSync(fontPath).toString("base64");
 //                 FIXED COUNTDOWN GIF - PROPER TEXT & CONSISTENT TIME
 // =================================================================
 
+// =================================================================
+//                 FIXED COUNTDOWN GIF - PROPER TEXT & CONSISTENT TIME
+// =================================================================
+
 app.get("/api/exams/countdown/:id.gif", async (req, res) => {
     try {
         console.log(`[Countdown] Generating GIF for exam: ${req.params.id}`);
