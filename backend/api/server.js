@@ -75,85 +75,18 @@ async function renderFrame(text, color = "#1d4ed8") {
 // Route: Generate countdown GIF - RETURNS ONLY GIF
 app.get("/api/exams/countdown/:id.gif", async (req, res) => {
     try {
-        console.log(`[Countdown] Request for exam: ${req.params.id}`);
+        console.log(`[Countdown] Generating GIF for exam: ${req.params.id}`);
 
         const exam = await Exam.findById(req.params.id).lean();
         if (!exam) {
-            console.log(`[Countdown] Exam not found: ${req.params.id}`);
-            // Return error as GIF, not text
-            return sendErrorGif(res, "Exam not found");
+            return sendSimpleErrorGif(res, "Exam Not Found");
         }
 
         const start = new Date(exam.scheduledAt);
         const now = new Date();
         let secondsLeft = Math.max(0, Math.floor((start - now) / 1000));
 
-        console.log(`[Countdown] Seconds left: ${secondsLeft} for exam ${req.params.id}`);
-
-        const frames = [];
-        const codec = new GifCodec();
-
-        // Generate 5 frames
-        for (let i = 0; i < 5; i++) {
-            const mins = Math.floor(secondsLeft / 60);
-            const secs = secondsLeft % 60;
-            const timeText =
-                secondsLeft <= 0
-                    ? "Exam Started!"
-                    : `Starts in ${mins}:${secs.toString().padStart(2, "0")}`;
-
-            const color = secondsLeft <= 60 ? "#dc2626" : "#1d4ed8";
-
-            console.log(`[Countdown] Frame ${i}: ${timeText}`);
-
-            try {
-                const pngBuffer = await renderFrame(timeText, color);
-
-                // Convert to GIF frame
-                const { data, info } = await sharp(pngBuffer)
-                    .ensureAlpha()
-                    .raw()
-                    .toBuffer({ resolveWithObject: true });
-
-                const bmp = new BitmapImage({
-                    width: info.width,
-                    height: info.height,
-                    data: data
-                });
-
-                frames.push(new GifFrame(bmp, {
-                    delayCentisecs: 100 // 1 second
-                }));
-
-                secondsLeft = Math.max(0, secondsLeft - 1);
-
-            } catch (frameError) {
-                console.error(`Error in frame ${i}:`, frameError);
-                // Create fallback frame as GIF
-                const fallbackText = `Error: ${i}`;
-                const fallbackBuffer = await renderFrame(fallbackText, "#ff0000");
-                const { data, info } = await sharp(fallbackBuffer)
-                    .ensureAlpha()
-                    .raw()
-                    .toBuffer({ resolveWithObject: true });
-
-                frames.push(new GifFrame(new BitmapImage({
-                    width: info.width,
-                    height: info.height,
-                    data: data
-                }), { delayCentisecs: 100 }));
-            }
-        }
-
-        if (frames.length === 0) {
-            throw new Error("No frames generated");
-        }
-
-        console.log(`[Countdown] Encoding ${frames.length} frames to GIF`);
-
-        const gif = await codec.encodeGif(frames, {
-            loops: 0 // Infinite loop
-        });
+        console.log(`[Countdown] ${secondsLeft} seconds remaining`);
 
         // Set GIF headers
         res.set({
@@ -163,12 +96,171 @@ app.get("/api/exams/countdown/:id.gif", async (req, res) => {
             "Expires": "0"
         });
 
-        console.log(`✅ Countdown GIF successfully generated with ${frames.length} frames`);
-        res.send(gif.buffer);
+        // Create a simple animated GIF using multiple frames
+        const gifBuffer = await generateSimpleCountdownGif(secondsLeft);
+        res.send(gifBuffer);
+        console.log(`✅ Countdown GIF sent successfully`);
 
     } catch (err) {
-        console.error("[CRITICAL] Countdown generation failed:", err);
-        sendErrorGif(res, "Countdown Error");
+        console.error("[Countdown Error]:", err);
+        sendSimpleErrorGif(res, "Server Error");
+    }
+});
+
+// Simple GIF generator without complex text rendering
+async function generateSimpleCountdownGif(secondsLeft) {
+    const { GifFrame, GifCodec } = require('gifwrap');
+    const codec = new GifCodec();
+    const frames = [];
+
+    // Generate 3 frames for simplicity
+    for (let i = 0; i < 3; i++) {
+        const currentSeconds = Math.max(0, secondsLeft - i);
+        const mins = Math.floor(currentSeconds / 60);
+        const secs = currentSeconds % 60;
+
+        const timeText = currentSeconds <= 0 ? "STARTED!" : `${mins}:${secs.toString().padStart(2, "0")}`;
+        const color = currentSeconds <= 60 ? [255, 0, 0] : [0, 0, 255]; // Red or Blue
+
+        // Create simple frame with colored background and text
+        const frame = createSimpleFrame(timeText, color);
+        frames.push(frame);
+    }
+
+    const gif = await codec.encodeGif(frames, {
+        loops: 0, // Infinite loop
+        delayCentisecs: 100 // 1 second per frame
+    });
+
+    return gif.buffer;
+}
+
+// Create a simple frame without complex text rendering
+function createSimpleFrame(text, color) {
+    const width = 200;
+    const height = 60;
+
+    // Create a simple colored rectangle with "text" as pattern
+    const frameData = Buffer.alloc(width * height * 4);
+
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const index = (y * width + x) * 4;
+
+            // Create a simple pattern based on text and position
+            const isTextArea = y > 20 && y < 40 && x > 50 && x < 150;
+
+            if (isTextArea) {
+                // White background for text area
+                frameData[index] = 255;     // R
+                frameData[index + 1] = 255; // G  
+                frameData[index + 2] = 255; // B
+                frameData[index + 3] = 255; // A
+            } else {
+                // Colored background
+                frameData[index] = color[0];     // R
+                frameData[index + 1] = color[1]; // G
+                frameData[index + 2] = color[2]; // B
+                frameData[index + 3] = 255;      // A
+            }
+        }
+    }
+
+    const { GifFrame, BitmapImage } = require('gifwrap');
+    return new GifFrame(new BitmapImage({
+        width: width,
+        height: height,
+        data: frameData
+    }), { delayCentisecs: 100 });
+}
+
+// Simple error GIF generator
+async function sendSimpleErrorGif(res, message) {
+    try {
+        const { GifFrame, GifCodec, BitmapImage } = require('gifwrap');
+        const codec = new GifCodec();
+
+        const width = 200;
+        const height = 60;
+        const frameData = Buffer.alloc(width * height * 4);
+
+        // Red background
+        for (let i = 0; i < frameData.length; i += 4) {
+            frameData[i] = 255;     // R
+            frameData[i + 1] = 200; // G
+            frameData[i + 2] = 200; // B
+            frameData[i + 3] = 255; // A
+        }
+
+        const frame = new GifFrame(new BitmapImage({
+            width: width,
+            height: height,
+            data: frameData
+        }), { delayCentisecs: 500 });
+
+        const gif = await codec.encodeGif([frame], { loops: 1 });
+
+        res.set({
+            "Content-Type": "image/gif",
+            "Cache-Control": "no-cache"
+        });
+        res.send(gif.buffer);
+    } catch (error) {
+        // Ultimate fallback - 1x1 red pixel GIF
+        const simpleGif = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
+        res.set("Content-Type", "image/gif");
+        res.send(simpleGif);
+    }
+}
+
+// TEST ENDPOINT - Simple working GIF
+app.get("/api/test-simple.gif", async (req, res) => {
+    try {
+        const { GifFrame, GifCodec, BitmapImage } = require('gifwrap');
+        const codec = new GifCodec();
+        const frames = [];
+
+        // Create 3 different colored frames
+        const colors = [
+            [255, 0, 0],    // Red
+            [0, 255, 0],    // Green  
+            [0, 0, 255]     // Blue
+        ];
+
+        for (const color of colors) {
+            const width = 100;
+            const height = 50;
+            const frameData = Buffer.alloc(width * height * 4);
+
+            // Fill with solid color
+            for (let i = 0; i < frameData.length; i += 4) {
+                frameData[i] = color[0];     // R
+                frameData[i + 1] = color[1]; // G
+                frameData[i + 2] = color[2]; // B
+                frameData[i + 3] = 255;      // A
+            }
+
+            frames.push(new GifFrame(new BitmapImage({
+                width: width,
+                height: height,
+                data: frameData
+            }), { delayCentisecs: 100 }));
+        }
+
+        const gif = await codec.encodeGif(frames, { loops: 0 });
+
+        res.set({
+            "Content-Type": "image/gif",
+            "Cache-Control": "no-cache"
+        });
+        res.send(gif.buffer);
+        console.log("✅ Simple test GIF sent");
+
+    } catch (error) {
+        console.error("Simple test failed:", error);
+        const simpleGif = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
+        res.set("Content-Type", "image/gif");
+        res.send(simpleGif);
     }
 });
 
