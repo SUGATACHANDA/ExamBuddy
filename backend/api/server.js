@@ -50,11 +50,12 @@ async function renderFrame(text, color = "#1d4ed8") {
     <svg width="400" height="120" xmlns="http://www.w3.org/2000/svg">
       <style>
         @font-face {
-          font-family: 'OpenSans';
+          font-family: 'Poppins';
           src: url('data:font/ttf;base64,${fontBase64}') format('truetype');
         }
         text {
-          font-family: 'OpenSans', sans-serif;
+          font-family: 'Poppins';
+          font-weight: normal;
         }
       </style>
       <rect width="100%" height="100%" fill="white"/>
