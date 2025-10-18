@@ -11,9 +11,8 @@ const ExamNotificationEmail = ({ name, examTitle, subject, startTime, duration, 
     minute: '2-digit'
   });
 
-  // IMPORTANT: Replace this with your actual backend server's base URL
+  // Replace with your backend base URL
   const API_BASE_URL = process.env.API_BASE_URL;
-
   const countdownImageUrl = `${API_BASE_URL}/api/exams/countdown/${examId}.gif`;
 
   return `
@@ -25,95 +24,139 @@ const ExamNotificationEmail = ({ name, examTitle, subject, startTime, duration, 
     <title>Upcoming Exam Notification</title>
     <style>
       body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #f9fafb;
-        color: #111827;
+        font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f8fafc;
+        color: #1e293b;
         margin: 0;
         padding: 0;
       }
+
       .container {
-        max-width: 650px;
-        margin: 30px auto;
+        max-width: 640px;
+        margin: 40px auto;
         background: #ffffff;
-        border-radius: 14px;
-        box-shadow: 0 4px 18px rgba(0,0,0,0.07);
+        border-radius: 16px;
+        box-shadow: 0 6px 25px rgba(0,0,0,0.08);
         overflow: hidden;
+        border: 1px solid #e2e8f0;
       }
+
       .header {
-        background: linear-gradient(135deg, #2563eb, #1d4ed8);
-        padding: 25px;
+        background: linear-gradient(135deg, #2563eb, #1e40af);
+        padding: 28px 20px;
         text-align: center;
         color: #ffffff;
       }
+
       .header h1 {
-        margin: 0;
         font-size: 26px;
+        margin: 0;
+        letter-spacing: 0.5px;
       }
+
       .header p {
         margin: 8px 0 0;
         font-size: 15px;
         opacity: 0.9;
       }
+
       .content {
         padding: 30px;
+        line-height: 1.6;
       }
+
       .content h2 {
         margin-top: 0;
         color: #1e3a8a;
+        font-size: 20px;
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 6px;
+        margin-bottom: 15px;
       }
+
       .exam-card {
-        background: #f3f4f6;
-        padding: 20px;
-        border-radius: 10px;
+        background: #f9fafb;
+        padding: 22px 20px;
+        border-radius: 12px;
         margin: 20px 0;
+        border: 1px solid #e2e8f0;
       }
+
       .exam-card p {
-        margin: 6px 0;
+        margin: 8px 0;
         font-size: 15px;
       }
-      /* Style for the countdown image container */
+
       .countdown-container {
         width: 100%;
         text-align: center;
-        margin: 15px 0;
+        margin: 20px 0 10px;
       }
+
       .countdown-container img {
-        max-width: 100%;
-        height: auto;
+        width: 90%;
+        max-width: 400px;
+        border-radius: 8px;
       }
+
+      .cta-button {
+        display: inline-block;
+        background: #2563eb;
+        color: #ffffff;
+        text-decoration: none;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-size: 15px;
+        margin-top: 10px;
+        transition: background 0.3s ease;
+      }
+
+      .cta-button:hover {
+        background: #1e40af;
+      }
+
       .footer {
-        background: #f3f4f6;
+        background: #f1f5f9;
         text-align: center;
-        padding: 15px;
-        font-size: 12px;
-        color: #6b7280;
+        padding: 18px;
+        font-size: 13px;
+        color: #64748b;
+      }
+
+      @media (max-width: 600px) {
+        .container {
+          margin: 20px;
+        }
+        .content {
+          padding: 20px;
+        }
       }
     </style>
   </head>
   <body>
     <div class="container">
       <div class="header">
-        <h1>📚 Upcoming Exam Alert</h1>
-        <p>Stay prepared — your next challenge awaits!</p>
+        <h1>📅 Upcoming Exam Reminder</h1>
+        <p>Your exam details are summarized below</p>
       </div>
+
       <div class="content">
-        <p>Hi <b>${name}</b>,</p>
-        <p>Your upcoming exam is scheduled soon. Here are the details:</p>
+        <p>Dear <b>${name}</b>,</p>
+        <p>This is a friendly reminder about your upcoming exam. Please review the details carefully:</p>
 
         <div class="exam-card">
           <p><b>Exam Title:</b> ${examTitle}</p>
           <p><b>Subject:</b> ${subject}</p>
           <p><b>Scheduled Date:</b> ${formattedDate}</p>
-          <p><b>Duration:</b> ${duration} mins</p>
-          <p><b>Time Remaining:</b></p>
-           <!-- The live countdown image is now here -->
-          <div class="countdown-container">
-            <img src="${countdownImageUrl}" alt="Live Countdown Timer" />
-          </div>
+          <p><b>Duration:</b> ${duration} minutes</p>
         </div>
+
+        <p>We wish you the very best in your preparation. Stay focused and confident!</p>
+        <p>— <b>ExamBuddy Team</b></p>
       </div>
+
       <div class="footer">
-        <p>© ${new Date().getFullYear()} ExamBuddy — Automated Exam Notification System</p>
+        <p>© ${new Date().getFullYear()} ExamBuddy • Automated Exam Notification System</p>
       </div>
     </div>
   </body>

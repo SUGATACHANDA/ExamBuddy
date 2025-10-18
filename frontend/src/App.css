@@ -2799,3 +2799,109 @@ button:focus,
     opacity: 1;
   }
 }
+/* === Full-screen background === */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+/* === Centered content === */
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+/* === Ripple effect container === */
+.pulse-ring {
+  position: relative;
+  width: 80px;
+  height: 80px;
+}
+
+/* === Core circle === */
+.pulse-core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 26px;
+  height: 26px;
+  background-color: #60a5fa;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 25px rgba(96, 165, 250, 0.8);
+  z-index: 2;
+  animation: corePulse 2s ease-in-out infinite;
+}
+
+/* === Outer expanding ripple === */
+.pulse-ring::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 26px;
+  height: 26px;
+  background: rgba(96, 165, 250, 0.4);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: ripple 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* === Ripple animation === */
+@keyframes ripple {
+  0% {
+    width: 26px;
+    height: 26px;
+    opacity: 0.8;
+  }
+  60% {
+    width: 80px;
+    height: 80px;
+    opacity: 0.25;
+  }
+  100% {
+    width: 100px;
+    height: 100px;
+    opacity: 0;
+  }
+}
+
+/* === Subtle breathing effect on the core === */
+@keyframes corePulse {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.15);
+  }
+}
+
+/* === Loading text === */
+.loading-text {
+  color: #a5c9ff;
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: 0.6px;
+  text-align: center;
+}
+
+@keyframes textFade {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
