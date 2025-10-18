@@ -10,7 +10,7 @@ const path = require('path');
 const sharp = require('sharp')
 const { GifCodec, GifFrame, BitmapImage } = require('gifwrap')
 const { createCanvas } = require('canvas');
-
+const axios = require('axios');
 
 
 
@@ -71,10 +71,11 @@ app.get("/api/exams/countdown/:id.gif", async (req, res) => {
 
         const start = new Date(exam.scheduledAt);
         const now = new Date();
-        // FIX: Calculate once and use for all frames
+
+        // FIX: Calculate initial time once and use it consistently
         const initialSecondsLeft = Math.max(0, Math.floor((start - now) / 1000));
 
-        console.log(`[Countdown] Initial seconds: ${initialSecondsLeft}`);
+        console.log(`[Countdown] Initial seconds: ${initialSecondsLeft}, Exam: ${exam.name}`);
 
         // Set GIF headers
         res.set({
@@ -84,7 +85,7 @@ app.get("/api/exams/countdown/:id.gif", async (req, res) => {
             "Expires": "0"
         });
 
-        const gifBuffer = await generateFixedCountdownGif(initialSecondsLeft);
+        const gifBuffer = await generateCountdownWithOnlineText(initialSecondsLeft);
         res.send(gifBuffer);
         console.log(`✅ Countdown GIF sent successfully`);
 
@@ -94,25 +95,32 @@ app.get("/api/exams/countdown/:id.gif", async (req, res) => {
     }
 });
 
-// Fixed version with proper text orientation and consistent time
-async function generateFixedCountdownGif(initialSecondsLeft) {
+// Generate countdown using online text-to-image service
+async function generateCountdownWithOnlineText(initialSecondsLeft) {
     const { GifFrame, GifCodec, BitmapImage } = require('gifwrap');
     const codec = new GifCodec();
     const frames = [];
 
-    // Generate 5 frames using the same initial time reference
+    // Generate 5 frames using consistent time reference
     for (let i = 0; i < 5; i++) {
-        // FIX: Use consistent time reference, don't recalculate
         const currentSeconds = Math.max(0, initialSecondsLeft - i);
         const mins = Math.floor(currentSeconds / 60);
         const secs = currentSeconds % 60;
 
-        const timeText = currentSeconds <= 0 ? "STARTED" : `${mins}:${secs.toString().padStart(2, "0")}`;
-        const isRed = currentSeconds <= 60;
+        const timeText = currentSeconds <= 0 ? "EXAM STARTED" : `Starts in ${mins}:${secs.toString().padStart(2, "0")}`;
+        const color = currentSeconds <= 60 ? "red" : "blue";
 
-        // Create frame with properly oriented text
-        const frame = createFixedTextFrame(timeText, isRed);
-        frames.push(frame);
+        try {
+            // Generate text image using QuickChart API
+            const textImageUrl = await generateTextImage(timeText, color);
+            const frame = await createFrameFromImageUrl(textImageUrl);
+            frames.push(frame);
+        } catch (error) {
+            console.error(`Error generating frame ${i}:`, error);
+            // Fallback: create simple colored frame
+            const fallbackFrame = createSimpleFrame(timeText, color);
+            frames.push(fallbackFrame);
+        }
     }
 
     const gif = await codec.encodeGif(frames, {
@@ -123,37 +131,112 @@ async function generateFixedCountdownGif(initialSecondsLeft) {
     return gif.buffer;
 }
 
-// Fixed text rendering with proper orientation
-function createFixedTextFrame(text, isRed) {
-    const width = 200;
-    const height = 60;
+// Generate text image using QuickChart API
+async function generateTextImage(text, color = "blue") {
+    const width = 300;
+    const height = 80;
+
+    // Use QuickChart API for text generation
+    const chartConfig = {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [1], // Single value for full circle
+                backgroundColor: [color],
+                borderColor: [color],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            cutout: '80%',
+            plugins: {
+                legend: { display: false },
+                title: {
+                    display: true,
+                    text: text,
+                    font: { size: 16, family: 'Arial', weight: 'bold' },
+                    color: color,
+                    position: 'bottom',
+                    padding: { top: 20, bottom: 10 }
+                },
+                tooltip: { enabled: false }
+            },
+            responsive: false,
+            maintainAspectRatio: false
+        }
+    };
+
+    const encodedConfig = encodeURIComponent(JSON.stringify(chartConfig));
+    const imageUrl = `https://quickchart.io/chart?c=${encodedConfig}&width=${width}&height=${height}&backgroundColor=white`;
+
+    return imageUrl;
+}
+
+// Alternative: Use a simpler text-only API
+async function generateSimpleTextImage(text, color = "blue") {
+    const width = 300;
+    const height = 80;
+
+    // Simple text image using QuickChart's label API
+    const imageUrl = `https://quickchart.io/chart?cht=tx&chl=${encodeURIComponent(text)}&chco=${color}&chf=bg,s,FFFFFF&chs=${width}x${height}`;
+
+    return imageUrl;
+}
+
+// Create frame from online image URL
+async function createFrameFromImageUrl(imageUrl) {
+    const { GifFrame, BitmapImage } = require('gifwrap');
+
+    try {
+        // Download image
+        const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+        const imageBuffer = Buffer.from(response.data);
+
+        // Convert to PNG and then to raw bitmap data
+        const { data, info } = await sharp(imageBuffer)
+            .resize(300, 80) // Ensure consistent size
+            .ensureAlpha()
+            .raw()
+            .toBuffer({ resolveWithObject: true });
+
+        return new GifFrame(new BitmapImage({
+            width: info.width,
+            height: info.height,
+            data: data
+        }), { delayCentisecs: 100 });
+    } catch (error) {
+        throw new Error(`Failed to download/process image: ${error.message}`);
+    }
+}
+
+// Fallback: Create simple frame if online service fails
+function createSimpleFrame(text, color) {
+    const { GifFrame, BitmapImage } = require('gifwrap');
+    const width = 300;
+    const height = 80;
     const frameData = Buffer.alloc(width * height * 4);
 
-    const color = isRed ? [255, 0, 0] : [0, 0, 255];
-    const bgColor = [255, 255, 255];
+    const rgbColor = color === "red" ? [255, 0, 0] : [0, 0, 255];
 
-    // Fill background
+    // Fill with white background
     for (let i = 0; i < frameData.length; i += 4) {
-        frameData[i] = bgColor[0];
-        frameData[i + 1] = bgColor[1];
-        frameData[i + 2] = bgColor[2];
-        frameData[i + 3] = 255;
+        frameData[i] = 255;     // R
+        frameData[i + 1] = 255; // G
+        frameData[i + 2] = 255; // B
+        frameData[i + 3] = 255; // A
     }
 
-    // Draw border
+    // Draw colored border
     for (let x = 0; x < width; x++) {
         for (let y = 0; y < height; y++) {
-            if (x < 3 || x >= width - 3 || y < 3 || y >= height - 3) {
+            if (x < 2 || x >= width - 2 || y < 2 || y >= height - 2) {
                 const index = (y * width + x) * 4;
-                frameData[index] = color[0];
-                frameData[index + 1] = color[1];
-                frameData[index + 2] = color[2];
+                frameData[index] = rgbColor[0];
+                frameData[index + 1] = rgbColor[1];
+                frameData[index + 2] = rgbColor[2];
             }
         }
     }
-
-    // FIX: Use properly oriented text rendering
-    drawFixedPixelText(frameData, text, color, width, height);
 
     return new GifFrame(new BitmapImage({
         width: width,
@@ -162,100 +245,33 @@ function createFixedTextFrame(text, isRed) {
     }), { delayCentisecs: 100 });
 }
 
-// Fixed text rendering with proper orientation
-function drawFixedPixelText(frameData, text, color, width, height) {
-    const textX = 50;
-    const textY = 25;
-
-    // FIX: Properly oriented 5x7 pixel font (right-side up)
-    const font = {
-        '0': [0x1F, 0x11, 0x11, 0x11, 0x1F], // 0b11111, 0b10001, 0b10001, 0b10001, 0b11111
-        '1': [0x04, 0x0C, 0x04, 0x04, 0x0E], // 0b00100, 0b01100, 0b00100, 0b00100, 0b01110
-        '2': [0x1F, 0x01, 0x1F, 0x10, 0x1F], // 0b11111, 0b00001, 0b11111, 0b10000, 0b11111
-        '3': [0x1F, 0x01, 0x0F, 0x01, 0x1F], // 0b11111, 0b00001, 0b01111, 0b00001, 0b11111
-        '4': [0x11, 0x11, 0x1F, 0x01, 0x01], // 0b10001, 0b10001, 0b11111, 0b00001, 0b00001
-        '5': [0x1F, 0x10, 0x1F, 0x01, 0x1F], // 0b11111, 0b10000, 0b11111, 0b00001, 0b11111
-        '6': [0x1F, 0x10, 0x1F, 0x11, 0x1F], // 0b11111, 0b10000, 0b11111, 0b10001, 0b11111
-        '7': [0x1F, 0x01, 0x02, 0x04, 0x04], // 0b11111, 0b00001, 0b00010, 0b00100, 0b00100
-        '8': [0x1F, 0x11, 0x1F, 0x11, 0x1F], // 0b11111, 0b10001, 0b11111, 0b10001, 0b11111
-        '9': [0x1F, 0x11, 0x1F, 0x01, 0x1F], // 0b11111, 0b10001, 0b11111, 0b00001, 0b11111
-        ':': [0x00, 0x0C, 0x00, 0x0C, 0x00], // 0b00000, 0b01100, 0b00000, 0b01100, 0b00000
-        'S': [0x1F, 0x10, 0x1F, 0x01, 0x1F], // 0b11111, 0b10000, 0b11111, 0b00001, 0b11111
-        'T': [0x1F, 0x04, 0x04, 0x04, 0x04], // 0b11111, 0b00100, 0b00100, 0b00100, 0b00100
-        'A': [0x0E, 0x11, 0x1F, 0x11, 0x11], // 0b01110, 0b10001, 0b11111, 0b10001, 0b10001
-        'R': [0x1E, 0x11, 0x1E, 0x12, 0x11], // 0b11110, 0b10001, 0b11110, 0b10010, 0b10001
-        'E': [0x1F, 0x10, 0x1F, 0x10, 0x1F], // 0b11111, 0b10000, 0b11111, 0b10000, 0b11111
-        'D': [0x1E, 0x11, 0x11, 0x11, 0x1E]  // 0b11110, 0b10001, 0b10001, 0b10001, 0b11110
-    };
-
-    let currentX = textX;
-
-    for (let char of text) {
-        if (font[char]) {
-            const charData = font[char];
-
-            // Draw each column of the character
-            for (let col = 0; col < 5; col++) {
-                const colData = charData[col];
-
-                // FIX: Proper orientation - draw from top to bottom
-                for (let row = 0; row < 7; row++) {
-                    // Check if this pixel should be drawn (bit is set)
-                    if (colData & (1 << (6 - row))) { // FIX: Use (6 - row) for proper orientation
-                        const x = currentX + col;
-                        const y = textY + row;
-
-                        if (x >= 0 && x < width && y >= 0 && y < height) {
-                            const index = (y * width + x) * 4;
-                            frameData[index] = color[0];
-                            frameData[index + 1] = color[1];
-                            frameData[index + 2] = color[2];
-                        }
-                    }
-                }
-            }
-
-            currentX += 7; // Move to next character position
-        } else {
-            currentX += 4; // Space for unknown characters
-        }
-    }
-}
-
-// Test endpoint with fixed orientation and consistent time
-app.get("/api/test-fixed.gif", async (req, res) => {
+// Test endpoint with online text generation
+app.get("/api/test-online-text.gif", async (req, res) => {
     try {
         const { GifFrame, GifCodec, BitmapImage } = require('gifwrap');
         const codec = new GifCodec();
         const frames = [];
 
-        // FIX: Use consistent time values
-        const testTimes = [300, 299, 298, 60, 59]; // 5:00, 4:59, 4:58, 1:00, 0:59
+        const testTexts = [
+            "Test: 05:00",
+            "Test: 04:59",
+            "Test: 01:00",
+            "Test: 00:59",
+            "EXAM STARTED"
+        ];
 
-        for (let i = 0; i < testTimes.length; i++) {
-            const seconds = testTimes[i];
-            const mins = Math.floor(seconds / 60);
-            const secs = seconds % 60;
-            const timeText = seconds <= 0 ? "STARTED" : `${mins}:${secs.toString().padStart(2, "0")}`;
-            const isRed = seconds <= 60;
+        for (let i = 0; i < testTexts.length; i++) {
+            const color = i >= 2 ? "red" : "blue"; // Last two in red
 
-            const frameData = Buffer.alloc(200 * 60 * 4);
-
-            // White background
-            for (let j = 0; j < frameData.length; j += 4) {
-                frameData[j] = 255;
-                frameData[j + 1] = 255;
-                frameData[j + 2] = 255;
-                frameData[j + 3] = 255;
+            try {
+                const imageUrl = await generateSimpleTextImage(testTexts[i], color);
+                const frame = await createFrameFromImageUrl(imageUrl);
+                frames.push(frame);
+            } catch (error) {
+                console.error(`Test frame ${i} failed:`, error);
+                const fallbackFrame = createSimpleFrame(testTexts[i], color);
+                frames.push(fallbackFrame);
             }
-
-            drawFixedPixelText(frameData, timeText, isRed ? [255, 0, 0] : [0, 0, 255], 200, 60);
-
-            frames.push(new GifFrame(new BitmapImage({
-                width: 200,
-                height: 60,
-                data: frameData
-            }), { delayCentisecs: 200 }));
         }
 
         const gif = await codec.encodeGif(frames, { loops: 0 });
@@ -265,11 +281,11 @@ app.get("/api/test-fixed.gif", async (req, res) => {
             "Cache-Control": "no-cache"
         });
         res.send(gif.buffer);
-        console.log("✅ Fixed test GIF sent");
+        console.log("✅ Online text test GIF sent");
 
     } catch (error) {
-        console.error("Fixed test failed:", error);
-        res.status(500).send("Test failed");
+        console.error("Online text test failed:", error);
+        sendErrorGif(res, "Test Failed");
     }
 });
 
@@ -279,30 +295,20 @@ async function sendErrorGif(res, message) {
         const { GifFrame, GifCodec, BitmapImage } = require('gifwrap');
         const codec = new GifCodec();
 
-        const width = 200;
-        const height = 60;
-        const frameData = Buffer.alloc(width * height * 4);
-
-        // Red background
-        for (let i = 0; i < frameData.length; i += 4) {
-            frameData[i] = 255;
-            frameData[i + 1] = 200;
-            frameData[i + 2] = 200;
-            frameData[i + 3] = 255;
+        // Try to generate error image online
+        try {
+            const imageUrl = await generateSimpleTextImage(message, "red");
+            const frame = await createFrameFromImageUrl(imageUrl);
+            const gif = await codec.encodeGif([frame], { loops: 1 });
+            res.set("Content-Type", "image/gif");
+            res.send(gif.buffer);
+        } catch (onlineError) {
+            // Fallback to simple error frame
+            const frame = createSimpleFrame(message, "red");
+            const gif = await codec.encodeGif([frame], { loops: 1 });
+            res.set("Content-Type", "image/gif");
+            res.send(gif.buffer);
         }
-
-        drawFixedPixelText(frameData, "ERROR", [255, 0, 0], width, height);
-
-        const frame = new GifFrame(new BitmapImage({
-            width: width,
-            height: height,
-            data: frameData
-        }), { delayCentisecs: 500 });
-
-        const gif = await codec.encodeGif([frame], { loops: 1 });
-
-        res.set("Content-Type", "image/gif");
-        res.send(gif.buffer);
     } catch (error) {
         const simpleGif = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
         res.set("Content-Type", "image/gif");
