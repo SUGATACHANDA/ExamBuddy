@@ -13,21 +13,28 @@
   "type": "commonjs",
   "dependencies": {
     "@react-email/components": "^0.5.3",
+    "@tensorflow/tfjs": "^4.22.0",
+    "@vladmandic/face-api": "^1.7.15",
     "axios": "^1.12.2",
     "bcryptjs": "^3.0.2",
     "canvas": "^3.2.0",
+    "cloudinary": "^2.8.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "express-async-handler": "^1.2.0",
+    "face-api.js": "^0.22.2",
     "gifwrap": "^0.10.1",
-    "jimp": "^0.22.10",
+    "image-hash": "^6.0.1",
+    "jimp": "^0.22.12",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.0",
+    "multer": "^2.0.2",
     "nodemailer": "^7.0.6",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "sharp": "^0.34.4",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "streamifier": "^0.0.2"
   }
 }

@@ -4,12 +4,15 @@ import api from '../../api/axiosConfig';
 import UserCard from '../../components/ui/UserCard';
 import Pagination from '../../components/teacher/Pagination';
 import EditUserModal from './EditUserModal';
+import { togglePasswordVisibility } from 'utils/passwordToggle';
+import { Eye, EyeOff } from 'lucide-react';
 
 // A dedicated modal sub-component for CREATING a new University Affairs user.
 const CreateUAModal = ({ colleges, onClose, onSave }) => {
-    const [formData, setFormData] = useState({ name: '', email: '', collegeId: '', password: '', college: '' });
+    const [formData, setFormData] = useState({ name: '', email: '', collegeId: '', password: 'password123', college: '' });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -37,7 +40,53 @@ const CreateUAModal = ({ colleges, onClose, onSave }) => {
                     <div className="form-group"><label>Full Name</label><input name="name" value={formData.name} onChange={handleChange} required /></div>
                     <div className="form-group"><label>Email Address</label><input name="email" type="email" value={formData.email} onChange={handleChange} required /></div>
                     <div className="form-group"><label>Employee ID</label><input name="collegeId" value={formData.collegeId} onChange={handleChange} required /></div>
-                    <div className="form-group"><label>Create Password</label><input name="password" type="password" value={formData.password} onChange={handleChange} required autoComplete="new-password" /></div>
+                    <div className="form-group" style={{ position: 'relative' }}>
+                        <label>Create Password</label>
+                        <input
+                            name="password"
+                            type={showPassword ? 'text' : 'password'}
+                            value={formData.password || ''}
+                            onChange={handleChange}
+                            required
+                            autoComplete="new-password"
+                            style={{ paddingRight: '2.5rem' }}
+                            disabled
+                        />
+
+                        {showPassword ? (
+                            <EyeOff
+                                className="password-icon"
+                                onClick={() => {
+                                    togglePasswordVisibility('password');
+                                    setShowPassword(false);
+                                }}
+                                style={{
+                                    position: 'absolute',
+                                    right: '10px',
+                                    top: '65%',
+                                    transform: 'translateY(-50%)',
+                                    cursor: 'pointer',
+                                }}
+
+                            />
+                        ) : (
+                            <Eye
+                                className="password-icon"
+                                onClick={() => {
+                                    togglePasswordVisibility('password');
+                                    setShowPassword(true);
+                                }}
+                                xlinkTitle='Show Password'
+                                style={{
+                                    position: 'absolute',
+                                    right: '10px',
+                                    top: '65%',
+                                    transform: 'translateY(-50%)',
+                                    cursor: 'pointer',
+                                }}
+                            />
+                        )}
+                    </div>
                     <div className="form-group"><label>Assign to College</label>
                         <select name="college" value={formData.college} onChange={handleChange} required>
                             <option value="" disabled>-- Select a College --</option>

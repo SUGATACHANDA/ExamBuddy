@@ -5,6 +5,7 @@ const EditQuestionModal = ({ question, onClose, onSave }) => {
     const [questionText, setQuestionText] = useState('');
     const [options, setOptions] = useState(['', '', '', '']);
     const [correctAnswer, setCorrectAnswer] = useState('');
+    const [marks, setMarks] = useState();
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -13,6 +14,7 @@ const EditQuestionModal = ({ question, onClose, onSave }) => {
             setQuestionText(question.questionText);
             setOptions(question.options);
             setCorrectAnswer(question.correctAnswer);
+            setMarks(question.marks || 1);
         }
     }, [question]);
 
@@ -25,7 +27,7 @@ const EditQuestionModal = ({ question, onClose, onSave }) => {
         }
         setLoading(true);
         try {
-            await api.put(`/questions/${question._id}`, { questionText, options, correctAnswer });
+            await api.put(`/questions/${question._id}`, { questionText, options, correctAnswer, marks });
             onSave(); // Trigger the parent to refetch
             onClose(); // Close the modal
         } catch (err) {
@@ -62,6 +64,17 @@ const EditQuestionModal = ({ question, onClose, onSave }) => {
                             {options.filter(o => o).map((opt, i) => <option key={i} value={opt}>{opt}</option>)}
                         </select>
                     </div>
+                    <div className="form-group">
+                        <label>Marks</label>
+                        <input
+                            type="number"
+                            min="1"
+                            value={marks}
+                            onChange={(e) => setMarks(Number(e.target.value))}
+                            required
+                        />
+                    </div>
+
                     <div className="modal-actions">
                         <button type="button" onClick={onClose} className="btn btn-secondary">Cancel</button>
                         <button type="submit" className="btn-submit" disabled={loading}>{loading ? 'Saving...' : 'Save Changes'}</button>

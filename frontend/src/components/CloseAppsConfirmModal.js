@@ -25,7 +25,7 @@ const CloseAppsConfirmModal = ({ isOpen, appList, onClose, onConfirm }) => {
                 <p><strong>Are you sure you want to proceed?</strong></p>
 
                 <div className="modal-actions">
-                    <button onClick={onClose} className="btn btn-secondary">Cancel</button>
+                    {/* <button onClick={onClose} className="btn btn-secondary">Cancel</button> */}
                     <button onClick={onConfirm} className="btn btn-danger">Yes, Close Apps</button>
                 </div>
             </div>

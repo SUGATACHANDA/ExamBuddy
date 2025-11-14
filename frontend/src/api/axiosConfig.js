@@ -15,6 +15,10 @@ api.interceptors.request.use(
             ? JSON.parse(localStorage.getItem('userInfo'))
             : null;
 
+        if (window.electronAPI && process.env.NODE_ENV === 'production') {
+            config.headers['Content-Type'] = 'application/json';
+            config.headers['Accept'] = 'application/json';
+        }
         if (userInfo && userInfo.token) {
             config.headers.Authorization = `Bearer ${userInfo.token}`;
         }

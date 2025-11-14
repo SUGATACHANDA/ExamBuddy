@@ -3,7 +3,10 @@ const mongoose = require('mongoose');
 
 const answerSchema = new mongoose.Schema({
     questionId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Question' },
-    submittedAnswer: String,
+    submittedAnswer: {
+        type: mongoose.Schema.Types.Mixed, // can hold string or array
+        default: null
+    },
     status: {
         type: String,
         enum: ['answered', 'notAnswered', 'markedForReview', 'answeredAndMarked'],
@@ -16,6 +19,11 @@ const resultSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Exam',
         required: true,
+    },
+    subject: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Subject",
+        required: true
     },
     student: {
         type: mongoose.Schema.Types.ObjectId,

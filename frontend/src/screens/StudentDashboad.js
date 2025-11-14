@@ -6,14 +6,25 @@ import api from "../api/axiosConfig";
 import PermissionModal from "../components/PermissionModal";
 import ChangePasswordModal from "components/ui/ChangePasswordModal";
 import Countdown from "../components/Countdown";
-// --- Clock component ---
+import { ClockIcon, CalendarIcon, AlertCircleIcon, CheckCircleIcon, LogOutIcon, KeyIcon, RefreshCwIcon } from "lucide-react";
+
+// --- Clock Component ---
 export const Clock = () => {
     const [time, setTime] = useState(new Date());
     useEffect(() => {
         const timerId = setInterval(() => setTime(new Date()), 1000);
         return () => clearInterval(timerId);
     }, []);
-    return <div className="clock">{time.toLocaleTimeString()}</div>;
+    return <span>{time.toLocaleTimeString()}</span>;
+};
+
+// --- Get Initials ---
+export const getInitials = (name) => {
+    if (!name) return "?";
+    const parts = name.trim().split(" ");
+    return parts.length === 1
+        ? parts[0][0].toUpperCase()
+        : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
 const StudentDashboard = () => {
@@ -29,18 +40,36 @@ const StudentDashboard = () => {
     const { userInfo, logout } = useAuth();
     const navigate = useNavigate();
 
-    // ✅ Fetch exams + completed exams
     const fetchData = useCallback(async () => {
         if (!isRefreshing) setLoading(true);
         try {
             const [examsRes, completedRes] = await Promise.all([
                 api.get("/exams/student/all"),
-                api.get("/results/my-completed")
+                api.get("/results/my-completed"),
             ]);
-            setAllFetchedExams(examsRes.data);
-            setCompletedExamIds(new Set(completedRes.data));
+
+            // ✅ Ensure exams is always an array
+            const fetchedExams = Array.isArray(examsRes.data)
+                ? examsRes.data
+                : examsRes.data.exams || [];
+
+            // ✅ Ensure completed exam IDs is always an array
+            let completedExamIdsArray = [];
+            if (Array.isArray(completedRes.data)) {
+                completedExamIdsArray = completedRes.data;
+            } else if (completedRes.data && typeof completedRes.data === 'object') {
+                completedExamIdsArray = completedRes.data.completedExamIds ||
+                    completedRes.data.examIds ||
+                    completedRes.data.completedExams ||
+                    [];
+            }
+
+            setAllFetchedExams(fetchedExams);
+            setCompletedExamIds(new Set(completedExamIdsArray));
         } catch (error) {
             console.error("Failed to fetch dashboard data", error);
+            setAllFetchedExams([]);
+            setCompletedExamIds(new Set());
         } finally {
             setLoading(false);
             setIsRefreshing(false);
@@ -53,37 +82,83 @@ const StudentDashboard = () => {
         return () => clearInterval(interval);
     }, [fetchData]);
 
-    const handleRefresh = () => {
+    const handleRefresh = useCallback(() => {
         setIsRefreshing(true);
         fetchData();
-    };
+    }, [fetchData]);
 
-    // ✅ categorize exams into active and upcoming
-    const { activeExams, upcomingExams } = useMemo(() => {
+    const { activeExams, upcomingExams, nearestUpcomingTime } = useMemo(() => {
         const now = new Date();
         const active = [];
         const upcoming = [];
+        let nearestTime = null;
+
+        if (!Array.isArray(allFetchedExams)) {
+            return { activeExams: [], upcomingExams: [], nearestUpcomingTime: null };
+        }
 
         allFetchedExams.forEach((exam) => {
+            if (!exam || !exam._id) return;
+
             if (completedExamIds.has(exam._id)) return;
 
             const scheduledTime = new Date(exam.scheduledAt);
             const windowStartTime = new Date(
-                scheduledTime.getTime() - (exam.loginWindowStart) * 60000
+                scheduledTime.getTime() - (exam.loginWindowStart || 0) * 60000
             );
-            const windowEndTime = new Date(scheduledTime.getTime() + (exam.lateEntryWindowEnd || 5) * 60000);
+            const windowEndTime = new Date(
+                scheduledTime.getTime() + (exam.lateEntryWindowEnd || 5) * 60000
+            );
+
             if (now >= windowStartTime && now <= windowEndTime) {
                 active.push({ ...exam, windowEndTime });
-            }
-            else if (now >= windowStartTime) {
-                active.push(exam);
-            } else {
+            } else if (now < windowStartTime) {
                 upcoming.push(exam);
+
+                if (!nearestTime || windowStartTime < nearestTime) {
+                    nearestTime = windowStartTime;
+                }
             }
         });
 
-        return { activeExams: active, upcomingExams: upcoming };
+        return { activeExams: active, upcomingExams: upcoming, nearestUpcomingTime: nearestTime };
     }, [allFetchedExams, completedExamIds]);
+
+    // Auto-refresh logic remains the same...
+    useEffect(() => {
+        if (!nearestUpcomingTime) return;
+        const now = new Date();
+        const timeUntilRefresh = nearestUpcomingTime.getTime() - now.getTime();
+        if (timeUntilRefresh <= 0) {
+            handleRefresh();
+            return;
+        }
+        const timeoutId = setTimeout(() => {
+            handleRefresh();
+        }, timeUntilRefresh + 1000);
+        return () => clearTimeout(timeoutId);
+    }, [nearestUpcomingTime, handleRefresh]);
+
+    useEffect(() => {
+        if (activeExams.length === 0) return;
+        const now = new Date();
+        const nearestEndingExam = activeExams.reduce((nearest, exam) => {
+            if (!nearest || exam.windowEndTime < nearest.windowEndTime) {
+                return exam;
+            }
+            return nearest;
+        }, null);
+        if (!nearestEndingExam) return;
+        const timeUntilEnd = nearestEndingExam.windowEndTime.getTime() - now.getTime();
+        if (timeUntilEnd <= 0) {
+            handleRefresh();
+            return;
+        }
+        const timeoutId = setTimeout(() => {
+            handleRefresh();
+        }, timeUntilEnd + 1000);
+        return () => clearTimeout(timeoutId);
+    }, [activeExams, handleRefresh]);
 
     const handleStartExamClick = (examId) => {
         setTargetExamId(examId);
@@ -97,25 +172,53 @@ const StudentDashboard = () => {
         }
     };
 
+    const initials = getInitials(userInfo?.name);
+
     return (
-        <div className="container">
-            {/* --- HEADER --- */}
+        <div className="professional-dashboard">
+            {/* Header */}
             <header className="dashboard-header">
-                <div>
-                    <h1>Welcome, {userInfo?.name}</h1>
-                    <p>Student Dashboard</p>
-                </div>
-                <Clock />
-                <div>
-                    <button
-                        onClick={() => setIsChangePassModalOpen(true)}
-                        className="changePasswordButton btn-secondary"
-                    >
-                        Change Password
-                    </button>
-                    <button onClick={logout} className="btn-danger">
-                        Logout
-                    </button>
+                <div className="header-content">
+                    <div className="user-profile">
+                        {userInfo.photoUrl ? (
+                            <img
+                                src={userInfo.photoUrl}
+                                alt={userInfo.name}
+                                className="user-avatar"
+                            />
+                        ) : (
+                            <div className="avatar-placeholder">{initials}</div>
+                        )}
+                        <div className="user-info">
+                            <h1 className="user-name">{userInfo?.name}</h1>
+                            <p className="user-department">Department of {userInfo?.department?.name}</p>
+                        </div>
+                    </div>
+
+                    <div className="header-right">
+                        <div className="time-display">
+                            <ClockIcon size={16} />
+                            <Clock />
+                        </div>
+                        <div className="header-actions">
+                            <button
+                                onClick={() => setIsChangePassModalOpen(true)}
+                                className="header-btn"
+                                title="Change Password"
+                            >
+                                <KeyIcon size={18} />
+                                Change Password
+                            </button>
+                            <button
+                                onClick={logout}
+                                className="header-btn logout"
+                                title="Logout"
+                            >
+                                <LogOutIcon size={18} />
+                                Logout
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </header>
 
@@ -125,86 +228,139 @@ const StudentDashboard = () => {
                 />
             )}
 
-            {/* --- ACTIVE EXAMS SECTION --- */}
-            <h2>Exams Open for Entry</h2>
-            <button
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="btn-secondary"
-            >
-                {isRefreshing ? "Refreshing..." : "Refresh List"}
-            </button>
-            {loading ? (
-                <p>Loading...</p>
-            ) : activeExams.length > 0 ? (
-                <ul className="exam-list">
-                    {activeExams.map((exam) => {
-                        return (
-                            <li key={exam._id} className="exam-card-active">
-                                <h3>{exam.title}</h3>
-                                <p>
-                                    This exam is open for entry now. Please proceed to the
-                                    security checks.
-                                </p>
-                                <Countdown
-                                    targetDate={exam.windowEndTime}
-                                    prefixText="Entry window closes in:"
-                                />
-                                <button
-                                    onClick={() => handleStartExamClick(exam._id)}
-                                    className="btn-primary"
-                                >
-                                    Start Exam
-                                </button>
-                            </li>
-                        );
-                    })}
-                </ul>
-            ) : (
-                <p>There are no exams open for entry at this moment.</p>
-            )}
+            {/* Main Content */}
+            <main className="dashboard-main">
+                <div className="dashboard-card">
+                    <div className="card-header">
+                        <div className="card-title">
+                            <h2>Exam Dashboard</h2>
+                            <p>Manage your exams and track upcoming schedules</p>
+                        </div>
+                        <button
+                            onClick={handleRefresh}
+                            disabled={isRefreshing}
+                            className="refresh-btn"
+                        >
+                            <RefreshCwIcon size={16} className={isRefreshing ? "spinning" : ""} />
+                            {isRefreshing ? "Refreshing..." : "Refresh"}
+                        </button>
+                    </div>
 
-            <hr className="divider" />
+                    <div className="card-content">
+                        {loading ? (
+                            <div className="loading-state">
+                                <div className="loading-spinner"></div>
+                                <p>Loading exams...</p>
+                            </div>
+                        ) : (
+                            <div className="exam-sections">
+                                {/* Active Exams */}
+                                {activeExams.length > 0 && (
+                                    <section className="exam-section">
+                                        <div className="section-header">
+                                            <AlertCircleIcon className="section-icon active" />
+                                            <h3>Available Exams</h3>
+                                            <span className="exam-count">{activeExams.length}</span>
+                                        </div>
+                                        <div className="exam-list">
+                                            {activeExams.map((exam) => (
+                                                <div key={exam._id} className="exam-card active">
+                                                    <div className="exam-info">
+                                                        <h4>{exam.title}</h4>
+                                                        <p className="exam-subject">{exam.subject?.name || exam.subject}</p>
+                                                        <div className="exam-meta">
+                                                            <span className="meta-item">
+                                                                <CalendarIcon size={14} />
+                                                                Scheduled: {new Date(exam.scheduledAt).toLocaleDateString()}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="exam-card-actions">
+                                                        <div className="countdown">
+                                                            <Countdown
+                                                                targetDate={exam.windowEndTime}
+                                                                prefixText="Entry closes in:"
+                                                                onComplete={handleRefresh}
+                                                            />
+                                                        </div>
+                                                        <button
+                                                            onClick={() => handleStartExamClick(exam._id)}
+                                                            className="btn-primary"
+                                                        >
+                                                            Start Exam
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </section>
+                                )}
 
-            {/* --- UPCOMING EXAMS SECTION --- */}
-            <h2>Exams Starting Soon</h2>
-            {loading ? (
-                <p>Loading...</p>
-            ) : upcomingExams.length > 0 ? (
-                <ul className="exam-list">
-                    {upcomingExams.map((exam) => {
-                        const windowStartTime = new Date(
-                            new Date(exam.scheduledAt).getTime() -
-                            (exam.loginWindowStart) * 60000
-                        );
-                        return (
-                            <li key={exam._id} className="exam-card-upcoming">
-                                <h3>{exam.title}</h3>
-                                <p>
-                                    Scheduled for:{" "}
-                                    {new Date(
-                                        exam.scheduledAt
-                                    ).toLocaleString()}
-                                </p>
-                                <div className="countdown-container">
-                                    <span>Entry opens in:</span>
-                                    <Countdown targetDate={windowStartTime} />
-                                </div>
-                            </li>
-                        );
-                    })}
-                </ul>
-            ) : (
-                <p>
-                    There are no other exams scheduled for you at this time.
-                </p>
-            )}
+                                {/* Upcoming Exams */}
+                                {upcomingExams.length > 0 && (
+                                    <section className="exam-section">
+                                        <div className="section-header">
+                                            <CalendarIcon className="section-icon upcoming" />
+                                            <h3>Upcoming Exams</h3>
+                                            <span className="exam-count">{upcomingExams.length}</span>
+                                        </div>
+                                        <div className="exam-list">
+                                            {upcomingExams.map((exam) => {
+                                                const windowStartTime = new Date(
+                                                    new Date(exam.scheduledAt).getTime() -
+                                                    exam.loginWindowStart * 60000
+                                                );
+                                                return (
+                                                    <div key={exam._id} className="exam-card upcoming">
+                                                        <div className="exam-info">
+                                                            <h4>{exam.title}</h4>
+                                                            <p className="exam-subject">{exam.subject?.name || exam.subject}</p>
+                                                            <div className="exam-meta">
+                                                                <span className="meta-item">
+                                                                    <CalendarIcon size={14} />
+                                                                    Scheduled: {new Date(exam.scheduledAt).toLocaleString()}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="exam-card-actions">
+                                                            <div className="countdown">
+                                                                <Countdown
+                                                                    targetDate={windowStartTime}
+                                                                    prefixText="Opens in:"
+                                                                    onComplete={handleRefresh}
+                                                                />
+                                                            </div>
+                                                            <button className="btn-secondary" disabled>
+                                                                Upcoming
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </section>
+                                )}
 
-            <div className="dashboard-actions">
-                <Link to="/student/my-results" className="action-card-link">
-                    View Past Exam Results
-                </Link>
-            </div>
+                                {/* Empty State */}
+                                {activeExams.length === 0 && upcomingExams.length === 0 && (
+                                    <div className="empty-state">
+                                        <CheckCircleIcon size={48} className="empty-icon" />
+                                        <h3>No Exams Scheduled</h3>
+                                        <p>You don't have any active or upcoming exams at the moment.</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Results Link */}
+                        <div className="card-footer">
+                            <Link to="/student/my-results" className="results-link">
+                                View Past Exam Results →
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            </main>
 
             <PermissionModal
                 isOpen={isPermissionModalOpen}

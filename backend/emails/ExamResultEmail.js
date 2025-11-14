@@ -1,46 +1,83 @@
 // backend/emails/ExamResultEmail.js
-const ExamResultEmail = ({ name, examTitle, score, total, percentage, status, rank }) => {
-    const color = status === "Pass" ? "#16a34a" : "#dc2626";
-    return `
-  <div style="max-width:650px;margin:auto;background:#f9fafb;border-radius:12px;
-              font-family:Arial,sans-serif;color:#111827;overflow:hidden;">
-    
+const ExamResultEmail = ({ name, examTitle, score, total, percentage, status, rank, subject }) => {
+  const statusColor = status === "Pass" ? "#22c55e" : "#ef4444"; // Tailwind-inspired tones
+
+  return `
+  <div style="
+      max-width: 620px;
+      margin: auto;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      color: #111827;">
+      
     <!-- Header -->
-    <div style="background:linear-gradient(135deg,#2563eb,#1d4ed8);padding:25px;text-align:center;color:white;">
-      <h1 style="margin:0;">🎓 ExamBuddy Results</h1>
-      <p style="margin:8px 0 0;font-size:16px;">Your ${examTitle} performance summary</p>
+    <div style="
+        background: #1f2937;
+        padding: 28px;
+        text-align: center;
+        border-radius: 10px 10px 0 0;
+        color: #ffffff;">
+      <h2 style="margin: 0; font-size: 24px; font-weight: 600;">Exam Result Summary</h2>
+      <p style="margin: 6px 0 0; font-size: 14px; opacity: 0.85;">${examTitle}</p>
     </div>
 
     <!-- Body -->
-    <div style="padding:30px;">
-      <p>Hello <b>${name}</b>,</p>
-      <p>Thank you for completing the <b>${examTitle}</b> exam! Here’s your result summary:</p>
+    <div style="padding: 26px;">
+      <p style="margin: 0 0 12px;">Hello <strong>${name}</strong>,</p>
+      <p style="margin: 0 0 20px;">
+        Your exam results are now available. Below is a summary of your performance:
+      </p>
 
-      <!-- Result Card -->
-      <div style="margin:20px 0;padding:20px;background:#ffffff;border:1px solid #e5e7eb;
-                  border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
-        <p style="margin:8px 0;font-size:16px;"><b>Score:</b> ${score} / ${total}</p>
-        <p style="margin:8px 0;font-size:16px;"><b>Percentage:</b> ${percentage}%</p>
-        <p style="margin:8px 0;font-size:16px;">
-          <b>Status:</b> <span style="color:${color};font-weight:bold;">${status}</span>
-        </p>
-        ${rank ? `<p style="margin:8px 0;font-size:16px;"><b>Rank:</b> #${rank}</p>` : ""}
+      <div style="display:flex; margin-bottom: 16px; gap: 12px;">
+        ${subject ? `<span style="font-size:13px; color:#374151; background:#f1f5f9; padding:8px 10px; border-radius:8px; border:1px solid #e5e7eb;">Subject: <strong style="margin-left:6px; color:#111827;">${subject}</strong></span>` : ""}
+        <span style="font-size:13px; color:#374151; background:#f9fafb; padding:8px 10px; border-radius:8px; border:1px solid #e5e7eb;">Total Marks: <strong style="margin-left:6px; color:#111827;">${total}</strong></span>
       </div>
 
-      <p style="margin-top:10px;">Keep up the ${status === "Pass" ? "great" : "hard"} work and continue improving with each attempt.</p>
+      <!-- Result Card -->
+      <div style="
+          padding: 20px;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          background: #f9fafb;">
+          
+        <div style="margin-bottom: 8px;">
+          <span style="font-weight: 600;">Score:</span> ${score} / ${total}
+        </div>
+        <div style="margin-bottom: 8px;">
+          <span style="font-weight: 600;">Percentage:</span> ${percentage}%
+        </div>
+        <div style="margin-bottom: 8px;">
+          <span style="font-weight: 600;">Status:</span> 
+          <span style="font-weight: 600; color: ${statusColor};">${status}</span>
+        </div>
+        ${rank ? `<div><span style="font-weight: 600;">Rank:</span> ${rank}</div>` : ""}
+      </div>
 
-      <p style="margin-top:25px;font-size:14px;color:#6b7280;text-align:center;">
-        This result was generated automatically. Please contact your teacher or department if you have questions.
+      <p style="margin-top: 22px; font-size: 14px; line-height: 1.6; color: #374151;">
+        ${status === "Pass"
+      ? "Congratulations on your achievement! Keep striving for excellence."
+      : "Don't get discouraged — review your answers and keep improving. Every effort counts."
+    }
       </p>
     </div>
 
     <!-- Footer -->
-    <div style="background:#f3f4f6;text-align:center;padding:15px;">
-      <p style="margin:0;font-size:12px;color:#6b7280;">
-        © ${new Date().getFullYear()} ExamBuddy. All rights reserved.
+    <div style="
+        background: #f3f4f6;
+        text-align: center;
+        padding: 16px;
+        border-radius: 0 0 10px 10px;">
+      <p style="margin: 0; font-size: 12px; color: #6b7280;">
+        This is an automated email. If you have any questions, please contact your examination department.
+      </p>
+      <p style="margin: 6px 0 0; font-size: 11px; color: #9ca3af;">
+        © ${new Date().getFullYear()} ExamBuddy • All rights reserved.
       </p>
     </div>
-  </div>`;
+  </div>
+  `;
 };
 
 module.exports = ExamResultEmail;

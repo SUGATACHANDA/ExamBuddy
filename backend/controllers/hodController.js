@@ -8,6 +8,16 @@ const Result = require('../models/Result');
 const Exam = require('../models/Exam');
 const UserRegistrationEmail = require('../emails/UserRegistrationEmail');
 const sendEmail = require('../utils/mailer');
+// const cloudinary = require("../config/cloudinary");
+const streamifier = require("streamifier");
+const fs = require('fs')
+const { v2: cloudinary } = require('cloudinary');
+
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 // =========================================================================
 // == USER REGISTRATION (BY HOD)
@@ -43,14 +53,33 @@ exports.registerTeacher = asyncHandler(async (req, res) => {
 /** @desc    Register a new Student for a course within the HOD's department */
 /** @route   POST /api/hod/users/register-student */
 exports.registerStudent = asyncHandler(async (req, res) => {
-    const { collegeId, name, email, password, course, semester } = req.body;
+    const { collegeId, name, email, password, course, semester, photoBase64, descriptor } = req.body;
     const { college: hodCollege, department: hodDepartmentId } = req.user;
 
     const userExists = await User.findOne({ $or: [{ email }, { collegeId }] });
+
     if (userExists) {
         res.status(400);
         throw new Error('User with this email or Roll No. already exists.');
     }
+
+    let photoUrl = null;
+    if (req.file) {
+        const uploadRes = await cloudinary.uploader.upload(req.file.path, { folder: "students/face" });
+        photoUrl = uploadRes.secure_url;
+    } else if (req.body.photoBase64) {
+        const uploadRes = await cloudinary.uploader.upload(req.body.photoBase64, { folder: "students/face" });
+        photoUrl = uploadRes.secure_url;
+    }
+    let descriptorArray = [];
+    if (req.body.descriptor) {
+        try {
+            descriptorArray = JSON.parse(req.body.descriptor); // array of numbers
+        } catch (e) {
+            // ignore parse error
+        }
+    }
+
 
     // --- Definitive Security Check ---
     // 1. Find the department that is the parent of the selected course.
@@ -74,9 +103,25 @@ exports.registerStudent = asyncHandler(async (req, res) => {
         degree: courseDoc.degree,    // Looked up from the validated Course
         course: course,              // From the form
         semester: semester,          // From the form
+        photoUrl: photoUrl || null,
+        faceDescriptor: descriptorArray.length ? descriptorArray : undefined,
     };
 
+    // if (descriptor) {
+    //     try {
+    //         const descArray = JSON.parse(descriptor);
+    //         if (Array.isArray(descArray) && descArray.length === 128) {
+    //             payload.faceDescriptor = descArray;
+    //         } else {
+    //             console.warn("[registerStudent] Invalid descriptor array size");
+    //         }
+    //     } catch (err) {
+    //         console.error("Error parsing descriptor JSON:", err);
+    //     }
+    // }
+
     const user = await User.create(payload);
+    fs.unlinkSync(req.file.path);
     const html = UserRegistrationEmail({
         name: user.name,
         role: user.role,
@@ -247,6 +292,7 @@ exports.getExamsWithResults = asyncHandler(async (req, res) => {
     // 2. Find all exams scheduled for any of those semesters
     const exams = await Exam.find({ semester: { $in: semesterIds } })
         .populate('semester', 'number') // Populate semester number for display
+        .populate('subject', 'name') // Populate semester number for display
         .sort({ scheduledAt: -1 })
         .lean(); // Use .lean() for performance
 

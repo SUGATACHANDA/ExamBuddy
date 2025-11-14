@@ -1,9 +1,9 @@
-import { React, useState, useEffect, useCallback, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import api from '../../api/axiosConfig';
-import EditQuestionModal from './EditQuestionModal';
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Link } from "react-router-dom";
+import api from "../../api/axiosConfig";
+import LoadingScreen from "components/LoadingScreen";
+import EditQuestionModal from "./EditQuestionModal";
 
-// --- Reusable, Self-Contained Pagination Component ---
 export const Pagination = ({ currentPage, totalPages, onPageChange }) => {
     // Don't render pagination controls if there's only one page.
     if (totalPages <= 1) {
@@ -41,39 +41,50 @@ export const Pagination = ({ currentPage, totalPages, onPageChange }) => {
     );
 };
 
-
-// --- The Main Question Management Component ---
 const ManageQuestions = () => {
     // --- STATE MANAGEMENT ---
     const [allQuestions, setAllQuestions] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+    const [error, setError] = useState("");
+    const [questionType, setQuestionType] = useState("");
 
-    // UI state for tabs and pagination
-    const [activeTab, setActiveTab] = useState('view');
+    const [activeTab, setActiveTab] = useState("view");
     const [currentPage, setCurrentPage] = useState(1);
-    const questionsPerPage = 5; // Configurable number of questions per page
+    const questionsPerPage = 4;
 
-    // State for the "Create New" form
-    const [newQuestionText, setNewQuestionText] = useState('');
-    const [newOptions, setNewOptions] = useState(['', '', '', '']);
-    const [newCorrectAnswer, setNewCorrectAnswer] = useState('');
-    const [isCreating, setIsCreating] = useState(false);
-
-    // State for the "Edit" modal
     const [editingQuestion, setEditingQuestion] = useState(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-    // --- DATA FETCHING & DERIVED STATE ---
+    // ✅ Subject states
+    const [subjects, setSubjects] = useState([]);
+    const [newSubject, setNewSubject] = useState("");
+    const [selectedSubject, setSelectedSubject] = useState("");
+
+    const [questions, setQuestions] = useState([]);
+
+    const [filterSubject, setFilterSubject] = useState("");
+
+
+    // const [marks, setMarks] = useState("");
+
+    // ====================== FETCH DATA ======================
+    const fetchSubjects = async () => {
+        try {
+            const { data } = await api.get("/subjects");
+            setSubjects(data);
+        } catch {
+            setError("Failed to load subjects");
+        }
+    };
+
     const fetchQuestions = useCallback(async () => {
         try {
             setLoading(true);
-            const { data } = await api.get('/questions');
-            setAllQuestions(data); // Store the full, unfiltered list
-            setError('');
-        } catch (err) {
-            setError('Failed to fetch your questions.');
-            console.error(err);
+            const { data } = await api.get("/questions");
+            setAllQuestions(data);
+            setError("");
+        } catch {
+            setError("Failed to fetch your questions.");
         } finally {
             setLoading(false);
         }
@@ -81,164 +92,576 @@ const ManageQuestions = () => {
 
     useEffect(() => {
         fetchQuestions();
+        fetchSubjects();
     }, [fetchQuestions]);
 
-    // useMemo recalculates the paginated questions only when the source data or page changes, optimizing performance.
+    const filteredQuestions = useMemo(() => {
+        if (!filterSubject) return allQuestions;
+        return allQuestions.filter(q => q.subject?._id === filterSubject);
+    }, [filterSubject, allQuestions]);
+
     const paginatedQuestions = useMemo(() => {
-        const startIndex = (currentPage - 1) * questionsPerPage;
-        return allQuestions.slice(startIndex, startIndex + questionsPerPage);
-    }, [allQuestions, currentPage, questionsPerPage]);
+        const start = (currentPage - 1) * questionsPerPage;
+        return filteredQuestions.slice(start, start + questionsPerPage);
+    }, [filteredQuestions, currentPage, questionsPerPage]);
 
-    const totalPages = Math.ceil(allQuestions.length / questionsPerPage);
+    const totalPages = Math.ceil(filteredQuestions.length / questionsPerPage);
 
+    // ====================== SUBJECT ACTIONS ======================
+    const handleAddSubject = async () => {
+        if (!newSubject.trim()) return setError("Enter subject name");
 
-    // --- CRUD EVENT HANDLERS ---
-
-    const handleCreateQuestion = async (e) => {
-        e.preventDefault();
-        setError('');
-        if (!newQuestionText.trim() || newOptions.some(opt => !opt.trim()) || !newCorrectAnswer) {
-            return setError('All fields are required.');
-        }
-        if (!newOptions.includes(newCorrectAnswer)) {
-            return setError('Correct answer must be one of the options.');
-        }
-
-        setIsCreating(true);
         try {
-            await api.post('/questions', { questionText: newQuestionText, options: newOptions, correctAnswer: newCorrectAnswer });
-            setNewQuestionText('');
-            setNewOptions(['', '', '', '']);
-            setNewCorrectAnswer('');
-            await fetchQuestions(); // Re-fetch the updated list
-            setActiveTab('view'); // Switch to the view tab
-            setCurrentPage(Math.ceil((allQuestions.length + 1) / questionsPerPage)); // Navigate to the last page to see the new question
-        } catch (err) {
-            setError('Failed to create the question.');
-            console.error(err);
-        } finally {
-            setIsCreating(false);
+            const res = await api.post("/subjects", { name: newSubject });
+            setSubjects((prev) => [...prev, res.data]);
+            setNewSubject("");
+        } catch {
+            setError("Subject already exists");
         }
     };
 
-    const handleDeleteQuestion = async (id) => {
-        if (window.confirm('Are you sure you want to delete this question? This cannot be undone.')) {
-            try {
-                await api.delete(`/questions/${id}`);
-                // Smart pagination: if deleting the last item on a page, go to the previous page.
-                if (paginatedQuestions.length === 1 && currentPage > 1) {
-                    setCurrentPage(prevPage => prevPage - 1);
-                }
-                await fetchQuestions(); // Refresh the list
-            } catch (err) {
-                setError('Failed to delete the question.');
-                console.error(err);
+    const handleDeleteSubject = async (id) => {
+        if (!window.confirm("Delete this subject?")) return;
+        try {
+            await api.delete(`/subjects/${id}`);
+            setSubjects(subjects.filter((s) => s._id !== id));
+        } catch {
+            setError("Cannot delete subject");
+        }
+    };
+
+    const addOption = (qIndex) => {
+        setQuestions(prev =>
+            prev.map((q, i) =>
+                i === qIndex
+                    ? { ...q, options: [...q.options, ""] }
+                    : q
+            )
+        );
+    };
+
+    const deleteOption = (qIndex, optIndex) => {
+        setQuestions(prev =>
+            prev.map((q, i) =>
+                i === qIndex
+                    ? { ...q, options: q.options.filter((_, idx) => idx !== optIndex) }
+                    : q
+            )
+        );
+    };
+
+    const addNewQuestion = () => {
+        if (!selectedSubject) return setError("Select a subject first");
+        if (!questionType) return setError("Select question type first");
+
+        setQuestions(prev => [
+            ...prev,
+            {
+                questionText: "",
+                questionType,
+                options: [""], // always start with 2 options
+                correctAnswer: "",
+                correctAnswers: [],
+                expectedAnswer: "",
+                marks: 1
             }
+        ]);
+    };
+
+
+    const handleQuestionChange = (index, key, value) => {
+        const updated = [...questions];
+        updated[index][key] = value;
+        setQuestions(updated);
+    };
+
+    const handleOptionChange = (qIndex, optIndex, value) => {
+        const updated = [...questions];
+        updated[qIndex].options[optIndex] = value;
+        setQuestions(updated);
+    };
+
+    const removeQuestionBlock = (i) => {
+        setQuestions(prev => prev.filter((_, idx) => idx !== i));
+    };
+
+
+
+    const submitAllQuestions = async () => {
+        if (!selectedSubject) return setError("Select subject first");
+        if (questions.length === 0) return setError("Add at least one question");
+
+        try {
+            await api.post("/questions/bulk", {
+                subjectId: selectedSubject,
+                questions
+            });
+
+            alert("Questions added successfully!");
+            setQuestions([]);
+            setSelectedSubject("");
+            fetchQuestions();
+            setActiveTab("view");
+
+        } catch (err) {
+            console.error(err);
+            setError("Failed to add questions");
+        }
+    };
+
+
+    const handleDeleteQuestion = async (id) => {
+        if (!window.confirm("Delete this question?")) return;
+
+        try {
+            await api.delete(`/questions/${id}`);
+            if (paginatedQuestions.length === 1 && currentPage > 1)
+                setCurrentPage((p) => p - 1);
+            await fetchQuestions();
+        } catch {
+            setError("Failed to delete question.");
         }
     };
 
     const openEditModal = (question) => {
         setEditingQuestion(question);
         setIsEditModalOpen(true);
+        setFilterSubject(selectedSubject)
     };
 
-    const handleOptionChange = (index, value) => {
-        const updatedOptions = [...newOptions];
-        updatedOptions[index] = value;
-        setNewOptions(updatedOptions);
-    };
-
-
-    // --- RENDER LOGIC ---
 
     return (
-        <div className="container">
-            <Link to="/teacher/dashboard" className="btn-link"> &larr; Back to Dashboard</Link>
-            <h1>Manage Questions</h1>
-            {error && <p className="error">{error}</p>}
+        <>
+            {loading && <LoadingScreen />}
 
-            {/* ====== TABS NAVIGATION ====== */}
-            <div className="tabs-container">
-                <button
-                    className={`tab-button ${activeTab === 'view' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('view')}>
-                    View All Questions ({allQuestions.length})
-                </button>
-                <button
-                    className={`tab-button ${activeTab === 'create' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('create')}>
-                    + Create New Question
-                </button>
-            </div>
+            <div className="container">
+                <Link to="/teacher/dashboard" className="btn-link">
+                    &larr; Back to Dashboard
+                </Link>
 
-            {/* ====== TAB CONTENT CONTAINER ====== */}
-            <div className="tab-content">
-                {activeTab === 'view' && (
-                    <div className="list-container">
-                        {loading ? <p>Loading questions...</p> : paginatedQuestions.length > 0 ? (
-                            <>
-                                {paginatedQuestions.map(q => (
-                                    <div key={q._id} className="question-item">
-                                        <p><strong>Q:</strong> {q.questionText}</p>
-                                        <ul>
-                                            {q.options.map((opt, i) => (
-                                                <li key={i} style={{ color: opt === q.correctAnswer ? 'var(--success-color)' : 'inherit', fontWeight: opt === q.correctAnswer ? 'bold' : 'normal' }}>
-                                                    {opt}{q.correctAnswer === opt && ' (Correct Answer)'}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                        <div className="question-actions">
-                                            <button onClick={() => openEditModal(q)} className="btn-secondary">Edit</button>
-                                            <button onClick={() => handleDeleteQuestion(q._id)} className="btn-danger">Delete</button>
-                                        </div>
-                                    </div>
-                                ))}
-                                <Pagination
-                                    currentPage={currentPage}
-                                    totalPages={totalPages}
-                                    onPageChange={setCurrentPage}
-                                />
-                            </>
-                        ) : (
-                            <p>You haven't created any questions yet. Click the "Create New" tab to begin.</p>
-                        )}
-                    </div>
-                )}
-                {activeTab === 'create' && (
-                    <div className="form-container">
-                        <form onSubmit={handleCreateQuestion}>
-                            <div className="form-group">
-                                <label>Question Text</label>
-                                <textarea value={newQuestionText} onChange={(e) => setNewQuestionText(e.target.value)} required />
-                            </div>
-                            {newOptions.map((option, index) => (
-                                <div className="form-group" key={index}>
-                                    <label>Option {index + 1}</label>
-                                    <input type="text" value={option} onChange={(e) => handleOptionChange(index, e.target.value)} required />
-                                </div>
-                            ))}
-                            <div className="form-group">
-                                <label>Correct Answer</label>
-                                <select value={newCorrectAnswer} onChange={e => setNewCorrectAnswer(e.target.value)} required>
-                                    <option value="" disabled>Select the correct option from above</option>
-                                    {newOptions.filter(o => o.trim() !== '').map((opt, i) => <option key={i} value={opt}>{opt}</option>)}
+                <h1>Manage Questions</h1>
+                {error && <p className="error">{error}</p>}
+
+                {/* ✅ TABS */}
+                <div className="tabs-container">
+                    <button className={`tab-button ${activeTab === "view" ? "active" : ""}`} onClick={() => setActiveTab("view")}>
+                        View Questions ({allQuestions.length})
+                    </button>
+
+                    <button className={`tab-button ${activeTab === "create" ? "active" : ""}`} onClick={() => setActiveTab("create")}>
+                        + Create Question
+                    </button>
+
+                    <button className={`tab-button ${activeTab === "subjects" ? "active" : ""}`} onClick={() => setActiveTab("subjects")}>
+                        Manage Subjects
+                    </button>
+                </div>
+
+                {/* ✅ TAB CONTENT */}
+                <div className="tab-content">
+
+                    {/* ✅ VIEW QUESTIONS */}
+                    {activeTab === "view" && (
+                        <>
+                            <div className="form-group" style={{ marginBottom: "15px", maxWidth: "300px" }}>
+                                <label>Filter by Subject</label>
+                                <select
+                                    value={filterSubject}
+                                    onChange={(e) => {
+                                        setFilterSubject(e.target.value);
+                                        setCurrentPage(1); // reset to first page on subject change
+                                    }}
+                                >
+                                    <option value="">All Subjects</option>
+                                    {subjects.map(s => (
+                                        <option key={s._id} value={s._id}>{s.name}</option>
+                                    ))}
                                 </select>
                             </div>
-                            <button type="submit" className="btn btn-submit" disabled={isCreating}>{isCreating ? 'Creating...' : 'Create Question'}</button>
-                        </form>
-                    </div>
+                            <div className="list-container">
+                                {paginatedQuestions.length > 0 ? (
+                                    <>
+                                        {paginatedQuestions.length > 0 ? (
+                                            <>
+                                                {paginatedQuestions.map(q => (
+                                                    <div key={q._id} className="question-item">
+                                                        <p><strong>Q:</strong> {q.questionText}</p>
+
+                                                        {/* ✅ Subject Badge */}
+                                                        {q.subject && (
+                                                            <span
+                                                                style={{
+                                                                    background: "#e8f1ff",
+                                                                    color: "#0366d6",
+                                                                    padding: "3px 8px",
+                                                                    borderRadius: "6px",
+                                                                    fontSize: "12px",
+                                                                    fontWeight: "600",
+                                                                    display: "inline-block",
+                                                                    marginBottom: "6px"
+                                                                }}
+                                                            >
+                                                                Subject: &nbsp;{q.subject?.name}
+                                                            </span>
+                                                        )}
+                                                        {q.subject && (
+                                                            <span
+                                                                style={{
+                                                                    background: "#e8f1ff",
+                                                                    color: "#0366d6",
+                                                                    padding: "3px 8px",
+                                                                    borderRadius: "6px",
+                                                                    fontSize: "12px",
+                                                                    fontWeight: "600",
+                                                                    display: "inline-block",
+                                                                    marginBottom: "6px",
+                                                                    marginLeft: "10px"
+                                                                }}
+                                                            >
+                                                                Marks: &nbsp;{q.marks}
+                                                            </span>
+                                                        )}
+
+                                                        <span
+                                                            style={{
+                                                                background: "#e8f1ff",
+                                                                color: "#0366d6",
+                                                                padding: "3px 8px",
+                                                                borderRadius: "6px",
+                                                                fontSize: "12px",
+                                                                fontWeight: "600",
+                                                                display: "inline-block",
+                                                                marginBottom: "6px",
+                                                                marginLeft: "10px"
+                                                            }}
+                                                        >
+                                                            Type:&nbsp;
+                                                            {q.questionType === "mcq"
+                                                                ? "MCQ"
+                                                                : q.questionType === "multiple_select"
+                                                                    ? "Multiple Select"
+                                                                    : "Short Answer"}
+                                                        </span>
+
+                                                        <ul>
+                                                            {/* ✅ For MCQ or Multiple Select Questions */}
+                                                            {(q.questionType === "mcq" || q.questionType === "multiple_select") && q.options?.length > 0 ? (
+                                                                q.options.map((opt, i) => {
+                                                                    // Determine if option is correct (works for both single & multiple correct answers)
+                                                                    const isCorrect =
+                                                                        q.questionType === "mcq"
+                                                                            ? opt === q.correctAnswer
+                                                                            : q.correctAnswers?.includes(opt);
+
+                                                                    return (
+                                                                        <li
+                                                                            key={i}
+                                                                            style={{
+                                                                                color: isCorrect ? "green" : "inherit",
+                                                                                fontWeight: isCorrect ? "bold" : "normal",
+                                                                            }}
+                                                                        >
+                                                                            {opt}
+                                                                            {isCorrect && " (Correct Answer)"}
+                                                                        </li>
+                                                                    );
+                                                                })
+                                                            ) : q.questionType === "short_answer" ? (
+                                                                // ✅ For Short Answer Type
+                                                                <li style={{ color: "green", fontWeight: "bold" }}>
+                                                                    Expected Answer: {q.expectedAnswer || "N/A"}
+                                                                </li>
+                                                            ) : (
+                                                                <li style={{ fontStyle: "italic", color: "#888" }}>No options provided</li>
+                                                            )}
+                                                        </ul>
+
+                                                        <div className="question-actions">
+                                                            <button onClick={() => openEditModal(q)} className="btn-secondary">Edit</button>
+                                                            <button onClick={() => handleDeleteQuestion(q._id)} className="btn-danger">Delete</button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </>
+                                        ) : (
+                                            <p style={{ color: "#555", fontStyle: "italic" }}>
+                                                {filterSubject
+                                                    ? "No questions found for this subject."
+                                                    : "You haven't created any questions yet."}
+                                            </p>
+                                        )}
+
+                                        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                                    </>
+                                ) : <p>No questions yet</p>}
+                            </div>
+                        </>
+                    )}
+
+                    {/* ✅ CREATE QUESTION */}
+                    {activeTab === 'create' && (
+                        <div className="form-container">
+                            {/* Select Subject */}
+                            <div className="form-group">
+                                <label>Select Subject</label>
+                                <select
+                                    value={selectedSubject}
+                                    onChange={e => setSelectedSubject(e.target.value)}
+                                    required
+                                    style={{ marginBottom: "10px" }}
+                                >
+                                    <option value="" disabled>Select subject</option>
+                                    {subjects.map(s => (
+                                        <option key={s._id} value={s._id}>{s.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Select Question Type */}
+                            <div className="form-group">
+                                <label>Select Question Type</label>
+                                <select
+                                    value={questionType}
+                                    style={{ marginBottom: "10px" }}
+                                    onChange={e => {
+                                        const type = e.target.value;
+                                        setQuestionType(type);
+                                        setQuestions([{
+                                            questionText: "",
+                                            questionType: type,
+                                            options: type !== "short_answer" ? [""] : [],
+                                            correctAnswer: "",
+                                            correctAnswers: [],
+                                            expectedAnswer: "",
+                                            marks: 1
+                                        }]);
+                                    }}
+                                    required
+                                    disabled={!selectedSubject}
+                                >
+                                    <option value="">Select Type</option>
+                                    <option value="mcq">MCQ (Single Answer)</option>
+                                    <option value="multiple_select">Multiple Select</option>
+                                    <option value="short_answer">Short Answer</option>
+                                </select>
+                            </div>
+
+
+
+                            {/* Questions List */}
+                            {questions.map((q, index) => (
+                                <div key={index} className="question-block">
+                                    {q.questionType === "multiple_select" && (
+                                        <p style={{ fontSize: "12px", color: "#666", marginTop: "4px" }}>
+                                            NB: Marks will be divided equally among all correct answers.
+                                        </p>
+                                    )}
+                                    <label>Question {index + 1}</label>
+                                    <textarea
+                                        value={q.questionText}
+                                        onChange={e => handleQuestionChange(index, "questionText", e.target.value)}
+                                    />
+
+                                    {/* ✅ MCQ & Multiple Select */}
+                                    {/* ✅ MCQ & Multiple Select */}
+                                    {(q.questionType === "mcq" || q.questionType === "multiple_select") && (
+                                        <div className="option-section">
+
+                                            {/* ✅ Option Fields */}
+                                            {q.options.map((opt, i) => (
+                                                <div key={i} className="option-row">
+                                                    <input
+                                                        type="text"
+                                                        className="options-input"
+                                                        placeholder={`Option ${i + 1}`}
+                                                        value={opt}
+                                                        onChange={e => handleOptionChange(index, i, e.target.value)}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        className="option-delete"
+                                                        onClick={() => deleteOption(index, i)}
+                                                        disabled={q.options.length <= 1}
+                                                    >
+                                                        ❌
+                                                    </button>
+                                                </div>
+                                            ))}
+
+                                            {/* ✅ Add Option Button */}
+                                            <button
+                                                type="button"
+                                                onClick={() => addOption(index)}
+                                                style={{
+                                                    background: "#007bff",
+                                                    color: "white",
+                                                    padding: "8px 12px",
+                                                    borderRadius: "6px",
+                                                    border: "none",
+                                                    cursor: "pointer",
+                                                    marginTop: "8px"
+                                                }}
+                                            >
+                                                ➕ Add Option
+                                            </button>
+
+                                            {/* ✅ MCQ Correct Answer */}
+                                            {q.questionType === "mcq" && (
+                                                <div className="form-group" style={{ marginTop: "12px" }}>
+                                                    <label>Select Correct Answer</label>
+                                                    <select
+                                                        value={q.correctAnswer}
+                                                        onChange={(e) => handleQuestionChange(index, "correctAnswer", e.target.value)}
+                                                        style={{
+                                                            width: "100%",
+                                                            padding: "8px",
+                                                            border: "1px solid #ccc",
+                                                            borderRadius: "5px",
+                                                            marginBottom: "10px"
+                                                        }}
+                                                    >
+                                                        <option value="">Select</option>
+                                                        {q.options.map((opt, i) => (
+                                                            <option key={i} value={opt}>{opt}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            )}
+
+                                            {/* ✅ Multiple Select */}
+                                            {q.questionType === "multiple_select" && (
+                                                <div className="form-group" style={{ marginTop: "12px" }}>
+                                                    <label>Select Correct Answers</label>
+                                                    <select
+                                                        multiple
+                                                        value={q.correctAnswers}
+                                                        onChange={(e) => {
+                                                            const values = Array.from(e.target.selectedOptions, o => o.value);
+                                                            handleQuestionChange(index, "correctAnswers", values);
+                                                        }}
+                                                        style={{
+                                                            width: "100%",
+                                                            padding: "8px",
+                                                            border: "1px solid #ccc",
+                                                            borderRadius: "5px",
+                                                            marginBottom: "10px"
+                                                        }}
+                                                    >
+                                                        {q.options.map((opt, i) => (
+                                                            <option key={i} value={opt}>{opt}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+
+                                    {/* ✅ Short Answer */}
+                                    {q.questionType === "short_answer" && (
+                                        <div className="form-group">
+                                            <label>Expected Answer</label>
+                                            <input
+                                                type="text"
+                                                value={q.expectedAnswer}
+                                                onChange={e => handleQuestionChange(index, "expectedAnswer", e.target.value)}
+                                                style={{ marginBottom: "10px" }}
+                                            />
+                                        </div>
+                                    )}
+
+                                    <label>Marks</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={q.marks}
+                                        onChange={e => handleQuestionChange(index, "marks", e.target.value)}
+                                        style={{ marginBottom: "10px" }}
+                                    />
+
+                                    <button
+                                        type="button"
+                                        className="btn-danger"
+                                        onClick={() => removeQuestionBlock(index)}
+                                    >
+                                        ❌ Remove Question
+                                    </button>
+                                    <hr />
+                                </div>
+                            ))}
+
+                            <button type="button" className="btn btn-submit" onClick={submitAllQuestions}>
+                                Submit All Questions
+                            </button>
+
+                            <button
+                                className="floating-add-btn"
+                                onClick={addNewQuestion}
+                                title="Add New Question"
+                                disabled={!selectedSubject || !questionType}
+                            >
+                                +
+                            </button>
+                        </div>
+                    )}
+
+
+                    {/* ✅ SUBJECT MANAGEMENT TAB */}
+                    {activeTab === "subjects" && (
+                        <div className="subject-manager">
+
+                            <div className="subject-header">
+                                <h2>Manage Subjects</h2>
+                                <p>Add, view, and manage subjects for your question bank</p>
+                            </div>
+
+                            <div className="subject-input-box">
+                                <input
+                                    type="text"
+                                    placeholder="Enter subject name"
+                                    value={newSubject}
+                                    onChange={(e) => setNewSubject(e.target.value)}
+                                    className="subject-input"
+                                    required
+                                />
+                                <button className="btn-add-subject" onClick={handleAddSubject}>
+                                    + Add Subject
+                                </button>
+                            </div>
+
+                            <div className="subject-list-container">
+                                <h3 className="subject-list-title">Your Subjects</h3>
+                                {subjects.length === 0 ? (
+                                    <p className="no-subject-text">No subjects found. Add one above.</p>
+                                ) : (
+                                    <ul className="subject-list">
+                                        {subjects.map((s) => (
+                                            <li key={s._id} className="subject-item">
+                                                <span className="subject-name">{s.name}</span>
+                                                <button
+                                                    className="btn-delete-subject"
+                                                    onClick={() => handleDeleteSubject(s._id)}
+                                                >
+                                                    Delete
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {isEditModalOpen && (
+                    <EditQuestionModal
+                        question={editingQuestion}
+                        onClose={() => setIsEditModalOpen(false)}
+                        onSave={fetchQuestions}
+                    />
                 )}
             </div>
-
-            {/* The Edit Modal, which appears on top of everything when active */}
-            {isEditModalOpen && (
-                <EditQuestionModal
-                    question={editingQuestion}
-                    onClose={() => setIsEditModalOpen(false)}
-                    onSave={fetchQuestions} // Re-fetch all questions after a successful save
-                />
-            )}
-        </div>
+        </>
     );
 };
 

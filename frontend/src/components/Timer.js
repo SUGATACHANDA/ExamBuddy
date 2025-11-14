@@ -8,10 +8,10 @@ import { useParams } from 'react-router-dom'; // Import useParams to get a uniqu
  * @param {number} props.initialMinutes - The starting duration for the countdown in minutes.
  * @param {function} props.onTimeUp - The callback function to execute when the timer reaches zero.
  */
-const Timer = ({ initialMinutes, onTimeUp }) => {
+const Timer = ({ initialMinutes, onTimeUp, onTick }) => {
     // We need a unique key for each exam's timer in session storage. The examId is perfect for this.
     const { examId } = useParams();
-    const storageKey = `examEndTime_${examId}`;
+    const storageKey = `examEndTime_`;
 
     // --- The Definitive State Initialization ---
     // This function runs only ONCE when the component first mounts.

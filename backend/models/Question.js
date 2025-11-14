@@ -1,28 +1,31 @@
-// models/Question.js
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const questionSchema = new mongoose.Schema({
-    questionText: {
-        type: String,
-        required: true,
+    subject: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Subject",
+        required: true
     },
-    options: [{
+    questionType: {
         type: String,
-        required: true,
-    }],
-    correctAnswer: {
-        type: String,
-        required: true,
+        enum: ["mcq", "multiple_select", "short_answer"],
+        default: "mcq"
     },
-    // subject: { type: String, required: true },
+    questionText: { type: String, required: true },
+
+    // ✅ MCQ / Multiple Select
+    options: [{ type: String }],
+    correctAnswer: { type: String },            // for MCQ
+    correctAnswers: [{ type: String }],         // for multiple select
+
+    // ✅ Short answer type
+    expectedAnswer: { type: String },
+
+    marks: { type: Number, default: 1 },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
-        required: true,
-        ref: 'User', // Reference to the teacher who created it
-    },
-}, {
-    timestamps: true,
+        ref: "User"
+    }
 });
 
-const Question = mongoose.model('Question', questionSchema);
-module.exports = Question;
+module.exports = mongoose.model("Question", questionSchema);

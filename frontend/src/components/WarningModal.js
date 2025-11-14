@@ -1,38 +1,39 @@
 // src/components/WarningModal.js
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 
-const WarningModal = ({ warningData, onClose }) => {
-    const [isVisible, setIsVisible] = useState(false);
 
+const WarningModal = ({ isOpen, onClose, data }) => {
+    const { title, message } = data || {};
+
+    // Close modal when pressing ESC
     useEffect(() => {
-        // When we receive new warning data, make the modal visible
-        if (warningData) {
-            setIsVisible(true);
+        if (!isOpen) return;
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') onClose && onClose();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, onClose]);
 
-            // Set a timer to automatically close the modal after a few seconds
-            const timer = setTimeout(() => {
-                setIsVisible(false);
-                onClose(); // Notify parent that the modal has closed
-            }, 4000); // Show for 4 seconds
-
-            return () => clearTimeout(timer);
-        }
-    }, [warningData, onClose]); // This effect re-runs every time a new warning comes in
-
-    if (!isVisible || !warningData) {
-        return null;
-    }
-
+    if (!isOpen) return null;
     return (
-        <div className="warning-modal-overlay">
-            <div className="warning-modal-content">
-                <div className="warning-icon">⚠️</div>
-                <h2>Security Warning</h2>
-                <p>A forbidden action was detected: <strong>{warningData.type}</strong></p>
-                <p className="warning-strike-count">
-                    This is your <strong>warning {warningData.strike} of {warningData.max}</strong>.
-                </p>
-                <p>Exceeding the warning limit will result in immediate expulsion from the exam.</p>
+        <div className="warning-modal-overlay" onClick={onClose}>
+            <div
+                className="warning-modal-content"
+                onClick={(e) => e.stopPropagation()} // prevent close on inner click
+            >
+                <div className="warning-header">
+                    <span role="img" aria-label="warning" className="warning-icon">
+                        ⚠️
+                    </span>
+                    <h2>{title || 'Warning'}</h2>
+                </div>
+
+                <p className="warning-message">{message || 'Something went wrong.'}</p>
+
+                <button className="warning-close-btn" onClick={onClose}>
+                    OK
+                </button>
             </div>
         </div>
     );

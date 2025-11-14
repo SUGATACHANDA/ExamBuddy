@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../api/axiosConfig';
 import { useAuth } from "../context/AuthContext"
+import LoadingScreen from 'components/LoadingScreen';
 
 // A helper component for table headers that allows sorting
 const SortableHeader = ({ children, sortConfig, onSort, columnKey }) => {
@@ -143,88 +144,89 @@ const ResultsScreen = () => {
         setSortConfig({ key, direction });
     }, [sortConfig]);
 
-    if (loading) {
-        return <div className="container"><p>Loading results...</p></div>;
-    }
 
     if (error) {
         return <div className="container error"><p>{error}</p></div>;
     }
 
     return (
-        <div className="container">
-            <Link to={backUrl} className="btn-link">&larr; Back to Exams List</Link>
-            <h1>Results for: {exam?.title || 'Exam'}</h1>
-            <p><strong>Subject:</strong> {exam?.subject || 'N/A'}</p>
+        <>
+            {loading && <LoadingScreen />}
+            <div className="container">
+                <Link to={backUrl} className="btn-link">&larr; Back to Exams List</Link>
+                <h1>Results for: {exam?.title || 'Exam'}</h1>
+                <p><strong>Subject:</strong> {results[0]?.subject?.name || "N/A"}</p>
 
-            {/* --- Summary Cards --- */}
-            <div className="summary-cards">
-                <div className="summary-card">
-                    <h4>Total Submissions</h4>
-                    <p>{results.length}</p>
+                {/* --- Summary Cards --- */}
+                <div className="summary-cards">
+                    <div className="summary-card">
+                        <h4>Total Submissions</h4>
+                        <p>{results.length}</p>
+                    </div>
+                    <div className="summary-card">
+                        <h4>Class Highest Score</h4>
+                        <p>{summaryStats.highestScore}</p>
+                    </div>
+                    <div className="summary-card">
+                        <h4>Total Marks</h4>
+                        <p>{summaryStats.totalMarks}</p>
+                    </div>
+                    <div className="summary-card">
+                        <h4>Class Average</h4>
+                        <p>{summaryStats.averageScore}</p>
+                    </div>
                 </div>
-                <div className="summary-card">
-                    <h4>Class Highest Score</h4>
-                    <p>{summaryStats.highestScore}</p>
-                </div>
-                <div className="summary-card">
-                    <h4>Total Marks</h4>
-                    <p>{summaryStats.totalMarks}</p>
-                </div>
-                <div className="summary-card">
-                    <h4>Class Average</h4>
-                    <p>{summaryStats.averageScore}</p>
-                </div>
-            </div>
 
-            <div className="search-bar-container">
-                <input
-                    type="search" // Use type="search" for better semantics
-                    placeholder="Search by student name or college ID..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    className="search-input"
-                />
-            </div>
+                <div className="search-bar-container">
+                    <input
+                        type="search" // Use type="search" for better semantics
+                        placeholder="Search by student name or college ID..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="search-input"
+                    />
+                </div>
 
-            {/* --- Results Table --- */}
-            {filteredAndSortedResults.length > 0 ? (
-                <table className="results-table">
-                    <thead>
-                        <tr>
-                            <SortableHeader sortConfig={sortConfig} onSort={handleSort} columnKey="student.name">
-                                Student Name
-                            </SortableHeader>
-                            <SortableHeader sortConfig={sortConfig} onSort={handleSort} columnKey="student.collegeId">
-                                College ID
-                            </SortableHeader>
-                            <SortableHeader sortConfig={sortConfig} onSort={handleSort} columnKey="score">
-                                Score
-                            </SortableHeader>
-                            <SortableHeader sortConfig={sortConfig} onSort={handleSort} columnKey="updatedAt">
-                                Submission Time
-                            </SortableHeader>
-                            <SortableHeader sortConfig={sortConfig} onSort={handleSort} columnKey="status">
-                                Status
-                            </SortableHeader>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredAndSortedResults.map((result) => (
-                            <tr key={result._id}>
-                                <td>{result.student?.name || 'N/A'}</td>
-                                <td>{result.student?.collegeId || 'N/A'}</td>
-                                <td>{result.score} / {result.totalMarks}</td>
-                                <td>{new Date(result.updatedAt).toLocaleString()}</td>
-                                <td className={result.status === 'completed' ? 'success-status' : 'failure-status'}>{(result.status).toUpperCase()}</td>
+                {/* --- Results Table --- */}
+                {filteredAndSortedResults.length > 0 ? (
+                    <table className="results-table">
+                        <thead>
+                            <tr>
+                                <SortableHeader sortConfig={sortConfig} onSort={handleSort} columnKey="student.name">
+                                    Student Name
+                                </SortableHeader>
+                                <SortableHeader sortConfig={sortConfig} onSort={handleSort} columnKey="student.collegeId">
+                                    College ID
+                                </SortableHeader>
+                                <SortableHeader sortConfig={sortConfig} onSort={handleSort} columnKey="score">
+                                    Score
+                                </SortableHeader>
+                                <SortableHeader sortConfig={sortConfig} onSort={handleSort} columnKey="updatedAt">
+                                    Submission Time
+                                </SortableHeader>
+                                <SortableHeader sortConfig={sortConfig} onSort={handleSort} columnKey="status">
+                                    Status
+                                </SortableHeader>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            ) : (
-                <p>No students have submitted this exam yet.</p>
-            )}
-        </div>
+                        </thead>
+                        <tbody>
+                            {filteredAndSortedResults.map((result) => (
+                                <tr key={result._id}>
+                                    <td>{result.student?.name || 'N/A'}</td>
+                                    <td>{result.student?.collegeId || 'N/A'}</td>
+                                    <td>{result.score} / {result.totalMarks}</td>
+                                    <td>{new Date(result.updatedAt).toLocaleString()}</td>
+                                    <td className={result.status === 'completed' ? 'success-status' : 'failure-status'}>{(result.status).toUpperCase()}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                ) : (
+                    <p>No students have submitted this exam yet.</p>
+                )}
+            </div>
+        </>
+
     );
 };
 

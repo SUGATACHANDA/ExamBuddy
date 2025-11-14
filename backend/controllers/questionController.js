@@ -5,41 +5,78 @@ const Question = require('../models/Question');
 // @desc    Create a new question
 // @route   POST /api/questions
 // @access  Private/Teacher
+// Create Question
 const createQuestion = asyncHandler(async (req, res) => {
-    const { questionText, options, correctAnswer } = req.body;
+    const { subjectId, questionType, questionText, options, correctAnswer, correctAnswers, expectedAnswer, marks } = req.body;
 
-    // The teacher's subject is attached to their profile/token
-    const subject = req.user.subject;
+    if (!subjectId || !questionType || !questionText)
+        return res.status(400).json({ message: "Missing fields" });
 
-    if (!questionText || !options || !correctAnswer) {
-        res.status(400);
-        throw new Error('Please fill all fields');
+    const data = {
+        subject: subjectId,
+        questionType,
+        questionText,
+        marks,
+        createdBy: req.user._id
+    };
+
+    if (questionType === "mcq") {
+        data.options = options;
+        data.correctAnswer = correctAnswer;
+    } else if (questionType === "multiple_select") {
+        data.options = options;
+        data.correctAnswers = correctAnswers;
+    } else if (questionType === "short_answer") {
+        data.expectedAnswer = expectedAnswer;
     }
 
-    const question = new Question({
-        questionText,
-        options,
-        correctAnswer,
-        subject,
-        createdBy: req.user._id,
-    });
-
-    const createdQuestion = await question.save();
-    res.status(201).json(createdQuestion);
+    const question = await Question.create(data);
+    res.status(201).json(question);
 });
+
+// Bulk Insert
+const createBulkQuestions = asyncHandler(async (req, res) => {
+    const { subjectId, questions } = req.body;
+    if (!subjectId || !questions?.length)
+        return res.status(400).json({ message: "Invalid request" });
+
+    const docs = questions.map(q => ({
+        subject: subjectId,
+        questionType: q.questionType,
+        questionText: q.questionText,
+        options: q.options,
+        correctAnswer: q.correctAnswer,
+        correctAnswers: q.correctAnswers,
+        expectedAnswer: q.expectedAnswer,
+        marks: q.marks,
+        createdBy: req.user._id
+    }));
+
+    await Question.insertMany(docs);
+    res.json({ success: true, count: docs.length });
+});
+
 
 // @desc    Get questions for the logged-in teacher
 // @route   GET /api/questions
 // @access  Private/Teacher
-const getMyQuestions = asyncHandler(async (req, res) => {
-    // A teacher can only see questions of their own subject
-    const questions = await Question.find({ createdBy: req.user._id, subject: req.user.subject });
-    res.json(questions);
-});
+const getTeacherQuestions = async (req, res) => {
+    try {
+        const questions = await Question.find({ createdBy: req.user.id })
+            .populate("subject", "name");
 
-// @desc    Update a question
-// @route   PUT /api/questions/:id
-// @access  Private/Teacher
+        res.json(questions);
+    } catch (err) {
+        console.error("Fetch Questions Error:", err);
+        res.status(500).json({ msg: "Server error", error: err.message });
+    }
+};
+
+/** 
+ @desc    Update a question
+ @route   PUT /api/questions/:id
+ @access  Private/Teacher
+**/
 const updateQuestion = asyncHandler(async (req, res) => {
     const question = await Question.findById(req.params.id);
 
@@ -54,11 +91,12 @@ const updateQuestion = asyncHandler(async (req, res) => {
         throw new Error('Not authorized to update this question');
     }
 
-    const { questionText, options, correctAnswer } = req.body;
+    const { questionText, options, correctAnswer, marks } = req.body;
 
     question.questionText = questionText || question.questionText;
     question.options = options || question.options;
     question.correctAnswer = correctAnswer || question.correctAnswer;
+    if (marks !== undefined) question.marks = marks;
 
     const updatedQuestion = await question.save();
     res.json(updatedQuestion);
@@ -84,4 +122,4 @@ const deleteQuestion = asyncHandler(async (req, res) => {
     res.json({ message: 'Question removed' });
 });
 
-module.exports = { createQuestion, getMyQuestions, updateQuestion, deleteQuestion };
+module.exports = { createQuestion, getTeacherQuestions, updateQuestion, deleteQuestion, createBulkQuestions };

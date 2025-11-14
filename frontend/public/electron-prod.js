@@ -36,10 +36,16 @@ function createSplashWindow() {
         alwaysOnTop: true,
         resizable: false,
         center: true,
+        show: false
     });
     // This assumes you have created the `splash.html` file in the `public` directory.
     splashWindow.loadFile(path.join(__dirname, 'splash.html'));
     splashWindow.on('closed', () => (splashWindow = null));
+
+    splashWindow.once('ready-to-show', () => {
+        console.log("Splash screen is ready to show");
+        splashWindow.show();
+    });
 }
 
 function createWindow() {
@@ -257,8 +263,9 @@ ipcMain.on('login-screen-ready', () => {
     // This is the failsafe against race conditions.
     if (isMainWindowReady) {
         console.log("Handshake complete. Closing splash and showing main window.");
-        if (splashWindow) {
+        if (splashWindow && !splashWindow.isDestroyed()) {
             splashWindow.close();
+            splashWindow = null;
         }
         mainWindow.show();
         isMainWindowVisible = true;
@@ -276,8 +283,9 @@ ipcMain.on('login-screen-ready', () => {
         console.log("React is ready, but waiting for Electron window...");
         mainWindow.once('ready-to-show', () => {
             console.log("...Electron window is now ready. Handshake complete.");
-            if (splashWindow) {
+            if (splashWindow && !splashWindow.isDestroyed()) {
                 splashWindow.close();
+                splashWindow = null;
             }
             mainWindow.show();
             handlePostUpdateLaunch();

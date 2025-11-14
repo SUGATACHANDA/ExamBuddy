@@ -11,6 +11,7 @@ const InstructionsModal = ({ onClose }) => {
                 <h2>Exam Instructions & Legend</h2>
                 <div className="instructions-content">
                     <h4>General Instructions:</h4>
+                    <span style={{ fontWeight: "bolder", color: "#3b82f6" }}>Note the timer is ticking. Close this window to return to the questions</span>
                     <ul>
                         <li>Read each question carefully before answering.</li>
                         <li>You can navigate between questions using the "Next" and "Previous" buttons, or by clicking a number in the Question Palette.</li>

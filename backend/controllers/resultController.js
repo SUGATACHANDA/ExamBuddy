@@ -2,6 +2,7 @@
 const asyncHandler = require('express-async-handler');
 const Result = require('../models/Result');
 const Exam = require('../models/Exam');
+const User = require('../models/User');
 const Question = require('../models/Question');
 const ExamResultEmail = require('../emails/ExamResultEmail');
 const sendEmail = require('../utils/mailer');
@@ -12,58 +13,121 @@ const sendEmail = require('../utils/mailer');
  * @access  Private/Student
  */
 const submitExam = asyncHandler(async (req, res) => {
-    const { examId, answers: studentAnswers } = req.body;
+    const { examId, answers: studentAnswersRaw } = req.body;
     const studentId = req.user._id;
 
-    // 1. Fetch the exam document WITH the correct answers to evaluate against.
-    // Deep populate is crucial here.
+    // Ensure answers is an array
+    const studentAnswers = Array.isArray(studentAnswersRaw) ? studentAnswersRaw : [];
+
+    // Fetch exam with full question details
     const exam = await Exam.findById(examId)
-        .populate('sections.questions'); // This gets the full question objects, including correct answers
+        .populate({
+            path: "sections.questions",
+            select: "questionType correctAnswer correctAnswers expectedAnswer marks"
+        })
+        .populate({ path: "subject", select: "name" });
 
     if (!exam) {
-        res.status(404); throw new Error('Exam not found.');
+        res.status(404);
+        throw new Error("Exam not found.");
     }
 
-    // Flatten the exam's questions into a single map for easy lookup
+    // Build a map of question details
     const questionMap = new Map();
     exam.sections.forEach(section => {
         section.questions.forEach(q => {
-            questionMap.set(q._id.toString(), q.correctAnswer);
+            questionMap.set(q._id.toString(), {
+                questionType: q.questionType,
+                correctAnswer: q.correctAnswer,
+                correctAnswers: q.correctAnswers || [],
+                expectedAnswer: q.expectedAnswer,
+                marks: q.marks || 1
+            });
         });
     });
 
     let score = 0;
-    const totalMarks = questionMap.size;
+    let totalMarks = 0;
+    questionMap.forEach(q => totalMarks += q.marks);
 
-    // 2. Iterate through the student's provided answers for evaluation
-    studentAnswers.forEach(studentAnswer => {
-        // Evaluate ONLY if the status is 'answered' or 'answeredAndMarked'
-        if (studentAnswer.status === 'answered' || studentAnswer.status === 'answeredAndMarked') {
-            const correctAnswer = questionMap.get(studentAnswer.questionId);
-            if (correctAnswer && studentAnswer.submittedAnswer === correctAnswer) {
-                score += 1; // Increment score (assumes 1 mark per question)
+    // Evaluate answers
+    studentAnswers.forEach(ans => {
+        if (ans.status === "answered" || ans.status === "answeredAndMarked") {
+            const q = questionMap.get(ans.questionId);
+            if (!q) return;
+
+            // ✅ MCQ
+            if (q.questionType === "mcq") {
+                if (ans.submittedAnswer === q.correctAnswer) {
+                    score += q.marks;
+                }
+            }
+
+            // ✅ MULTIPLE SELECT
+            else if (q.questionType === "multiple_select") {
+                const correctAnswers = q.correctAnswers;
+                const submitted = Array.isArray(ans.submittedAnswer)
+                    ? ans.submittedAnswer
+                    : [ans.submittedAnswer];
+
+                if (correctAnswers.length > 0) {
+                    const marksPerOption = q.marks / correctAnswers.length;
+                    let earned = 0;
+                    submitted.forEach(option => {
+                        if (correctAnswers.includes(option)) {
+                            earned += marksPerOption;
+                        }
+                    });
+                    score += parseFloat(earned.toFixed(2)); // rounded 2 decimals
+                }
+            }
+
+            // ✅ SHORT ANSWER
+            else if (q.questionType === "short_answer") {
+                if (
+                    ans.submittedAnswer &&
+                    q.expectedAnswer &&
+                    ans.submittedAnswer.trim().toLowerCase() ===
+                    q.expectedAnswer.trim().toLowerCase()
+                ) {
+                    score += q.marks;
+                }
             }
         }
     });
 
-    // 3. Update or create the final Result document in the database
+    // ✅ Save final result
     const finalResult = await Result.findOneAndUpdate(
         { exam: examId, student: studentId },
         {
             exam: examId,
+            subject: exam.subject,
             student: studentId,
-            score: score,
-            totalMarks: totalMarks,
-            answers: studentAnswers, // Save the full state of their palette and answers
-            status: 'completed'      // Mark as completed
+            score,
+            totalMarks,
+            answers: studentAnswers.map((a) => ({
+                questionId: a.questionId,
+                submittedAnswer: Array.isArray(a.submittedAnswer)
+                    ? a.submittedAnswer
+                    : [a.submittedAnswer].filter(Boolean),
+                status: a.status || "answered",
+                awardedMarks:
+                    typeof a.awardedMarks === "number"
+                        ? a.awardedMarks
+                        : a.isCorrect
+                            ? a.marks || 0
+                            : 0, // ✅ Save marks explicitly
+            })),
+            status: "completed",
         },
         { upsert: true, new: true }
     );
 
+    // ✅ Email notification
     const student = await User.findById(studentId);
     if (student) {
         const percentage = ((score / totalMarks) * 100).toFixed(2);
-        const status = percentage >= 40 ? "Pass" : "Fail"; // You can adjust threshold
+        const status = percentage >= 40 ? "Pass" : "Fail";
 
         const html = ExamResultEmail({
             name: student.name,
@@ -72,22 +136,22 @@ const submitExam = asyncHandler(async (req, res) => {
             total: totalMarks,
             percentage,
             status,
+            subject: exam.subject?.name || ''
         });
 
         try {
-            await sendEmail(student.email, `Your ${exam.title} Results`, html);
-            console.log(`✅ Result email sent to ${student.email}`);
+            await sendEmail(student.email, `Results published for ${exam.title}`, html);
         } catch (err) {
-            console.error("❌ Failed to send result email:", err);
+            console.error("Email send failed:", err);
         }
     }
 
-
     res.status(201).json({
-        message: 'Exam submitted for evaluation successfully!',
+        message: "Exam submitted successfully!",
         result: finalResult
     });
 });
+
 
 
 /**
@@ -150,6 +214,7 @@ const getResultsForExam = asyncHandler(async (req, res) => {
     // 3. If authorization passes, fetch the results.
     const results = await Result.find({ exam: req.params.examId })
         .populate('student', 'name collegeId')
+        .populate("subject", "name")
         .sort({ score: -1 })
         .lean();
 
@@ -157,7 +222,6 @@ const getResultsForExam = asyncHandler(async (req, res) => {
         exam: {
             _id: exam._id,
             title: exam.title,
-            subject: exam.subject,
             totalMarks: exam.totalMarks
         },
         results
@@ -170,6 +234,7 @@ const getMyResults = asyncHandler(async (req, res) => {
         // Populate the 'exam' field with the title and subject from the Exam collection.
         // This is crucial for displaying useful information to the student.
         .populate('exam', 'title subject')
+        .populate("subject", "name")
         .select('exam score totalMarks createdAt status')
         .sort({ createdAt: -1 }); // Show the most recent results first.
 
@@ -244,5 +309,120 @@ const expelStudent = asyncHandler(async (req, res) => {
     res.status(200).json({ message: 'Student has been marked as expelled.', result });
 });
 
+// controllers/resultController.js
 
-module.exports = { submitExam, saveProgress, getResultsForExam, addProctoringLog, getMyCompletedExams, getMyResults, expelStudent };
+const getResultDetails = asyncHandler(async (req, res) => {
+    const resultId = req.params.id;
+
+    // ✅ Find result and populate all necessary fields
+    const result = await Result.findById(resultId)
+        .populate({
+            path: "exam",
+            populate: { path: "subject", select: "name" },
+        })
+        .populate("subject", "name")
+        .populate("student", "name collegeId")
+        .populate({
+            path: "answers.questionId",
+            model: "Question",
+            select: "questionText questionType correctAnswer correctAnswers expectedAnswer marks options",
+        });
+
+    if (!result) {
+        return res.status(404).json({ message: "Result not found" });
+    }
+
+    // ✅ Format answers for frontend
+    const formattedAnswers = result.answers.map((ans) => {
+        const q = ans.questionId;
+
+        if (!q) {
+            return {
+                questionText: "Question not found",
+                options: [],
+                correctAnswer: null,
+                correctAnswers: [],
+                selectedOption: ans.submittedAnswer || null,
+                isCorrect: false,
+                awardedMarks: ans.awardedMarks ?? awardedMarks,
+                questionMarks: 0,
+                questionType: "N/A",
+            };
+        }
+
+        // ✅ Normalize arrays
+        const options = Array.isArray(q.options) ? q.options : [];
+        const correctAnswers = Array.isArray(q.correctAnswers)
+            ? q.correctAnswers
+            : q.correctAnswer
+                ? [q.correctAnswer]
+                : [];
+
+        const selectedOptions = Array.isArray(ans.submittedAnswer)
+            ? ans.submittedAnswer
+            : ans.submittedAnswer
+                ? [ans.submittedAnswer]
+                : [];
+
+        // ✅ Scoring logic based on question type
+        let isCorrect = false;
+        let awardedMarks = 0;
+
+        if (q.questionType === "multiple_select" && correctAnswers.length > 0) {
+            const correctSelected = selectedOptions.filter((opt) =>
+                correctAnswers.includes(opt)
+            ).length;
+            awardedMarks = parseFloat(
+                ((correctSelected / correctAnswers.length) * q.marks).toFixed(2)
+            );
+            isCorrect = correctSelected === correctAnswers.length;
+        }
+        else if (q.questionType === "mcq") {
+            const chosen = selectedOptions[0]?.trim().toLowerCase();
+            const correct =
+                (q.correctAnswer || correctAnswers[0] || "").trim().toLowerCase();
+
+            isCorrect = chosen === correct;
+            awardedMarks = isCorrect ? Number(q.marks) : 0;
+        }
+        else if (q.questionType === "short_answer") {
+            const studentAnswer = selectedOptions[0]?.trim().toLowerCase();
+            const expected = q.expectedAnswer?.trim().toLowerCase();
+            isCorrect = studentAnswer === expected;
+            awardedMarks = isCorrect ? q.marks : 0;
+        }
+
+        return {
+            questionText: q.questionText || "Question not found",
+            options,
+            correctAnswer: q.correctAnswer || null,
+            correctAnswers,
+            selectedOption: ans.submittedAnswer,
+            questionType: q.questionType || "mcq",
+            questionMarks: q.marks || 1,
+            expectedAnswer: q.expectedAnswer || "",
+            isCorrect,
+            awardedMarks: ans.awardedMarks ?? awardedMarks,
+            status: ans.status || "unanswered",
+        };
+    });
+
+    // ✅ Send response
+    res.json({
+        _id: result._id,
+        exam: {
+            title: result.exam?.title,
+            subject: result.exam?.subject?.name || "N/A",
+        },
+        subject: result.subject?.name || "N/A",
+        student: result.student,
+        score: result.score,
+        totalMarks: result.totalMarks,
+        answers: formattedAnswers,
+        createdAt: result.createdAt,
+    });
+});
+
+
+
+module.exports = { submitExam, saveProgress, getResultsForExam, addProctoringLog, getMyCompletedExams, getMyResults, expelStudent, getResultDetails };

@@ -57,9 +57,10 @@ const authUser = asyncHandler(async (req, res) => {
             course: user.course,
             department: user.department,
             semester: user.semester,
-
             // Include other necessary fields based on role if needed in the future
-            token: generateToken(user._id, user.role), // Token is generated here
+            token: generateToken(user._id, user.role),
+            photoUrl: user.photoUrl,   // Token is generated here
+
         });
 
     } else {

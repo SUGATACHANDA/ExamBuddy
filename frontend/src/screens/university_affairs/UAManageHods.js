@@ -6,13 +6,17 @@ import api from '../../api/axiosConfig';
 import EditUserModal from '../admin/EditUserModal';
 import UserCard from '../../components/ui/UserCard';
 import Pagination from '../../components/teacher/Pagination';
+import LoadingScreen from 'components/LoadingScreen';
+import { Eye, EyeOff } from 'lucide-react';
+import { togglePasswordVisibility } from 'utils/passwordToggle';
 
 // A dedicated modal for CREATING a new HOD
 const CreateHODModal = ({ onClose, onSave }) => {
-    const [formData, setFormData] = useState({ name: '', email: '', collegeId: '', password: '', department: '' });
+    const [formData, setFormData] = useState({ name: '', email: '', collegeId: '', password: 'password123', department: '' });
     const [departments, setDepartments] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
     // Fetch available departments when the modal mounts
     useEffect(() => {
@@ -58,15 +62,58 @@ const CreateHODModal = ({ onClose, onSave }) => {
                         <label>Employee ID</label>
                         <input name="collegeId" value={formData.collegeId || ''} onChange={handleChange} required />
                     </div>
-                    <div className="form-group">
+                    <div className="form-group" style={{ position: 'relative' }}>
                         <label>Create Password</label>
-                        <input name="password" type="password" value={formData.password || ''} onChange={handleChange} required autoComplete="new-password" />
+                        <input
+                            name="password"
+                            type={showPassword ? 'text' : 'password'}
+                            value={formData.password || ''}
+                            onChange={handleChange}
+                            required
+                            autoComplete="new-password"
+                            style={{ paddingRight: '2.5rem' }}
+                            disabled
+                        />
+
+                        {showPassword ? (
+                            <EyeOff
+                                className="password-icon"
+                                onClick={() => {
+                                    togglePasswordVisibility('password');
+                                    setShowPassword(false);
+                                }}
+                                style={{
+                                    position: 'absolute',
+                                    right: '10px',
+                                    top: '65%',
+                                    transform: 'translateY(-50%)',
+                                    cursor: 'pointer',
+                                }}
+
+                            />
+                        ) : (
+                            <Eye
+                                className="password-icon"
+                                onClick={() => {
+                                    togglePasswordVisibility('password');
+                                    setShowPassword(true);
+                                }}
+                                xlinkTitle='Show Password'
+                                style={{
+                                    position: 'absolute',
+                                    right: '10px',
+                                    top: '65%',
+                                    transform: 'translateY(-50%)',
+                                    cursor: 'pointer',
+                                }}
+                            />
+                        )}
                     </div>
                     <div className="form-group">
                         <label>Assign to Department</label>
                         <select name="department" value={formData.department || ''} onChange={handleChange} required disabled={departments.length === 0}>
                             <option value="" disabled>-- Select a Department --</option>
-                            {departments.map(dept => <option key={dept._id} value={dept._id}>{dept.name}</option>)}
+                            {departments.map(dept => <option key={dept._id} value={dept._1d}>{dept.name}</option>)}
                         </select>
                     </div>
                     <div className="modal-actions">
@@ -147,66 +194,69 @@ const UAManageHods = () => {
         }
     };
 
-
     return (
-        <div className="container">
-            <Link to="/ua/dashboard" className="btn-link">&larr; Back to UA Dashboard</Link>
+        <>
+            {loading && <LoadingScreen />}
 
-            <div className="page-header">
-                <div>
-                    <h1>Manage Heads of Department</h1>
-                    <p>Register new HODs for departments within your college.</p>
+            <div className="container">
+                <Link to="/ua/dashboard" className="btn-link">&larr; Back to UA Dashboard</Link>
+
+                <div className="page-header">
+                    <div>
+                        <h1>Manage Heads of Department</h1>
+                        <p>Register new HODs for departments within your college.</p>
+                    </div>
+                    <button onClick={() => setIsCreateModalOpen(true)} className="btn-primary">
+                        + Register New HOD
+                    </button>
                 </div>
-                <button onClick={() => setIsCreateModalOpen(true)} className="btn-primary">
-                    + Register New HOD
-                </button>
-            </div>
 
-            {error && <p className="error">{error}</p>}
+                {error && <p className="error">{error}</p>}
 
-            <div className="content-area">
-                {loading ? <p>Loading HOD list...</p> : hods.length > 0 ? (
-                    <>
-                        <div className="user-grid">
-                            {paginatedHods.map(hod => (
-                                <UserCard
-                                    key={hod._id}
-                                    user={hod}
-                                    onEdit={openEditModal}
-                                    onDelete={handleDeleteUser}
-                                />
-                            ))}
-                        </div>
-                        <Pagination
-                            currentPage={currentPage}
-                            totalPages={totalPages}
-                            onPageChange={setCurrentPage}
-                        />
-                    </>
-                ) : (
-                    <p>No Heads of Department have been registered for your college yet.</p>
+                <div className="content-area">
+                    {hods.length > 0 ? (
+                        <>
+                            <div className="user-grid">
+                                {paginatedHods.map(hod => (
+                                    <UserCard
+                                        key={hod._id}
+                                        user={hod}
+                                        onEdit={openEditModal}
+                                        onDelete={handleDeleteUser}
+                                    />
+                                ))}
+                            </div>
+                            <Pagination
+                                currentPage={currentPage}
+                                totalPages={totalPages}
+                                onPageChange={setCurrentPage}
+                            />
+                        </>
+                    ) : (
+                        <p>No Heads of Department have been registered for your college yet.</p>
+                    )}
+                </div>
+
+                {/* Render Modals */}
+                {isCreateModalOpen && (
+                    <CreateHODModal
+                        onClose={() => setIsCreateModalOpen(false)}
+                        onSave={fetchHODs}
+                    />
+                )}
+
+                {isEditModalOpen && (
+                    <EditUserModal
+                        user={editingUser}
+                        onClose={() => setIsEditModalOpen(false)}
+                        onSave={fetchHODs}
+                        // --- THIS IS THE CRITICAL FIX ---
+                        // A UA staff member must use their own authorized endpoint to update an HOD.
+                        updateUrl={`/university-affairs/users/hods/${editingUser._id}`}
+                    />
                 )}
             </div>
-
-            {/* Render Modals */}
-            {isCreateModalOpen && (
-                <CreateHODModal
-                    onClose={() => setIsCreateModalOpen(false)}
-                    onSave={fetchHODs}
-                />
-            )}
-
-            {isEditModalOpen && (
-                <EditUserModal
-                    user={editingUser}
-                    onClose={() => setIsEditModalOpen(false)}
-                    onSave={fetchHODs}
-                    // --- THIS IS THE CRITICAL FIX ---
-                    // A UA staff member must use their own authorized endpoint to update an HOD.
-                    updateUrl={`/university-affairs/users/hods/${editingUser._id}`}
-                />
-            )}
-        </div>
+        </>
     );
 };
 

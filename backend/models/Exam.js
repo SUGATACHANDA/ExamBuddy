@@ -14,7 +14,11 @@ const examSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    subject: { type: String, required: true },
+    subject: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Subject",
+        required: true
+    },
     semester: { type: mongoose.Schema.Types.ObjectId, ref: 'Semester', required: true },
     sections: [sectionSchema],
     // questions: [{
@@ -48,8 +52,20 @@ const examSchema = new mongoose.Schema({
     // The late entry window after the scheduled time (in minutes)
     lateEntryWindowEnd: {
         type: Number,
-        default: 5,
-    }
+        default: 10,
+    },
+    enableCameraProctoring: {
+        type: Boolean,
+        default: false,
+    },
+    enableAudioProctoring: {
+        type: Boolean,
+        default: false,
+    },
+    enableFaceVerification: {
+        type: Boolean,
+        default: false
+    },
 }, {
     timestamps: true,
 });

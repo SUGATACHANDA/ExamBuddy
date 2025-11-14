@@ -37,6 +37,8 @@ import ReviewScreen from "screens/ReviewScreen";
 import RequestOTP from "screens/RequestOTP";
 import VerifyOTP from "screens/VerifyOTP";
 import ResetPasswordOTP from "screens/ResetPasswordOTP";
+import { loadFaceModels } from "utils/faceUtils";
+import ResultDetailsPage from "screens/ResultDetailsPage";
 
 function App() {
   const location = useLocation();
@@ -52,6 +54,9 @@ function App() {
 
   const [email, setEmail] = React.useState("");
   const [otp, setOtp] = React.useState("");
+  useEffect(() => {
+    loadFaceModels().catch(err => console.error("Failed to load face models", err));
+  }, []);
   return (
     <AuthProvider>
       <div className="App">
@@ -164,6 +169,14 @@ function App() {
             element={
               <ProtectedRoute role="student">
                 <SubmissionSuccessScreen />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/results/:id"
+            element={
+              <ProtectedRoute role="student">
+                <ResultDetailsPage />
               </ProtectedRoute>
             }
           />

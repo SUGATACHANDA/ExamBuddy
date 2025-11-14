@@ -4,6 +4,7 @@ const Exam = require('../models/Exam');
 const Result = require('../models/Result');
 const Question = require('../models/Question');
 const User = require('../models/User');
+const Subject = require('../models/Subject');
 const { default: mongoose } = require('mongoose');
 const ExamNotificationEmail = require('../emails/ExamNotificationEmail');
 const sendEmail = require('../utils/mailer');
@@ -17,10 +18,20 @@ const sendEmail = require('../utils/mailer');
  * @access  Private/Teacher, Private/HOD
  */
 const createExam = asyncHandler(async (req, res) => {
-    const { title, subject, semester, scheduledAt, examType, duration, sections } = req.body;
-
+    const {
+        title,
+        subject,
+        semester,
+        scheduledAt,
+        examType,
+        duration,
+        sections,
+        enableCameraProctoring = false,
+        enableAudioProctoring = false,
+        enableFaceVerification
+    } = req.body;
     // --- Validation ---
-    if (!title || !subject || !semester || !scheduledAt || !sections || !Array.isArray(sections)) {
+    if (!title || !semester || !scheduledAt || !sections || !Array.isArray(sections)) {
         res.status(400);
         throw new Error('Please provide all required exam details, including sections.');
     }
@@ -33,15 +44,24 @@ const createExam = asyncHandler(async (req, res) => {
     // (This is an advanced check, for now we trust the frontend)
 
     // Construct the payload for the new exam
+
+    const subjectDoc = await Subject.findById(subject);
+    if (!subjectDoc) {
+        res.status(404);
+        throw new Error("Subject not found");
+    }
     const examPayload = {
         title,
-        subject,
+        subject: new mongoose.Types.ObjectId(subject),
         semester,
         sections, // The sections array is passed directly
         createdBy: req.user._id,
         scheduledAt,
         duration,
         examType,
+        enableCameraProctoring,
+        enableAudioProctoring,
+        enableFaceVerification: enableFaceVerification || false,
     };
 
     const createdExam = await Exam.create(examPayload);
@@ -53,7 +73,7 @@ const createExam = asyncHandler(async (req, res) => {
         const html = ExamNotificationEmail({
             name: student.name,
             examTitle: exam.title,
-            subject: exam.subject,
+            subject: subjectDoc.name,
             startTime: exam.scheduledAt,
             duration: exam.duration,
             examId: exam._id
@@ -78,6 +98,7 @@ const createExam = asyncHandler(async (req, res) => {
 const getMyExams = asyncHandler(async (req, res) => {
     // This query now returns lean JavaScript objects and adds a `questionCount` field.
     const exams = await Exam.find({ createdBy: req.user._id })
+        .populate("subject", "name")
         .lean() // Makes queries faster
         .sort({ scheduledAt: -1 }); // Sort by most recent
 
@@ -109,20 +130,17 @@ const getExamForStudent = asyncHandler(async (req, res) => {
     }
 
     // --- 2. CHECK FOR PREVIOUS ATTEMPTS (MOST IMPORTANT SECURITY CHECK FIRST) ---
-    // Check if a result document already exists for this exam and student.
-    const existingResult = await Result.findOne({ exam: req.params.id, student: student._id });
+    // const existingExpelledResult = await Result.findOne({
+    //     exam: req.params.id,
+    //     student: student._id,
+    //     status: 'expelled',
+    // });
 
-    if (existingResult) {
-        // If a result exists, the student has either completed the exam or was expelled. Deny access.
-        res.status(403); // 403 Forbidden is the correct status code for authorization failure.
-
-        if (existingResult.status === 'expelled') {
-            throw new Error('You were previously expelled from this exam and cannot re-enter.');
-        } else {
-            throw new Error('You have already submitted this exam and cannot retake it.');
-        }
-    }
-
+    // if (existingExpelledResult.status === "expelled") {
+    //     return res.status(403).json({
+    //         message: "You have been expelled from this exam and cannot re-enter.",
+    //     });
+    // }
     // --- 3. FETCH & DEEPLY POPULATE THE EXAM DATA ---
     // This is the definitive fix for the frontend Palette rendering bug.
     // It populates the nested 'questions' array within each section.
@@ -132,13 +150,12 @@ const getExamForStudent = asyncHandler(async (req, res) => {
             model: 'Question',
             // CRITICAL: For security, never send the correct answer to the student's browser.
             select: '-correctAnswer'
-        });
+        }).populate("subject", "name");
 
     if (!exam) {
         res.status(404);
         throw new Error('Exam not found.');
     }
-
     // --- 4. HIERARCHICAL VALIDATION ---
     // Ensure the student is actually enrolled in the semester this exam is for.
     if (!student.semester || exam.semester.toString() !== student.semester.toString()) {
@@ -153,14 +170,55 @@ const getExamForStudent = asyncHandler(async (req, res) => {
     const windowStartTime = new Date(scheduledTime.getTime() - (exam.loginWindowStart || 10) * 60000); // Defaults to 10 min before
     const windowEndTime = new Date(scheduledTime.getTime() + (exam.lateEntryWindowEnd || 5) * 60000);   // Defaults to 5 min after
 
-    if (now < windowStartTime) {
-        res.status(403);
-        throw new Error(`The login window for this exam has not opened yet. Please try again after ${windowStartTime.toLocaleTimeString()}.`);
+    const totalMarks = exam.sections.reduce((total, section) => total + section.questions.length, 0);
+
+    await Result.findOneAndUpdate(
+        { exam: req.params.id, student: student._id },
+        {
+            $setOnInsert: { // These fields are only set when the document is first created
+                status: 'ongoing',
+                exam: req.params.id,
+                student: student._id,
+                totalMarks: totalMarks,
+                answers: [], // Start with an empty answers array
+                score: 0,
+            }
+        },
+        { upsert: true } // If no document matches, create it.
+    );
+
+    const existingResult = await Result.findOne({
+        exam: req.params.id,
+        student: student._id,
+        // status: 'ongoing',
+    });
+
+    if (existingResult) {
+        // If a result exists, the student has either completed the exam or was expelled. Deny access.
+        res.status(403); // 403 Forbidden is the correct status code for authorization failure.
+
+        if (existingResult.status === 'expelled') {
+            throw new Error('You were previously expelled from this exam and cannot re-enter.');
+        }
     }
 
-    if (now > windowEndTime) {
-        res.status(403);
-        throw new Error(`The login window for this exam has closed. Entry was allowed until ${windowEndTime.toLocaleTimeString()}.`);
+
+    if (existingResult) {
+        console.log(`[ExamController] Student ${student._id} already has ongoing exam — skipping late login restriction.`);
+    } else {
+        if (now < windowStartTime) {
+            res.status(403);
+            throw new Error(
+                `The login window for this exam has not opened yet. Please try again after ${windowStartTime.toLocaleTimeString()}.`
+            );
+        }
+
+        if (now > windowEndTime) {
+            res.status(403);
+            throw new Error(
+                `The login window for this exam has closed. Entry was allowed until ${windowEndTime.toLocaleTimeString()}.`
+            );
+        }
     }
 
     // --- 6. SUCCESS ---
@@ -194,7 +252,7 @@ const getAvailableExamsForStudent = asyncHandler(async (req, res) => {
     // This is vastly more performant than fetching all exams and filtering in code.
     const examsForSemester = await Exam.find({ semester: studentSemesterIdString })
         .sort({ scheduledAt: 'asc' }) // Sort by the soonest starting exams first.
-        .lean(); // Use .lean() for a significant performance boost.
+        .lean().populate("subject", "name"); // Use .lean() for a significant performance boost.
 
     // 3. Filter the results in-memory based on the current time.
     // This logic is for determining which exams are "upcoming" vs "active".

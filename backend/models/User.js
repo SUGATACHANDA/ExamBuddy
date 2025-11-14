@@ -55,8 +55,18 @@ const userSchema = new mongoose.Schema(
             },
         },
         resetOTP: { type: String },
+
         resetOTPExpiry: { type: Date },
+
         resetOTPResendAfter: { type: Date },
+
+        photoUrl: { type: String },
+
+        photoPublicId: { type: String },
+
+        photoVerified: { type: Boolean, default: false },
+
+        faceDescriptor: { type: [Number] },
     },
     { timestamps: true }
 );

@@ -33,6 +33,12 @@ const ManageExams = () => {
     const [duration, setDuration] = useState(60);
     // const [selectedQuestions, setSelectedQuestions] = useState([]);
     const [isScheduling, setIsScheduling] = useState(false);
+    const [enableCameraProctoring, setEnableCameraProctoring] = useState(false);
+    const [enableAudioProctoring, setEnableAudioProctoring] = useState(false);
+    const [enableFaceVerification, setEnableFaceVerification] = useState(false);
+
+    const [subjects, setSubjects] = useState([]);
+    const [selectedSubject, setSelectedSubject] = useState("");
 
     // --- State for the "Edit Exam" modal ---
     const [editingExam, setEditingExam] = useState(null);
@@ -68,6 +74,21 @@ const ManageExams = () => {
         setSections(updatedSections);
     };
 
+    const filteredQuestions = useMemo(() => {
+        if (!selectedSubject) return myQuestions;
+
+        return myQuestions.filter(q => {
+            // Case 1: subject stored as ObjectId string
+            if (typeof q.subject === "string") {
+                return q.subject === selectedSubject;
+            }
+            // Case 2: subject populated as object
+            if (q.subject?._id) {
+                return q.subject._id === selectedSubject;
+            }
+            return false;
+        });
+    }, [myQuestions, selectedSubject]);
     const removeQuestionFromSection = (sectionIndex, questionId) => {
         const updatedSections = [...sections];
         updatedSections[sectionIndex].questions = updatedSections[sectionIndex].questions.filter(id => id !== questionId);
@@ -89,7 +110,7 @@ const ManageExams = () => {
         try {
             // This is the new, correct payload structure for the backend
             const payload = {
-                title, subject, semester: selectedSemester,
+                title, subject: selectedSubject, semester: selectedSemester,
                 scheduledAt: new Date(scheduledAt).toISOString(),
                 examType,
                 duration: examType === 'timed' ? Number(duration) : undefined,
@@ -98,6 +119,9 @@ const ManageExams = () => {
                     title: sec.title,
                     questions: sec.questions // These are already just IDs
                 })),
+                enableCameraProctoring,
+                enableAudioProctoring,
+                enableFaceVerification
             };
 
             await api.post('/exams', payload);
@@ -120,6 +144,10 @@ const ManageExams = () => {
         updatedSections[index].title = newTitle;
         setSections(updatedSections);
     };
+
+    useEffect(() => {
+        api.get("/subjects").then(res => setSubjects(res.data));
+    }, []);
 
     // --- DATA FETCHING LOGIC ---
 
@@ -213,7 +241,7 @@ const ManageExams = () => {
         const examTime = new Date(scheduledAt);
         if (now < examTime) return "Upcoming";
         // You can add more complex logic here (e.g., checking duration to see if it's "In Progress")
-        return "Live / Completed";
+        return "Completed";
     };
 
     return (
@@ -239,9 +267,12 @@ const ManageExams = () => {
                                         {paginatedExams.map(exam => (
                                             <li key={exam._id}>
                                                 <h3>{exam.title}</h3>
-                                                <p><strong>Subject:</strong> {exam.subject}</p>
+                                                <p><strong>Subject:</strong> {exam.subject?.name || exam.subject}</p>
                                                 <p><strong>Scheduled:</strong> {new Date(exam.scheduledAt).toLocaleString()}</p>
-                                                <p><strong>Status:</strong> {getExamStatus(exam.scheduledAt)} | <strong>Questions:</strong> {exam.questionCount}</p>
+                                                <p>
+                                                    <strong>Status:</strong> {getExamStatus(exam.scheduledAt)} | <strong>Questions:</strong>{' '}
+                                                    {exam.questionCount ?? exam.questions?.length ?? (exam.sections ? exam.sections.reduce((acc, s) => acc + (s.questions?.length ?? 0), 0) : 0)}
+                                                </p>
                                                 <div className="exam-actions">
                                                     <button onClick={() => navigate(`/teacher/results/${exam._id}`)} className="btn btn-primary">Results</button>
                                                     <button onClick={() => navigate(`/teacher/proctor/${exam._id}`)} className="btn-success">Proctor</button>
@@ -263,7 +294,7 @@ const ManageExams = () => {
                             <h2>Details for New Exam</h2>
                             <form onSubmit={handleScheduleExam}>
                                 <div className="form-group"><label>Exam Title (e.g., Midterm 1, Final Exam)</label><input type="text" value={title} onChange={e => setTitle(e.target.value)} required /></div>
-                                <div className="form-group"><label>Subject of Exam (e.g., Data Structures, Thermodynamics)</label><input type="text" value={subject} onChange={e => setSubject(e.target.value)} required /></div>
+                                {/* <div className="form-group"><label>Subject of Exam (e.g., Data Structures, Thermodynamics)</label><input type="text" value={subject} onChange={e => setSubject(e.target.value)} required /></div> */}
                                 <div className="form-group"><label>Target Department</label>
                                     <select value={selectedDepartment} onChange={e => setSelectedDepartment(e.target.value)} required>
                                         <option value="" disabled>Select department</option>
@@ -279,46 +310,157 @@ const ManageExams = () => {
                                 <div className="form-group"><label>Schedule At (in your local time)</label><input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)} required /></div>
                                 <div className="form-group"><label>Exam Type</label><select value={examType} onChange={e => setExamType(e.target.value)}><option value="timed">Timed</option><option value="untimed">Untimed</option></select></div>
                                 {examType === 'timed' && <div className="form-group"><label>Duration (in minutes)</label><input type="number" value={duration} onChange={e => setDuration(Number(e.target.value))} required min="1" /></div>}
+                                <div className="form-group proctoring-settings">
+                                    <h3>Proctoring Settings</h3>
+
+                                    {/* Face Verifiction */}
+                                    <div className="toggle-row">
+                                        <label className="toggle-label">Enable Face Verification</label>
+                                        <label className="switch">
+                                            <input
+                                                type="checkbox"
+                                                checked={enableFaceVerification}
+                                                onChange={(e) => setEnableFaceVerification(e.target.checked)}
+                                            />
+                                            <span className="slider"></span>
+                                        </label>
+                                    </div>
+
+                                    {/* Camera Proctoring Toggle */}
+                                    <div className="toggle-row">
+                                        <label className="toggle-label">Enable Camera Proctoring</label>
+                                        <label className="switch">
+                                            <input
+                                                type="checkbox"
+                                                checked={enableCameraProctoring}
+                                                onChange={(e) => setEnableCameraProctoring(e.target.checked)}
+                                            />
+                                            <span className="slider"></span>
+                                        </label>
+                                    </div>
+
+                                    {/* Audio Proctoring Toggle */}
+                                    <div className="toggle-row">
+                                        <label className="toggle-label">Enable Audio Proctoring</label>
+                                        <label className="switch">
+                                            <input
+                                                type="checkbox"
+                                                checked={enableAudioProctoring}
+                                                onChange={(e) => setEnableAudioProctoring(e.target.checked)}
+                                            />
+                                            <span className="slider"></span>
+                                        </label>
+                                    </div>
+
+                                    <small style={{ color: '#666', display: 'block', marginTop: '8px' }}>
+                                        (By default, all proctoring features are disabled. By enabling FACE VERIFICATION, AUDIO and VIDEO proctoring will be enabled.)
+                                    </small>
+                                </div>
+
                                 <hr />
-                                <h2>Question Allocation</h2>
-                                {/* --- NEW Two-Panel Question Allocator --- */}
-                                <div className="question-allocator">
-                                    <div className="question-bank-panel">
-                                        <h3>Your Question Bank ({myQuestions.length})</h3>
-                                        <div className="question-bank-list">
-                                            {myQuestions.map(q => (
-                                                <div key={q._id} className="question-bank-item">
-                                                    <span>{q.questionText.substring(0, 80)}...</span>
-                                                    <div className="add-to-section-buttons">
-                                                        {sections.map((sec, secIndex) => (
-                                                            <button key={secIndex} type="button" onClick={() => addQuestionToSection(secIndex, q._id)} title={`Add to ${sec.title}`}>
-                                                                {String.fromCharCode(65 + secIndex)}
-                                                            </button>
-                                                        ))}
+                                <h2 className="qa-title">Question Allocation</h2>
+                                {/* ✅ Select Subject FIRST */}
+                                <div className="qa-subject-select">
+                                    <label>Select Subject</label>
+                                    <select
+                                        value={subject}
+                                        onChange={(e) => {
+                                            setSubject(e.target.value)
+                                            setSelectedSubject(e.target.value);
+                                        }}
+                                        required
+                                    >
+                                        <option value="" disabled>-- Select Subject --</option>
+                                        {subjects.map((s) => (
+                                            <option key={s._id} value={s._id}>
+                                                {s.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* ✅ Only show question bank AFTER subject chosen */}
+                                {selectedSubject ? (
+                                    <div className="question-allocator-modern">
+
+                                        {/* LEFT SIDE: Question Bank */}
+                                        <div className="qa-panel qa-bank">
+                                            <h3>Questions ({filteredQuestions.length})</h3>
+                                            <div className="qa-list">
+                                                {filteredQuestions.length > 0 ? (
+                                                    filteredQuestions.map(q => (
+                                                        <div key={q._id} className="qa-item">
+                                                            <p className="qa-question">{q.questionText}</p>
+                                                            <div className="section-tag-container">
+                                                                {sections.map((sec, secIndex) => (
+                                                                    <button
+                                                                        key={secIndex}
+                                                                        type="button"
+                                                                        className="section-tag-btn"
+                                                                        onClick={() => addQuestionToSection(secIndex, q._id)}
+                                                                        title={`Add to ${sec.title}`}
+                                                                    >
+                                                                        {String.fromCharCode(65 + secIndex)}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <p className="qa-empty">No questions for this subject.</p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* RIGHT SIDE: Section Panel */}
+                                        <div className="qa-panel qa-sections">
+                                            <h3>Sections</h3>
+                                            {sections.map((section, secIndex) => (
+                                                <div key={secIndex} className="qa-section-box">
+
+                                                    {/* Section title + remove */}
+                                                    <div className="qa-sec-header">
+                                                        <input
+                                                            type="text"
+                                                            value={section.title}
+                                                            onChange={(e) => handleSectionTitleChange(secIndex, e.target.value)}
+                                                            className="qa-sec-title"
+                                                        />
+                                                        <button
+                                                            className="qa-remove-sec"
+                                                            type="button"
+                                                            onClick={() => removeSection(secIndex)}
+                                                        >
+                                                            ✕
+                                                        </button>
                                                     </div>
+
+                                                    {/* Allocated Qs */}
+                                                    <ul className="qa-section-list">
+                                                        {section.questions.map(qId => (
+                                                            <li key={qId} className="qa-sec-item">
+                                                                <span>{getQuestionById(qId)?.questionText.slice(0, 60)}...</span>
+                                                                <button
+                                                                    type="button"
+                                                                    className="qa-remove-q"
+                                                                    onClick={() => removeQuestionFromSection(secIndex, qId)}
+                                                                >
+                                                                    remove
+                                                                </button>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
                                                 </div>
                                             ))}
+
+                                            <button type="button" onClick={addSection} className="qa-add-section-btn">
+                                                + Add Section
+                                            </button>
                                         </div>
                                     </div>
-                                    <div className="exam-sections-panel">
-                                        <h3>Exam Sections</h3>
-                                        {sections.map((section, secIndex) => (
-                                            <div key={secIndex} className="exam-section-item">
-                                                <input type="text" value={section.title} onChange={(e) => handleSectionTitleChange(secIndex, e.target.value)} placeholder="Section Title" />
-                                                <button type="button" className="btn-danger" onClick={() => removeSection(secIndex)}>X</button>
-                                                <ul className="allocated-questions-list">
-                                                    {section.questions.map(qId => (
-                                                        <li key={qId}>
-                                                            <span>{getQuestionById(qId)?.questionText.substring(0, 50)}...</span>
-                                                            <button type="button" onClick={() => removeQuestionFromSection(secIndex, qId)}>remove</button>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                        ))}
-                                        <button type="button" onClick={addSection} className="btn-secondary">+ Add Another Section</button>
-                                    </div>
-                                </div>
+                                ) : (
+                                    <p className="qa-placeholder">Select a subject to load questions</p>
+                                )}
 
                                 <hr />
                                 <button type="submit" className="btn btn-submit" disabled={isScheduling}>{isScheduling ? 'Scheduling...' : 'Schedule Exam'}</button>
@@ -334,3 +476,9 @@ const ManageExams = () => {
 };
 
 export default ManageExams;
+
+
+
+
+
+

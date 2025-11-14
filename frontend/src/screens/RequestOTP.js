@@ -41,6 +41,9 @@ const RequestOTP = ({ onSuccess }) => {
                 {loading ? "Sending OTP..." : "Request OTP"}
             </button>
             <p className="auth-msg">{message}</p>
+            <p className="auth-link" onClick={() => navigate("/login")}>
+                &larr;Back to Login
+            </p>
         </div>
     );
 };

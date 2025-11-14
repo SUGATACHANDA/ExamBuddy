@@ -49,8 +49,6 @@ const QuestionPalette = ({ section, answers, currentQuestionId, onNavigate }) =>
         );
     }
 
-    // Get the global starting question number for this section from the parent.
-    const sectionStartNumber = section.globalQuestionIndexStart || 1;
 
     return (
         <div className="question-palette-final">

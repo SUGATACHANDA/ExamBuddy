@@ -30,6 +30,8 @@ const teacherRoutes = require('../routes/teacherRoutes');
 const dataRoutes = require('../routes/dataRoutes');
 const universityAffairsRoutes = require('../routes/universityAffairsRoutes');
 const hodRoutes = require('../routes/hodRoutes');
+const faceRoutes = require('../routes/faceRoutes.js');
+const subjectRoutes = require("../routes/subjectRoutes.js");
 
 const startServer = async () => {
     await connectDB();
@@ -327,6 +329,8 @@ app.use('/api/teacher', teacherRoutes);
 app.use('/api/data', dataRoutes);
 app.use('/api/university-affairs', universityAffairsRoutes);
 app.use('/api/hod', hodRoutes);
+app.use('/api/face', faceRoutes);
+app.use("/api/subjects", subjectRoutes);
 
 app.get('/', (req, res) => {
     res.send('Exam App API is running...');

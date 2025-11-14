@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom'; // <-- Make sure to import Link
 import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
+import { Eye, EyeOff } from 'lucide-react';
+import { togglePasswordVisibility } from 'utils/passwordToggle';
+import Tooltip from 'components/Tooltip';
 
 const LoginScreen = () => {
     // --- STATE MANAGEMENT ---
@@ -9,6 +12,7 @@ const LoginScreen = () => {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
     // --- HOOKS ---
     const navigate = useNavigate();
@@ -75,11 +79,53 @@ const LoginScreen = () => {
                     {error && <p className="error">{error}</p>}
                     <div className="form-group">
                         <label htmlFor="collegeId">College ID / Employee ID</label>
-                        <input id="collegeId" type="text" value={collegeId} onChange={(e) => setCollegeId(e.target.value)} required />
+                        <input id="collegeId" type="text" value={collegeId} onChange={(e) => setCollegeId(e.target.value)} required disabled={loading} />
                     </div>
-                    <div className="form-group">
+                    <div className="form-group" style={{ position: 'relative' }}>
                         <label htmlFor="password">Password</label>
-                        <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                        <input
+                            id="password"
+                            type={showPassword ? 'text' : 'password'}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            disabled={loading}
+                        />
+                        {/* <Tooltip content={showPassword ? "Hide password" : "Show password"} position="left"> */}
+                        {showPassword ? (
+                            <EyeOff
+                                className="password-icon"
+                                onClick={() => {
+                                    togglePasswordVisibility('password');
+                                    setShowPassword(false);
+                                }}
+                                style={{
+                                    position: 'absolute',
+                                    right: '10px',
+                                    top: '65%',
+                                    transform: 'translateY(-50%)',
+                                    cursor: 'pointer',
+                                }}
+
+                            />
+                        ) : (
+                            <Eye
+                                className="password-icon"
+                                onClick={() => {
+                                    togglePasswordVisibility('password');
+                                    setShowPassword(true);
+                                }}
+                                xlinkTitle='Show Password'
+                                style={{
+                                    position: 'absolute',
+                                    right: '10px',
+                                    top: '65%',
+                                    transform: 'translateY(-50%)',
+                                    cursor: 'pointer',
+                                }}
+                            />
+                        )}
+                        {/* </Tooltip> */}
                     </div>
 
                     {/* --- THIS IS THE FIX for FORGOT PASSWORD --- */}
