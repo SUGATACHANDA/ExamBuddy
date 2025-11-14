@@ -1,22 +1,24 @@
-// middleware/upload.js
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 
-// Use memory storage to directly send buffer to Cloudinary
-const uploadDir = "uploads";
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+// Use memory storage for Vercel (serverless compatible)
+const storage = multer.memoryStorage(); // <-- CHANGE TO MEMORY STORAGE
 
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, uploadDir);
+const upload = multer({
+    storage: storage,
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB limit
     },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + path.extname(file.originalname));
-    },
+    fileFilter: (req, file, cb) => {
+        // Validate file types if needed
+        if (file.mimetype.startsWith('image/') ||
+            file.mimetype === 'application/pdf' ||
+            file.mimetype === 'application/msword' ||
+            file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+            cb(null, true);
+        } else {
+            cb(new Error('Unsupported file type'), false);
+        }
+    }
 });
-
-const upload = multer({ storage });
-
 
 module.exports = upload;
