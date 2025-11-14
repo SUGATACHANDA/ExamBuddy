@@ -1,81 +1,138 @@
-import React, { useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { useWebRTC } from '../hooks/useWebRTC'; // Import the custom hook that handles all the hard work
+import { Clock, Mail, Phone, Zap } from 'lucide-react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-// --- STUDENT MONITOR COMPONENT (Child) ---
-// This is a simple, "dumb" component whose only job is to display a video stream.
-const StudentMonitor = ({ peer }) => {
-    const videoRef = useRef(null);
+const ProctorScreen = () => {
+    const navigate = useNavigate();
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
-    useEffect(() => {
-        // When the `stream` prop from the peer object is available,
-        // attach it to the srcObject of the <video> element.
-        if (videoRef.current && peer.stream) {
-            videoRef.current.srcObject = peer.stream;
-        }
-    }, [peer.stream]); // This effect runs whenever the stream changes.
+    const handleBack = () => {
+        navigate(-1);
+    };
 
-    // Note: The `handleExpel` logic would be added back here later,
-    // potentially by passing a function from the main hook.
-    // For now, we focus on displaying the video.
-    const handleExpel = () => {
-        alert(`Expel functionality would be triggered for peer with ID: ${peer.socketId}`);
+    const handleSupportClick = () => {
+        setIsModalOpen(true);
+    };
+
+    const closeModal = () => {
+        setIsModalOpen(false);
     };
 
     return (
-        <div className="student-monitor">
-            {/* The peer object might eventually contain the student's name */}
-            <h4>Student: {peer.socketId}</h4>
-            <div className="video-container">
-                {/* 
-                  - The `ref` attaches this element to our `videoRef`.
-                  - `autoPlay` makes the video play as soon as it's received.
-                  - `playsInline` is important for mobile compatibility.
-                  - `muted` is added because browsers often block un-muted autoplaying video.
-                    The teacher can manually unmute if needed.
-                */}
-                <video ref={videoRef} autoPlay playsInline muted />
-            </div>
-            {/* The proctoring log for violations would be implemented here */}
-            {/* <div className="proctor-log">...</div> */}
-            <button onClick={handleExpel} className="btn-danger">
-                Expel Student
-            </button>
-        </div>
-    );
-};
-
-
-// --- PROCTOR SCREEN COMPONENT (Parent) ---
-// This is the main screen for the teacher. It is now clean and declarative.
-const ProctorScreen = () => {
-    const { examId } = useParams();
-    const { userInfo } = useAuth(); // Get the currently logged-in teacher
-
-    // --- THIS IS THE CORE OF THE NEW ARCHITECTURE ---
-    // We call our custom hook with the exam ID and the current user's info.
-    // The hook handles EVERYTHING: Socket.IO, permissions, WebRTC signaling, etc.
-    // It returns a clean, simple array of "peers" (the connected students).
-    const { peers } = useWebRTC(examId, userInfo);
-    // ---------------------------------------------
-
-    return (
         <div className="proctor-container">
-            <h1>Live Proctoring: Exam "{examId}"</h1>
-            <p><strong>Status:</strong> {peers.length > 0 ? `${peers.length} student(s) connected.` : 'Waiting for students...'}</p>
-            <hr />
+            <div className="proctor-content">
+                <div className="header-section">
+                    <button className="back-button" onClick={handleBack}>
+                        Back to Dashboard
+                    </button>
+                    <h1>Proctoring System</h1>
+                </div>
 
-            <div className="monitors-grid">
-                {peers.length > 0 ? (
-                    // We simply map over the array of peers and render a monitor for each one.
-                    peers.map(peer => (
-                        <StudentMonitor key={peer.socketId} peer={peer} />
-                    ))
-                ) : (
-                    <div className="status-container">
-                        <p>No students have connected to this proctoring session yet.</p>
-                        <p>Please ensure students have started the correct exam.</p>
+                <div className="status-section">
+                    <div className="status-badge">Coming Soon</div>
+                    <h2>Real-time Proctoring Feature</h2>
+                    <p className="description">
+                        This feature is currently under active development and will be available in our future release.
+                    </p>
+                </div>
+
+                <div className="features-section">
+                    <h3>Planned Features</h3>
+                    <div className="features-list">
+                        <div className="feature">
+                            <div className="feature-dot"></div>
+                            <span>Live video monitoring of exam sessions</span>
+                        </div>
+                        <div className="feature">
+                            <div className="feature-dot"></div>
+                            <span>AI-powered suspicious behavior detection</span>
+                        </div>
+                        <div className="feature">
+                            <div className="feature-dot"></div>
+                            <span>Multi-student proctoring dashboard</span>
+                        </div>
+                        <div className="feature">
+                            <div className="feature-dot"></div>
+                            <span>Real-time violation alerts and logging</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="progress-section">
+                    <div className="progress-header">
+                        <span>Development Progress</span>
+                        <span>2%</span>
+                    </div>
+                    <div className="progress-bar">
+                        <div className="progress-fill"></div>
+                    </div>
+                </div>
+
+                <div className="contact-section">
+                    <p>For questions about upcoming features, please contact our support team.</p>
+                    <button className="support-button" onClick={handleSupportClick}>
+                        Contact Support
+                    </button>
+                </div>
+
+                {/* Contact Support Modal */}
+                {isModalOpen && (
+                    <div className="modal-overlay" onClick={closeModal}>
+                        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                            <div className="modal-header">
+                                <h3>Need Help?</h3>
+                                <button className="close-button" onClick={closeModal}>×</button>
+                            </div>
+                            <div className="modal-body">
+                                <div className="contact-info">
+                                    <div className="contact-item">
+                                        <div className="contact-icon">
+                                            <Mail size={20} />
+                                        </div>
+                                        <div className="contact-details">
+                                            <strong>Email us</strong>
+                                            <a href="mailto:support@exambuddy.com" className="contact-link">
+                                                support@exambuddy.com
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div className="contact-item">
+                                        <div className="contact-icon">
+                                            <Phone size={20} />
+                                        </div>
+                                        <div className="contact-details">
+                                            <strong>Call us</strong>
+                                            <a href="tel:+919748278005" className="contact-link">
+                                                +91-9748278005
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div className="contact-item">
+                                        <div className="contact-icon">
+                                            <Clock size={20} />
+                                        </div>
+                                        <div className="contact-details">
+                                            <strong>Business Hours</strong>
+                                            <p>Monday - Friday: 9:00 AM - 6:00 PM IST</p>
+                                        </div>
+                                    </div>
+                                    <div className="contact-item">
+                                        <div className="contact-icon">
+                                            <Zap size={20} />
+                                        </div>
+                                        <div className="contact-details">
+                                            <strong>Response Time</strong>
+                                            <p>Typically within 2 business hours</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button className="modal-close-btn" onClick={closeModal}>
+                                    Close
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>

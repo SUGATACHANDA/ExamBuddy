@@ -191,7 +191,8 @@ const StudentDashboard = () => {
                         )}
                         <div className="user-info">
                             <h1 className="user-name">{userInfo?.name}</h1>
-                            <p className="user-department">Department of {userInfo?.department?.name}</p>
+                            <p className="user-department">{userInfo?.department?.name}</p>
+                            <p className="user-department">{userInfo?.college?.name}</p>
                         </div>
                     </div>
 

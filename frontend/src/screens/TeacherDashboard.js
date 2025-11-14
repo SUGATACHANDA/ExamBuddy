@@ -21,7 +21,10 @@ const TeacherDashboard = () => {
                 <div className="student-header-center">
                     <div className="student-name">{userInfo?.name}</div>
                     <div className="student-department">
-                        Department of {userInfo?.department?.name}
+                        {userInfo?.department?.name}
+                    </div>
+                    <div className="student-department">
+                        {userInfo?.college?.name}
                     </div>
                     <div className="student-clock">
                         <ClockIcon className="clock-icon" />

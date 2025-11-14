@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Headset, Phone, Mail, X } from "lucide-react";
 
-const SUPPORT_EMAIL = "support@examproctor.com";
+const SUPPORT_EMAIL = "support@exambuddy.com";
 const SUPPORT_PHONE = "+91-9748278005";
 
 const FloatingSupportButton = () => {

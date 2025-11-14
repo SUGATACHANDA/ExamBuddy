@@ -144,8 +144,8 @@ const ResultDetailPage = () => {
                         {/* ✅ Short Answer Display */}
                         {q.questionType === "short_answer" && (
                             <div className="short-answer-block">
-                                <p><b>Your Answer:</b> {q.selectedOption || "Not Answered"}</p>
-                                <p><b>Expected Answer:</b> {q.expectedAnswer || "N/A"}</p>
+                                <p>Your Answer: <b>{q.selectedOption || "Not Answered"}</b></p>
+                                <p>Expected Answer: <b>{q.expectedAnswer || "N/A"}</b></p>
                             </div>
                         )}
 
