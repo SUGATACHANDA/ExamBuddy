@@ -82,24 +82,85 @@ const updateQuestion = asyncHandler(async (req, res) => {
 
     if (!question) {
         res.status(404);
-        throw new Error('Question not found');
+        throw new Error("Question not found");
     }
 
-    // Ensure the teacher updating the question is the one who created it
     if (question.createdBy.toString() !== req.user._id.toString()) {
         res.status(401);
-        throw new Error('Not authorized to update this question');
+        throw new Error("Not authorized to update this question");
     }
 
-    const { questionText, options, correctAnswer, marks } = req.body;
+    const {
+        questionText,
+        questionType,
+        options,
+        correctAnswer,
+        correctAnswers,
+        expectedAnswer,
+        marks
+    } = req.body;
 
-    question.questionText = questionText || question.questionText;
-    question.options = options || question.options;
-    question.correctAnswer = correctAnswer || question.correctAnswer;
+    console.log("📨 UPDATE REQUEST BODY:", req.body);
+
+    // Update basic fields
+    if (questionText !== undefined) question.questionText = questionText;
     if (marks !== undefined) question.marks = marks;
 
-    const updatedQuestion = await question.save();
-    res.json(updatedQuestion);
+    // Handle question type changes
+    const targetQuestionType = questionType || question.questionType;
+
+    if (questionType && questionType !== question.questionType) {
+        // Question type is changing - clear all fields
+        question.questionType = questionType;
+        question.options = [];
+        question.correctAnswer = "";
+        question.correctAnswers = [];
+        question.expectedAnswer = "";
+    }
+
+    // Update type-specific fields based on the TARGET question type
+    if (targetQuestionType === "mcq") {
+        console.log("🔄 Processing as MCQ");
+        if (options !== undefined) question.options = options;
+        if (correctAnswer !== undefined) question.correctAnswer = correctAnswer;
+        // Clear other fields
+        question.correctAnswers = [];
+        question.expectedAnswer = "";
+    }
+    else if (targetQuestionType === "multiple_select") {
+        console.log("🔄 Processing as Multiple Select");
+        if (options !== undefined) question.options = options;
+        if (correctAnswers !== undefined) question.correctAnswers = correctAnswers;
+        // Clear other fields
+        question.correctAnswer = "";
+        question.expectedAnswer = "";
+    }
+    else if (targetQuestionType === "short_answer") {
+        console.log("🔄 Processing as Short Answer");
+        if (expectedAnswer !== undefined) {
+            console.log("📝 Setting expectedAnswer:", expectedAnswer);
+            question.expectedAnswer = expectedAnswer;
+        }
+        // Clear other fields
+        question.options = [];
+        question.correctAnswer = "";
+        question.correctAnswers = [];
+    }
+
+    console.log("💾 Saving question:", {
+        questionType: question.questionType,
+        expectedAnswer: question.expectedAnswer,
+        questionText: question.questionText
+    });
+
+    const updated = await question.save();
+    console.log("✅ Saved question:", {
+        _id: updated._id,
+        questionType: updated.questionType,
+        expectedAnswer: updated.expectedAnswer
+    });
+
+    res.json(updated);
 });
 
 // @desc    Delete a question

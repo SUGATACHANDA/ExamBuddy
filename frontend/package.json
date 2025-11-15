@@ -91,7 +91,7 @@
     },
     "releaseInfo": {
       "releaseNotesFile": "CHANGELOG.md",
-      "releaseNotes": "Release 1.2.2"
+      "releaseNotes": "Release 1.4.1"
     },
     "asar": false,
     "npmRebuild": false,
