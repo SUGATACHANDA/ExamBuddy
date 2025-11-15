@@ -4,7 +4,6 @@ import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Eye, EyeOff } from 'lucide-react';
 import { togglePasswordVisibility } from 'utils/passwordToggle';
-import Tooltip from 'components/Tooltip';
 
 const LoginScreen = () => {
     // --- STATE MANAGEMENT ---
@@ -21,10 +20,15 @@ const LoginScreen = () => {
     // --- EFFECT ---
     // Signal to main process that the UI is ready, so the splash screen can close.
     useEffect(() => {
-        if (window.electronAPI && window.electronAPI.sendLoginScreenReady) {
-            window.electronAPI.sendLoginScreenReady();
-        }
-    }, []); // Empty dependency array `[]` ensures this runs only once.
+        // ADD setTimeout:
+        const timer = setTimeout(() => {
+            if (window.electronAPI && window.electronAPI.sendLoginScreenReady) {
+                window.electronAPI.sendLoginScreenReady();
+            }
+        }, 1000); // 1 second delay
+
+        return () => clearTimeout(timer);
+    }, []);// Empty dependency array `[]` ensures this runs only once.
 
 
     // --- HANDLERS ---

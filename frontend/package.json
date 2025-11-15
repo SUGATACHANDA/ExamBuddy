@@ -1,6 +1,6 @@
 {
   "name": "exambuddy",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "productName": "Exam Buddy",
   "author": {
     "name": "SUGATA CHANDA",
@@ -49,7 +49,7 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "electron:start": "npx concurrently -k \"npm run start\" \"npx wait-on http://localhost:3000 && npx electron .\"",
-    "electron:package": "node ./scripts/publish-with-changelog.js && npm run build && npm run postbuild && npx cross-env NODE_ENV=production electron-builder",
+    "electron:package": "npm run build && npm run postbuild && npx cross-env NODE_ENV=production electron-builder",
     "publish": "npm run electron:package -- --publish always"
   },
   "eslintConfig": {
@@ -91,7 +91,7 @@
     },
     "releaseInfo": {
       "releaseNotesFile": "CHANGELOG.md",
-      "releaseNotes": "Release 1.4.1"
+      "releaseNotes": "Release 1.4.2"
     },
     "asar": false,
     "npmRebuild": false,

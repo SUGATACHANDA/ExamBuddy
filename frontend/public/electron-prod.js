@@ -26,6 +26,7 @@ let violationStrikes = 0;
 const MAX_STRIKES = 3;
 
 let splashWindow;
+let downloadProgressWindow;
 
 function createSplashWindow() {
     splashWindow = new BrowserWindow({
@@ -36,16 +37,188 @@ function createSplashWindow() {
         alwaysOnTop: true,
         resizable: false,
         center: true,
-        show: false
+        show: true
     });
     // This assumes you have created the `splash.html` file in the `public` directory.
     splashWindow.loadFile(path.join(__dirname, 'splash.html'));
     splashWindow.on('closed', () => (splashWindow = null));
+}
 
-    splashWindow.once('ready-to-show', () => {
-        console.log("Splash screen is ready to show");
-        splashWindow.show();
+function createDownloadProgressWindow() {
+    const progressWindow = new BrowserWindow({
+        width: 450,
+        height: 280,
+        resizable: false,
+        minimizable: false,
+        maximizable: false,
+        closable: false,
+        show: false,
+        frame: false,
+        alwaysOnTop: true,
+        transparent: true,
+        webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true
+        }
     });
+
+    progressWindow.loadURL(`data:text/html;charset=utf-8,
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    margin: 0;
+                    padding: 20px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    height: 100vh;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                }
+                .header {
+                    text-align: center;
+                    margin-bottom: 20px;
+                }
+                .header h2 {
+                    margin: 0 0 5px 0;
+                    font-size: 18px;
+                    font-weight: 600;
+                }
+                .header p {
+                    margin: 0;
+                    font-size: 12px;
+                    opacity: 0.9;
+                }
+                .progress-container {
+                    background: rgba(255,255,255,0.1);
+                    border-radius: 10px;
+                    padding: 15px;
+                    margin: 10px 0;
+                }
+                .progress-info {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 8px;
+                    font-size: 12px;
+                }
+                .progress-bar {
+                    width: 100%;
+                    height: 20px;
+                    background: rgba(255,255,255,0.2);
+                    border-radius: 10px;
+                    overflow: hidden;
+                }
+                .progress-fill {
+                    height: 100%;
+                    background: linear-gradient(90deg, #4CAF50, #45a049);
+                    border-radius: 10px;
+                    transition: width 0.3s ease;
+                    width: 0%;
+                }
+                .status {
+                    text-align: center;
+                    font-size: 14px;
+                    margin: 10px 0;
+                    font-weight: 500;
+                }
+                .details {
+                    background: rgba(255,255,255,0.1);
+                    border-radius: 5px;
+                    padding: 10px;
+                    font-size: 11px;
+                    margin: 10px 0;
+                    max-height: 60px;
+                    overflow-y: auto;
+                }
+                .buttons {
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 10px;
+                    margin-top: 15px;
+                }
+                button {
+                    padding: 8px 16px;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-size: 12px;
+                    font-weight: 500;
+                    transition: all 0.2s;
+                }
+                .show-btn {
+                    background: #4CAF50;
+                    color: white;
+                }
+                .cancel-btn {
+                    background: #f44336;
+                    color: white;
+                }
+                .other-btn {
+                    background: #2196F3;
+                    color: white;
+                }
+                button:hover {
+                    opacity: 0.9;
+                    transform: translateY(-1px);
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h2>Downloading Update</h2>
+                <p>Exam Buddy is being updated...</p>
+            </div>
+            
+            <div class="progress-container">
+                <div class="progress-info">
+                    <span>Progress:</span>
+                    <span id="progress-percent">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+            </div>
+            
+            <div class="status" id="status">Initializing download...</div>
+            
+            <div class="details" id="details">
+                • Preparing update package<br>
+                • Connecting to update server
+            </div>
+            
+            <div class="buttons">
+                <button class="show-btn" onclick="showDetails()">Show details</button>
+                <button class="other-btn" onclick="showOther()">Other</button>
+                <button class="cancel-btn" onclick="cancelDownload()">Cancel</button>
+            </div>
+
+            <script>
+                function showDetails() {
+                    window.electronAPI.showDetails();
+                }
+                function showOther() {
+                    window.electronAPI.showOther();
+                }
+                function cancelDownload() {
+                    window.electronAPI.cancelDownload();
+                }
+                
+                // Update progress from main process
+                window.electronAPI.onProgressUpdate((percent, status, details) => {
+                    document.getElementById('progress-percent').textContent = percent + '%';
+                    document.getElementById('progress-fill').style.width = percent + '%';
+                    document.getElementById('status').textContent = status;
+                    document.getElementById('details').innerHTML = details;
+                });
+            </script>
+        </body>
+        </html>
+    `.replace(/\s+/g, ' '));
+
+    return progressWindow;
 }
 
 function createWindow() {
@@ -152,7 +325,7 @@ app.whenReady().then(() => {
         setTimeout(() => {
             autoUpdater.checkForUpdates();
         }, 3000);
-    }, 1500);
+    }, 100);
 
     setInterval(() => {
         log.info("Performing periodic update check...");
@@ -186,8 +359,11 @@ autoUpdater.on('update-available', (info) => {
             defaultId: 0,
             cancelId: 1
         }).then(result => {
-            if (result.response === 0) { // 'Download Update' was clicked
+            if (result.response === 0) {
                 log.info('User approved download. Starting download...');
+                // CREATE DOWNLOAD PROGRESS WINDOW
+                downloadProgressWindow = createDownloadProgressWindow();
+                downloadProgressWindow.show();
                 autoUpdater.downloadUpdate();
             } else {
                 log.info('User deferred the update.');
@@ -195,24 +371,43 @@ autoUpdater.on('update-available', (info) => {
         });
     }
     if (isMainWindowVisible) {
-        showDownloadPrompt(); // If the window is already visible, show the dialog now.
+        showDownloadPrompt();
     } else {
-        // Otherwise, add the function to our queue to be shown later.
         console.log("Update found, but window not visible yet. Queuing dialog.");
         updateDialogQueue.push(showDownloadPrompt);
     }
 });
 
 autoUpdater.on('download-progress', (progressObj) => {
-    const log_message = `Downloading update... ${Math.floor(progressObj.percent)}%`;
+    const percent = Math.floor(progressObj.percent);
+    const log_message = `Downloading update... ${percent}%`;
     console.log(log_message);
 
     if (mainWindow) {
-        // Shows native progress bar on Windows/Linux/macOS dock icon
         mainWindow.setProgressBar(progressObj.percent / 100);
-
-        // Sends progress info to the renderer (React app)
         mainWindow.webContents.send('update-progress', progressObj);
+    }
+
+    // UPDATE DOWNLOAD PROGRESS WINDOW
+    if (downloadProgressWindow && !downloadProgressWindow.isDestroyed()) {
+        const speed = progressObj.bytesPerSecond ? ` (${(progressObj.bytesPerSecond / 1024 / 1024).toFixed(1)} MB/s)` : '';
+        const transferred = progressObj.transferred ? `Transferred: ${(progressObj.transferred / 1024 / 1024).toFixed(1)} MB` : '';
+        const total = progressObj.total ? `Total: ${(progressObj.total / 1024 / 1024).toFixed(1)} MB` : '';
+
+        const details = `
+            • Downloading update package<br>
+            • ${transferred}<br>
+            • ${total}<br>
+            • Speed: ${speed}<br>
+            • Estimated time: ${progressObj.eta ? progressObj.eta + 's' : 'calculating...'}
+        `.trim();
+
+        downloadProgressWindow.webContents.executeJavaScript(`
+            document.getElementById('progress-percent').textContent = '${percent}%';
+            document.getElementById('progress-fill').style.width = '${percent}%';
+            document.getElementById('status').textContent = 'Downloading update... ${percent}% complete';
+            document.getElementById('details').innerHTML = \`${details}\`;
+        `);
     }
 });
 
@@ -220,6 +415,13 @@ autoUpdater.on('update-downloaded', (info) => {
     log.info(`Update ${info.version} downloaded. Prompting user to restart.`);
 
     if (mainWindow) mainWindow.setProgressBar(-1);
+
+    // CLOSE DOWNLOAD PROGRESS WINDOW
+    if (downloadProgressWindow && !downloadProgressWindow.isDestroyed()) {
+        downloadProgressWindow.close();
+        downloadProgressWindow = null;
+    }
+
     try {
         const updateData = {
             version: info.version,
@@ -242,7 +444,7 @@ autoUpdater.on('update-downloaded', (info) => {
             defaultId: 0,
             cancelId: 1
         }).then(result => {
-            if (result.response === 0) { // 'Restart Now' was clicked
+            if (result.response === 0) {
                 log.info('User approved restart. Quitting and installing...');
                 autoUpdater.quitAndInstall();
             }
@@ -256,6 +458,35 @@ autoUpdater.on('update-downloaded', (info) => {
     }
 });
 
+autoUpdater.on('error', (err) => {
+    log.error('Auto-Updater Error:', err);
+    // CLOSE DOWNLOAD PROGRESS WINDOW ON ERROR
+    if (downloadProgressWindow && !downloadProgressWindow.isDestroyed()) {
+        downloadProgressWindow.close();
+        downloadProgressWindow = null;
+    }
+});
+
+// Add IPC handlers for the download progress window buttons
+ipcMain.handle('cancel-download', () => {
+    log.info('User cancelled download.');
+    if (downloadProgressWindow && !downloadProgressWindow.isDestroyed()) {
+        downloadProgressWindow.close();
+        downloadProgressWindow = null;
+    }
+    // You might want to add logic to actually cancel the download
+});
+
+ipcMain.handle('show-details', () => {
+    // Implement details showing logic if needed
+    console.log('Show details clicked');
+});
+
+ipcMain.handle('show-other', () => {
+    // Implement other options logic if needed
+    console.log('Other button clicked');
+});
+
 ipcMain.on('login-screen-ready', () => {
     console.log("React reports: Login screen has mounted.");
 
@@ -263,10 +494,22 @@ ipcMain.on('login-screen-ready', () => {
     // This is the failsafe against race conditions.
     if (isMainWindowReady) {
         console.log("Handshake complete. Closing splash and showing main window.");
-        if (splashWindow && !splashWindow.isDestroyed()) {
-            splashWindow.close();
-            splashWindow = null;
-        }
+        setTimeout(() => {
+            if (splashWindow && !splashWindow.isDestroyed()) {
+                splashWindow.close();
+                splashWindow = null;
+            }
+            mainWindow.show();
+            isMainWindowVisible = true;
+            console.log("Gatekeeper: Main window is now visible.");
+            handlePostUpdateLaunch();
+
+            if (updateDialogQueue.length > 0) {
+                console.log("Processing queued update dialog...");
+                const showDialog = updateDialogQueue.shift();
+                showDialog();
+            }
+        }, 500);
         mainWindow.show();
         isMainWindowVisible = true;
         console.log("Gatekeeper: Main window is now visible. Dialogs are allowed.");
@@ -300,14 +543,14 @@ ipcMain.on('enter-fullscreen', () => {
     }
 });
 
-ipcMain.on('react-app-ready', () => {
-    console.log("React app has signaled it is ready.");
-    if (splashWindow) {
-        splashWindow.close();
-    }
-    mainWindow.center();
-    mainWindow.show();
-});
+// ipcMain.on('react-app-ready', () => {
+//     console.log("React app has signaled it is ready.");
+//     if (splashWindow) {
+//         splashWindow.close();
+//     }
+//     mainWindow.center();
+//     mainWindow.show();
+// });
 
 ipcMain.handle('get-release-notes', () => {
     try {
