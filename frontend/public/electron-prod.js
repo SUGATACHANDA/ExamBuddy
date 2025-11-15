@@ -56,11 +56,11 @@ function createDownloadProgressWindow() {
         resizable: false,
         minimizable: false,
         maximizable: false,
-        closable: false,
+        closable: true, // <-- CHANGE FROM false TO true
         show: false,
-        frame: false,
-        alwaysOnTop: true,
-        transparent: true,
+        frame: true, // <-- CHANGE FROM false TO true for proper window frame
+        parent: mainWindow, // <-- ADD THIS to make it modal to main window
+        modal: true, // <-- ADD THIS to make it modal
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true
@@ -76,8 +76,8 @@ function createDownloadProgressWindow() {
                     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                     margin: 0;
                     padding: 20px;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
+                    background: white;
+                    color: #333;
                     height: 100vh;
                     display: flex;
                     flex-direction: column;
@@ -86,35 +86,41 @@ function createDownloadProgressWindow() {
                 .header {
                     text-align: center;
                     margin-bottom: 20px;
+                    border-bottom: 1px solid #e0e0e0;
+                    padding-bottom: 15px;
                 }
                 .header h2 {
                     margin: 0 0 5px 0;
                     font-size: 18px;
                     font-weight: 600;
+                    color: #2c3e50;
                 }
                 .header p {
                     margin: 0;
                     font-size: 12px;
-                    opacity: 0.9;
+                    color: #7f8c8d;
                 }
                 .progress-container {
-                    background: rgba(255,255,255,0.1);
-                    border-radius: 10px;
+                    background: #f8f9fa;
+                    border-radius: 8px;
                     padding: 15px;
                     margin: 10px 0;
+                    border: 1px solid #e9ecef;
                 }
                 .progress-info {
                     display: flex;
                     justify-content: space-between;
                     margin-bottom: 8px;
                     font-size: 12px;
+                    color: #495057;
                 }
                 .progress-bar {
                     width: 100%;
                     height: 20px;
-                    background: rgba(255,255,255,0.2);
+                    background: #e9ecef;
                     border-radius: 10px;
                     overflow: hidden;
+                    border: 1px solid #dee2e6;
                 }
                 .progress-fill {
                     height: 100%;
@@ -128,42 +134,51 @@ function createDownloadProgressWindow() {
                     font-size: 14px;
                     margin: 10px 0;
                     font-weight: 500;
+                    color: #2c3e50;
                 }
                 .details {
-                    background: rgba(255,255,255,0.1);
+                    background: #f8f9fa;
                     border-radius: 5px;
                     padding: 10px;
                     font-size: 11px;
                     margin: 10px 0;
                     max-height: 60px;
                     overflow-y: auto;
+                    border: 1px solid #e9ecef;
+                    color: #495057;
                 }
                 .buttons {
                     display: flex;
                     justify-content: flex-end;
                     gap: 10px;
                     margin-top: 15px;
+                    border-top: 1px solid #e0e0e0;
+                    padding-top: 15px;
                 }
                 button {
                     padding: 8px 16px;
-                    border: none;
-                    border-radius: 5px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
                     cursor: pointer;
                     font-size: 12px;
                     font-weight: 500;
                     transition: all 0.2s;
+                    background: white;
                 }
                 .show-btn {
-                    background: #4CAF50;
+                    background: #007bff;
                     color: white;
+                    border-color: #007bff;
                 }
                 .cancel-btn {
-                    background: #f44336;
+                    background: #6c757d;
                     color: white;
+                    border-color: #6c757d;
                 }
                 .other-btn {
-                    background: #2196F3;
+                    background: #28a745;
                     color: white;
+                    border-color: #28a745;
                 }
                 button:hover {
                     opacity: 0.9;
@@ -174,7 +189,7 @@ function createDownloadProgressWindow() {
         <body>
             <div class="header">
                 <h2>Downloading Update</h2>
-                <p>Exam Buddy is being updated...</p>
+                <p>Exam Buddy is being updated to the latest version</p>
             </div>
             
             <div class="progress-container">
@@ -202,22 +217,31 @@ function createDownloadProgressWindow() {
 
             <script>
                 function showDetails() {
-                    window.electronAPI.showDetails();
-                }
-                function showOther() {
-                    window.electronAPI.showOther();
-                }
-                function cancelDownload() {
-                    window.electronAPI.cancelDownload();
+                    // Toggle details visibility
+                    const details = document.getElementById('details');
+                    details.style.display = details.style.display === 'none' ? 'block' : 'none';
                 }
                 
-                // Update progress from main process
-                window.electronAPI.onProgressUpdate((percent, status, details) => {
-                    document.getElementById('progress-percent').textContent = percent + '%';
-                    document.getElementById('progress-fill').style.width = percent + '%';
-                    document.getElementById('status').textContent = status;
-                    document.getElementById('details').innerHTML = details;
-                });
+                function showOther() {
+                    // Placeholder for other actions
+                    alert('Other options would appear here');
+                }
+                
+                function cancelDownload() {
+                    if (confirm('Are you sure you want to cancel the download?')) {
+                        window.close();
+                    }
+                }
+                
+                // Listen for progress updates from main process
+                if (window.electronAPI) {
+                    window.electronAPI.onProgressUpdate((event, data) => {
+                        document.getElementById('progress-percent').textContent = data.percent + '%';
+                        document.getElementById('progress-fill').style.width = data.percent + '%';
+                        document.getElementById('status').textContent = data.status;
+                        document.getElementById('details').innerHTML = data.details;
+                    });
+                }
             </script>
         </body>
         </html>
@@ -407,12 +431,12 @@ autoUpdater.on('download-progress', (progressObj) => {
             • Estimated time: ${progressObj.eta ? progressObj.eta + 's' : 'calculating...'}
         `.trim();
 
-        downloadProgressWindow.webContents.executeJavaScript(`
-            document.getElementById('progress-percent').textContent = '${percent}%';
-            document.getElementById('progress-fill').style.width = '${percent}%';
-            document.getElementById('status').textContent = 'Downloading update... ${percent}% complete';
-            document.getElementById('details').innerHTML = \`${details}\`;
-        `);
+        // Send progress update to the window
+        downloadProgressWindow.webContents.send('progress-update', {
+            percent: percent,
+            status: `Downloading update... ${percent}% complete`,
+            details: details
+        });
     }
 });
 
