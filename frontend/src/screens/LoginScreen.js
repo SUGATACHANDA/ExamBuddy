@@ -20,15 +20,10 @@ const LoginScreen = () => {
     // --- EFFECT ---
     // Signal to main process that the UI is ready, so the splash screen can close.
     useEffect(() => {
-        // ADD setTimeout:
-        const timer = setTimeout(() => {
-            if (window.electronAPI && window.electronAPI.sendLoginScreenReady) {
-                window.electronAPI.sendLoginScreenReady();
-            }
-        }, 1000); // 1 second delay
-
-        return () => clearTimeout(timer);
-    }, []);// Empty dependency array `[]` ensures this runs only once.
+        if (window.electronAPI && window.electronAPI.sendLoginScreenReady) {
+            window.electronAPI.sendLoginScreenReady();
+        }
+    }, []);
 
 
     // --- HANDLERS ---

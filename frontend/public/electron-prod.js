@@ -37,11 +37,16 @@ function createSplashWindow() {
         alwaysOnTop: true,
         resizable: false,
         center: true,
-        show: true
+        show: false
     });
     // This assumes you have created the `splash.html` file in the `public` directory.
     splashWindow.loadFile(path.join(__dirname, 'splash.html'));
     splashWindow.on('closed', () => (splashWindow = null));
+
+    splashWindow.once('ready-to-show', () => {
+        console.log("Splash screen is ready to show");
+        splashWindow.show();
+    });
 }
 
 function createDownloadProgressWindow() {
@@ -325,7 +330,7 @@ app.whenReady().then(() => {
         setTimeout(() => {
             autoUpdater.checkForUpdates();
         }, 3000);
-    }, 100);
+    }, 1500);
 
     setInterval(() => {
         log.info("Performing periodic update check...");
@@ -494,22 +499,10 @@ ipcMain.on('login-screen-ready', () => {
     // This is the failsafe against race conditions.
     if (isMainWindowReady) {
         console.log("Handshake complete. Closing splash and showing main window.");
-        setTimeout(() => {
-            if (splashWindow && !splashWindow.isDestroyed()) {
-                splashWindow.close();
-                splashWindow = null;
-            }
-            mainWindow.show();
-            isMainWindowVisible = true;
-            console.log("Gatekeeper: Main window is now visible.");
-            handlePostUpdateLaunch();
-
-            if (updateDialogQueue.length > 0) {
-                console.log("Processing queued update dialog...");
-                const showDialog = updateDialogQueue.shift();
-                showDialog();
-            }
-        }, 500);
+        if (splashWindow && !splashWindow.isDestroyed()) {
+            splashWindow.close();
+            splashWindow = null;
+        }
         mainWindow.show();
         isMainWindowVisible = true;
         console.log("Gatekeeper: Main window is now visible. Dialogs are allowed.");
@@ -543,14 +536,14 @@ ipcMain.on('enter-fullscreen', () => {
     }
 });
 
-// ipcMain.on('react-app-ready', () => {
-//     console.log("React app has signaled it is ready.");
-//     if (splashWindow) {
-//         splashWindow.close();
-//     }
-//     mainWindow.center();
-//     mainWindow.show();
-// });
+ipcMain.on('react-app-ready', () => {
+    console.log("React app has signaled it is ready.");
+    if (splashWindow) {
+        splashWindow.close();
+    }
+    mainWindow.center();
+    mainWindow.show();
+});
 
 ipcMain.handle('get-release-notes', () => {
     try {
