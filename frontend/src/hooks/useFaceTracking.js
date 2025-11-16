@@ -29,7 +29,7 @@ export const useFaceTracking = (videoRef, onViolation, onFaceWarning, onMultiple
             try {
                 await Promise.all([
                     faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
                 ]);
                 setIsModelsLoaded(true);
                 console.log('[FaceTracking] Models loaded.');
