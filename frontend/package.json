@@ -1,6 +1,6 @@
 {
   "name": "exambuddy",
-  "version": "1.4.6",
+  "version": "1.4.8",
   "productName": "Exam Buddy",
   "author": {
     "name": "SUGATA CHANDA",
@@ -89,6 +89,12 @@
       "repo": "ExamBuddy",
       "releaseType": "release"
     },
+    "extraResources": [
+      {
+        "from": "build/models",
+        "to": "models"
+      }
+    ],
     "releaseInfo": {
       "releaseNotesFile": "CHANGELOG.md",
       "releaseNotes": "Release 1.4.2"

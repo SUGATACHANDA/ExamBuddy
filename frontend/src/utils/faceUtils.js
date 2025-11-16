@@ -1,11 +1,21 @@
 // src/utils/faceUtils.js
 import * as faceapi from "face-api.js";
 
+export const getModelPath = () => {
+    if (window.location.protocol === "file:") {
+        // Electron production build
+        return `models`;
+    } else {
+        // Development server
+        return `${process.env.PUBLIC_URL}/models`;
+    }
+};
+
 /**
  * Load models from public/models. Call once at app start (e.g. App.js)
  */
 export async function loadFaceModels() {
-    const MODEL_URL = "/models";
+    const MODEL_URL = getModelPath();
     await Promise.all([
         faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
         faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL), // Changed to Tiny version

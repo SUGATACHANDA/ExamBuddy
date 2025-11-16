@@ -1,7 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import * as faceapi from 'face-api.js';
 
-const MODEL_URL = (process.env.PUBLIC_URL || '') + '/models';
+
+
+export const getModelPath = () => {
+    if (window.location.protocol === "file:") {
+        // Electron production build
+        return `models`;
+    } else {
+        // Development server
+        return `${process.env.PUBLIC_URL}/models`;
+    }
+};
+const MODEL_URL = getModelPath();
 
 /**
  * useFaceTracking Hook

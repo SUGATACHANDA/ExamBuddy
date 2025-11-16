@@ -12,7 +12,7 @@ export const useFaceVerification = (videoRef, studentId) => {
     useEffect(() => {
         const loadModels = async () => {
             try {
-                const MODEL_URL = "/models"; // ensure this folder is served from public/
+                const MODEL_URL = `${window.location.origin}/models`; // ensure this folder is served from public/
                 await Promise.all([
                     faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
                     faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),

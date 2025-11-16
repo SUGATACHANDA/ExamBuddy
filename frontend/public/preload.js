@@ -84,10 +84,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // New listener to get the result back from the main process
     onKillProcessesResult: (callback) => ipcRenderer.on('kill-processes-result', (event, result) => callback(result)),
 
-    onProgressUpdate: (callback) => ipcRenderer.on('progress-update', callback),
-    showDetails: () => ipcRenderer.invoke('show-details'),
-    showOther: () => ipcRenderer.invoke('show-other'),
-    cancelDownload: () => ipcRenderer.invoke('cancel-download'),
+    // onProgressUpdate: (callback) => ipcRenderer.on('progress-update', callback),
+    // showDetails: () => ipcRenderer.invoke('show-details'),
+    // showOther: () => ipcRenderer.invoke('show-other'),
+    // cancelDownload: () => ipcRenderer.invoke('cancel-download'),
 
     exitApp: () => ipcRenderer.send('exit-app'),
 

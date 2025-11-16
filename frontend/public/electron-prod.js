@@ -56,196 +56,20 @@ function createDownloadProgressWindow() {
         resizable: false,
         minimizable: false,
         maximizable: false,
-        closable: true, // <-- CHANGE FROM false TO true
+        closable: true,
         show: false,
-        frame: true, // <-- CHANGE FROM false TO true for proper window frame
-        parent: mainWindow, // <-- ADD THIS to make it modal to main window
-        modal: true, // <-- ADD THIS to make it modal
+        frame: true,
+        parent: mainWindow,
+        modal: true,
         webPreferences: {
-            nodeIntegration: false,
-            contextIsolation: true
+            nodeIntegration: true, // <-- CHANGE TO true for this window
+            contextIsolation: false, // <-- CHANGE TO false for this window
+            enableRemoteModule: true
         }
     });
 
-    progressWindow.loadURL(`data:text/html;charset=utf-8,
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {
-                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                    margin: 0;
-                    padding: 20px;
-                    background: white;
-                    color: #333;
-                    height: 100vh;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: space-between;
-                }
-                .header {
-                    text-align: center;
-                    margin-bottom: 20px;
-                    border-bottom: 1px solid #e0e0e0;
-                    padding-bottom: 15px;
-                }
-                .header h2 {
-                    margin: 0 0 5px 0;
-                    font-size: 18px;
-                    font-weight: 600;
-                    color: #2c3e50;
-                }
-                .header p {
-                    margin: 0;
-                    font-size: 12px;
-                    color: #7f8c8d;
-                }
-                .progress-container {
-                    background: #f8f9fa;
-                    border-radius: 8px;
-                    padding: 15px;
-                    margin: 10px 0;
-                    border: 1px solid #e9ecef;
-                }
-                .progress-info {
-                    display: flex;
-                    justify-content: space-between;
-                    margin-bottom: 8px;
-                    font-size: 12px;
-                    color: #495057;
-                }
-                .progress-bar {
-                    width: 100%;
-                    height: 20px;
-                    background: #e9ecef;
-                    border-radius: 10px;
-                    overflow: hidden;
-                    border: 1px solid #dee2e6;
-                }
-                .progress-fill {
-                    height: 100%;
-                    background: linear-gradient(90deg, #4CAF50, #45a049);
-                    border-radius: 10px;
-                    transition: width 0.3s ease;
-                    width: 0%;
-                }
-                .status {
-                    text-align: center;
-                    font-size: 14px;
-                    margin: 10px 0;
-                    font-weight: 500;
-                    color: #2c3e50;
-                }
-                .details {
-                    background: #f8f9fa;
-                    border-radius: 5px;
-                    padding: 10px;
-                    font-size: 11px;
-                    margin: 10px 0;
-                    max-height: 60px;
-                    overflow-y: auto;
-                    border: 1px solid #e9ecef;
-                    color: #495057;
-                }
-                .buttons {
-                    display: flex;
-                    justify-content: flex-end;
-                    gap: 10px;
-                    margin-top: 15px;
-                    border-top: 1px solid #e0e0e0;
-                    padding-top: 15px;
-                }
-                button {
-                    padding: 8px 16px;
-                    border: 1px solid #ddd;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    font-size: 12px;
-                    font-weight: 500;
-                    transition: all 0.2s;
-                    background: white;
-                }
-                .show-btn {
-                    background: #007bff;
-                    color: white;
-                    border-color: #007bff;
-                }
-                .cancel-btn {
-                    background: #6c757d;
-                    color: white;
-                    border-color: #6c757d;
-                }
-                .other-btn {
-                    background: #28a745;
-                    color: white;
-                    border-color: #28a745;
-                }
-                button:hover {
-                    opacity: 0.9;
-                    transform: translateY(-1px);
-                }
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <h2>Downloading Update</h2>
-                <p>Exam Buddy is being updated to the latest version</p>
-            </div>
-            
-            <div class="progress-container">
-                <div class="progress-info">
-                    <span>Progress:</span>
-                    <span id="progress-percent">0%</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progress-fill"></div>
-                </div>
-            </div>
-            
-            <div class="status" id="status">Initializing download...</div>
-            
-            <div class="details" id="details">
-                • Preparing update package<br>
-                • Connecting to update server
-            </div>
-            
-            <div class="buttons">
-                <button class="show-btn" onclick="showDetails()">Show details</button>
-                <button class="other-btn" onclick="showOther()">Other</button>
-                <button class="cancel-btn" onclick="cancelDownload()">Cancel</button>
-            </div>
-
-            <script>
-                function showDetails() {
-                    // Toggle details visibility
-                    const details = document.getElementById('details');
-                    details.style.display = details.style.display === 'none' ? 'block' : 'none';
-                }
-                
-                function showOther() {
-                    // Placeholder for other actions
-                    alert('Other options would appear here');
-                }
-                
-                function cancelDownload() {
-                    if (confirm('Are you sure you want to cancel the download?')) {
-                        window.close();
-                    }
-                }
-                
-                // Listen for progress updates from main process
-                if (window.electronAPI) {
-                    window.electronAPI.onProgressUpdate((event, data) => {
-                        document.getElementById('progress-percent').textContent = data.percent + '%';
-                        document.getElementById('progress-fill').style.width = data.percent + '%';
-                        document.getElementById('status').textContent = data.status;
-                        document.getElementById('details').innerHTML = data.details;
-                    });
-                }
-            </script>
-        </body>
-        </html>
-    `.replace(/\s+/g, ' '));
+    // LOAD FROM HTML FILE INSTEAD OF DATA URL
+    progressWindow.loadFile(path.join(__dirname, 'download-progress.html'));
 
     return progressWindow;
 }
@@ -497,13 +321,13 @@ autoUpdater.on('error', (err) => {
 });
 
 // Add IPC handlers for the download progress window buttons
-ipcMain.handle('cancel-download', () => {
+ipcMain.on('cancel-download', () => {
     log.info('User cancelled download.');
     if (downloadProgressWindow && !downloadProgressWindow.isDestroyed()) {
         downloadProgressWindow.close();
         downloadProgressWindow = null;
     }
-    // You might want to add logic to actually cancel the download
+    // Optionally add logic to actually cancel the autoUpdater download
 });
 
 ipcMain.handle('show-details', () => {
