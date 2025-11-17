@@ -175,6 +175,8 @@
     </div>
 
     <script>
+        const { ipcRenderer } = require('electron');
+
         document.addEventListener('DOMContentLoaded', function () {
             const modalOverlay = document.getElementById('modalOverlay');
             const closeButton = document.getElementById('closeButton');
@@ -196,6 +198,47 @@
                 if (e.target === modalOverlay) {
                     modalOverlay.style.display = 'none';
                 }
+            });
+
+            // Function to update the modal content with release data
+            function updateReleaseData(releaseData) {
+                // Update title
+                document.querySelector('.modal-title').textContent = releaseData.title || "What's New";
+
+                // Update version
+                document.querySelector('.version-number').textContent = `Version ${releaseData.version}`;
+
+                // Update release date
+                if (releaseData.releaseDate) {
+                    const releaseDate = new Date(releaseData.releaseDate);
+                    releaseDateElement.textContent = formatRelativeTime(releaseDate);
+                }
+
+                // Update notes
+                const changelogList = document.querySelector('.changelog-list');
+                changelogList.innerHTML = ''; // Clear existing items
+
+                if (releaseData.notes && Array.isArray(releaseData.notes)) {
+                    releaseData.notes.forEach(note => {
+                        const listItem = document.createElement('li');
+                        listItem.className = 'changelog-item';
+
+                        // Check if note starts with "Fixed:" and apply special styling
+                        if (note.toLowerCase().startsWith('fixed:')) {
+                            const fixedText = note.substring(6); // Remove "Fixed:" part
+                            listItem.innerHTML = `<span class="fixed-label">Fixed:</span> ${fixedText.trim()}`;
+                        } else {
+                            listItem.textContent = note;
+                        }
+
+                        changelogList.appendChild(listItem);
+                    });
+                }
+            }
+
+            // Listen for release data from main process
+            ipcRenderer.on('load-release-data', (event, releaseData) => {
+                updateReleaseData(releaseData);
             });
 
             // Function to format relative time

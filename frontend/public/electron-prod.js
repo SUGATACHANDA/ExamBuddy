@@ -76,33 +76,32 @@ function createDownloadProgressWindow() {
 }
 
 function createReleaseNotesWindow(releaseData) {
-    // Get screen dimensions for fullscreen
-    const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-
+    // Create a new browser window for release notes
+    // Assign to the outer-scoped variable instead of declaring a new constant,
+    // so the closed handler can null out the shared reference.
     releaseNotesWindow = new BrowserWindow({
-        width: width,
-        height: height,
-        x: 0,
-        y: 0,
-        resizable: true,
+        width: 450,
+        height: 600,
+        show: false,
+        resizable: false,
         minimizable: false,
         maximizable: false,
-        closable: true,
-        show: false,
-        frame: true, // Keep frame for fullscreen
-        fullscreen: false, // Don't use fullscreen mode to keep window controls
+        fullscreenable: false,
+        titleBarStyle: 'hidden', // Hide title bar for modal look
         webPreferences: {
             nodeIntegration: true,
-            contextIsolation: false,
-            enableRemoteModule: true
-        }
+            contextIsolation: false
+        },
+        modal: true,
+        parent: BrowserWindow.getFocusedWindow() // Make it modal to main window
     });
 
-    releaseNotesWindow.loadFile(path.join(__dirname, 'release-notes.html'));
+    // Load the release notes HTML template
+    releaseNotesWindow.loadFile('release-notes.html');
 
-    // Send release data when window is ready
+    // When window is ready to show, inject the release data
     releaseNotesWindow.webContents.once('did-finish-load', () => {
-        releaseNotesWindow.webContents.send('show-release-notes', releaseData);
+        releaseNotesWindow.webContents.send('load-release-data', releaseData);
     });
 
     releaseNotesWindow.on('closed', () => {
@@ -177,6 +176,13 @@ function showReleaseNotes(releaseData) {
         // Enhance release data with structured content
         const enhancedData = enhanceReleaseData(releaseData);
         releaseNotesWindow = createReleaseNotesWindow(enhancedData);
+
+        releaseNotesWindow.once('ready-to-show', () => {
+            releaseNotesWindow.show();
+        });
+    } else {
+        // If window already exists, just show it and update content
+        releaseNotesWindow.webContents.send('load-release-data', releaseData);
         releaseNotesWindow.show();
     }
 }
@@ -197,7 +203,15 @@ function enhanceReleaseData(releaseData) {
     if (releaseData.notes && releaseData.notes !== "No release notes provided.") {
         // Handle both string and array formats for notes
         if (typeof releaseData.notes === 'string') {
-            defaultData.notes = [releaseData.notes];
+            // Try to parse bullet points from string
+            defaultData.notes = releaseData.notes.split('\n')
+                .filter(line => line.trim().startsWith('-'))
+                .map(line => line.replace(/^- /, '').trim());
+
+            // If no bullet points found, use the string as a single note
+            if (defaultData.notes.length === 0) {
+                defaultData.notes = [releaseData.notes];
+            }
         } else if (Array.isArray(releaseData.notes)) {
             defaultData.notes = releaseData.notes;
         }
@@ -215,10 +229,12 @@ ipcMain.on('request-release-notes', () => {
         if (fs.existsSync(updateInfoPath)) {
             const data = JSON.parse(fs.readFileSync(updateInfoPath, 'utf8'));
             if (data && data.showOnNextLaunch) {
+                // Reset the flag so it doesn't show again
+                data.showOnNextLaunch = false;
+                fs.writeFileSync(updateInfoPath, JSON.stringify(data, null, 2));
+
                 const enhancedData = enhanceReleaseData(data);
-                if (releaseNotesWindow && !releaseNotesWindow.isDestroyed()) {
-                    releaseNotesWindow.webContents.send('show-release-notes', enhancedData);
-                }
+                showReleaseNotes(enhancedData);
             }
         }
     } catch (err) {

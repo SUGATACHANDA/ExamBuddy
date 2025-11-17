@@ -80,7 +80,7 @@ function App() {
             <ResetPasswordOTP
               email={email}
               otp={otp}
-              onDone={() => (window.location.href = "/login")}
+              onDone={() => (<Navigate to={'/login'} />)}
             />
           } />
 
