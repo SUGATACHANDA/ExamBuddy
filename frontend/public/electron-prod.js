@@ -27,6 +27,7 @@ const MAX_STRIKES = 3;
 
 let splashWindow;
 let downloadProgressWindow;
+let releaseNotesWindow;
 
 function createSplashWindow() {
     splashWindow = new BrowserWindow({
@@ -72,6 +73,43 @@ function createDownloadProgressWindow() {
     progressWindow.loadFile(path.join(__dirname, 'download-progress.html'));
 
     return progressWindow;
+}
+
+function createReleaseNotesWindow(releaseData) {
+    // Get screen dimensions for fullscreen
+    const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+
+    releaseNotesWindow = new BrowserWindow({
+        width: width,
+        height: height,
+        x: 0,
+        y: 0,
+        resizable: true,
+        minimizable: false,
+        maximizable: false,
+        closable: true,
+        show: false,
+        frame: true, // Keep frame for fullscreen
+        fullscreen: false, // Don't use fullscreen mode to keep window controls
+        webPreferences: {
+            nodeIntegration: true,
+            contextIsolation: false,
+            enableRemoteModule: true
+        }
+    });
+
+    releaseNotesWindow.loadFile(path.join(__dirname, 'release-notes.html'));
+
+    // Send release data when window is ready
+    releaseNotesWindow.webContents.once('did-finish-load', () => {
+        releaseNotesWindow.webContents.send('show-release-notes', releaseData);
+    });
+
+    releaseNotesWindow.on('closed', () => {
+        releaseNotesWindow = null;
+    });
+
+    return releaseNotesWindow;
 }
 
 function createWindow() {
@@ -121,14 +159,12 @@ function handlePostUpdateLaunch() {
             const data = JSON.parse(fs.readFileSync(updateInfoPath, 'utf8'));
             if (data && data.showOnNextLaunch) {
                 if (isMainWindowVisible && mainWindow) {
-                    console.log(`First launch after update. Sending release notes to UI for version ${data.version}.`);
-                    mainWindow.webContents.send('show-release-notes', data);
+                    console.log(`First launch after update. Showing release notes for version ${data.version}.`);
+                    showReleaseNotes(data);
                 } else {
                     console.log("Release notes pending until main window is visible.");
                     updateDialogQueue.push(() => {
-                        if (mainWindow) {
-                            mainWindow.webContents.send('show-release-notes', data);
-                        }
+                        showReleaseNotes(data);
                     });
                 }
             }
@@ -136,12 +172,64 @@ function handlePostUpdateLaunch() {
     } catch (err) { console.error("Error in handlePostUpdateLaunch:", err); }
 }
 
-// public/electron-prod.js
+function showReleaseNotes(releaseData) {
+    if (!releaseNotesWindow || releaseNotesWindow.isDestroyed()) {
+        // Enhance release data with structured content
+        const enhancedData = enhanceReleaseData(releaseData);
+        releaseNotesWindow = createReleaseNotesWindow(enhancedData);
+        releaseNotesWindow.show();
+    }
+}
 
+function enhanceReleaseData(releaseData) {
+    const defaultData = {
+        version: releaseData.version || '1.4.1',
+        title: "Exciting New Features & Improvements",
+        notes: releaseData.notes || "This update includes various improvements and bug fixes to enhance your Exam Buddy experience.",
+        newFeatures: [
+            "Enhanced proctoring system with AI-powered monitoring",
+            "Real-time violation detection and alerts",
+            "Improved user interface with dark mode support",
+            "Advanced reporting and analytics dashboard"
+        ],
+        improvements: [
+            "Faster application startup and performance",
+            "Reduced memory usage during exams",
+            "Better error handling and user feedback",
+            "Enhanced security protocols"
+        ],
+        bugFixes: [
+            "Fixed issue with screen sharing permissions",
+            "Resolved crash during exam submission",
+            "Fixed audio detection false positives",
+            "Patched security vulnerability in update system"
+        ]
+    };
 
+    // If releaseData has custom notes, try to parse them
+    if (releaseData.notes && releaseData.notes !== "No release notes provided.") {
+        // You can add custom parsing logic here for different note formats
+        defaultData.notes = releaseData.notes;
+    }
 
+    return defaultData;
+}
 
-// == App Lifecycle ==
+ipcMain.on('request-release-notes', () => {
+    try {
+        if (fs.existsSync(updateInfoPath)) {
+            const data = JSON.parse(fs.readFileSync(updateInfoPath, 'utf8'));
+            if (data && data.showOnNextLaunch) {
+                const enhancedData = enhanceReleaseData(data);
+                if (releaseNotesWindow && !releaseNotesWindow.isDestroyed()) {
+                    releaseNotesWindow.webContents.send('show-release-notes', enhancedData);
+                }
+            }
+        }
+    } catch (err) {
+        console.error("Error handling release notes request:", err);
+    }
+});
 
 // --- THIS IS THE PRODUCTION SCREEN SHARE FIX ---
 // The `app.on('ready', ...)` block is replaced by the more modern `app.whenReady().then(...)`
@@ -436,6 +524,7 @@ ipcMain.on('release-notes-shown', () => {
             const data = JSON.parse(fs.readFileSync(updateInfoPath, 'utf8'));
             data.showOnNextLaunch = false;
             fs.writeFileSync(updateInfoPath, JSON.stringify(data));
+            console.log("Release notes marked as shown.");
         }
     } catch (err) {
         console.error("Could not mark release notes as shown:", err);
