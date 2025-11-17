@@ -184,35 +184,30 @@ function showReleaseNotes(releaseData) {
 function enhanceReleaseData(releaseData) {
     const defaultData = {
         version: releaseData.version || '1.4.1',
-        title: "Exciting New Features & Improvements",
-        notes: releaseData.notes || "This update includes various improvements and bug fixes to enhance your Exam Buddy experience.",
-        newFeatures: [
-            "Enhanced proctoring system with AI-powered monitoring",
-            "Real-time violation detection and alerts",
-            "Improved user interface with dark mode support",
-            "Advanced reporting and analytics dashboard"
-        ],
-        improvements: [
-            "Faster application startup and performance",
-            "Reduced memory usage during exams",
-            "Better error handling and user feedback",
-            "Enhanced security protocols"
-        ],
-        bugFixes: [
-            "Fixed issue with screen sharing permissions",
-            "Resolved crash during exam submission",
-            "Fixed audio detection false positives",
-            "Patched security vulnerability in update system"
+        title: "What's New",
+        releaseDate: releaseData.releaseDate || new Date().toISOString(),
+        notes: [
+            "Added a new feature: Changelog for every release.",
+            "Fixed the redirection route to Login page from Password Reset Page",
+            "Some minor bugs fixed."
         ]
     };
 
-    // If releaseData has custom notes, try to parse them
+    // If releaseData has custom notes, use them instead
     if (releaseData.notes && releaseData.notes !== "No release notes provided.") {
-        // You can add custom parsing logic here for different note formats
-        defaultData.notes = releaseData.notes;
+        // Handle both string and array formats for notes
+        if (typeof releaseData.notes === 'string') {
+            defaultData.notes = [releaseData.notes];
+        } else if (Array.isArray(releaseData.notes)) {
+            defaultData.notes = releaseData.notes;
+        }
     }
 
-    return defaultData;
+    // Preserve any additional properties from the original releaseData
+    return {
+        ...defaultData,
+        ...releaseData
+    };
 }
 
 ipcMain.on('request-release-notes', () => {

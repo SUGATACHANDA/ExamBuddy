@@ -1,356 +1,219 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
-    <title>Release Notes</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Changelog Modal</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
         }
 
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: white;
-            color: #1a1a1a;
-            height: 100vh;
+            background-color: #f5f5f5;
             display: flex;
-            flex-direction: column;
-            line-height: 1.6;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
         }
 
-        .header {
-            padding: 30px 40px 20px 40px;
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background-color: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .modal-header {
+            padding: 16px 20px;
             border-bottom: 1px solid #e5e5e5;
-            background: white;
-        }
-
-        .header-content {
+            position: relative;
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
-        }
-
-        .title-section h1 {
-            font-size: 32px;
-            font-weight: 700;
-            color: #1a1a1a;
-            margin-bottom: 8px;
-            letter-spacing: -0.5px;
-        }
-
-        .title-section .subtitle {
-            font-size: 16px;
-            color: #666;
-            font-weight: 400;
-        }
-
-        .version-section {
-            text-align: right;
-        }
-
-        .version-badge {
-            background: #1a1a1a;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            display: inline-block;
-        }
-
-        .close-btn {
-            background: #f5f5f5;
-            border: 1px solid #e0e0e0;
-            font-size: 18px;
-            cursor: pointer;
-            color: #666;
-            width: 40px;
-            height: 40px;
-            display: flex;
             align-items: center;
-            justify-content: center;
-            border-radius: 8px;
-            transition: all 0.2s ease;
-            margin-top: 10px;
         }
 
-        .close-btn:hover {
-            background: #e8e8e8;
-            border-color: #ccc;
-        }
-
-        .content {
-            flex: 1;
-            padding: 30px 40px;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .release-content {
-            flex: 1;
-            overflow-y: auto;
-            padding-right: 20px;
-        }
-
-        .section {
-            margin-bottom: 40px;
-            max-width: 800px;
-        }
-
-        .section:last-child {
-            margin-bottom: 0;
-        }
-
-        .section-title {
-            font-size: 20px;
+        .modal-title {
+            font-size: 17px;
             font-weight: 600;
-            color: #1a1a1a;
-            margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 2px solid #1a1a1a;
-            display: inline-block;
-        }
-
-        .feature-grid {
-            display: grid;
-            gap: 16px;
-        }
-
-        .feature-item {
-            padding: 20px;
-            background: #fafafa;
-            border-radius: 8px;
-            border-left: 4px solid #1a1a1a;
-            transition: all 0.2s ease;
-        }
-
-        .feature-item:hover {
-            background: #f5f5f5;
-            transform: translateX(4px);
-        }
-
-        .feature-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #1a1a1a;
-            margin-bottom: 8px;
-        }
-
-        .feature-description {
-            font-size: 14px;
-            color: #666;
-            line-height: 1.5;
-        }
-
-        .notes-section {
-            background: #fafafa;
-            border-radius: 12px;
-            padding: 30px;
-            margin-top: 40px;
-            border: 1px solid #e8e8e8;
-        }
-
-        .notes-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #1a1a1a;
-            margin-bottom: 16px;
-        }
-
-        .notes-content {
-            font-size: 15px;
-            color: #555;
-            line-height: 1.7;
-        }
-
-        .footer {
-            padding: 30px 40px;
-            border-top: 1px solid #e5e5e5;
-            background: white;
-            display: flex;
-            justify-content: flex-end;
+            color: #000;
         }
 
         .close-button {
-            background: #1a1a1a;
-            color: white;
+            background: none;
             border: none;
-            border-radius: 8px;
-            padding: 14px 40px;
-            font-size: 15px;
-            font-weight: 600;
+            font-size: 20px;
+            color: #8e8e93;
             cursor: pointer;
-            transition: all 0.2s ease;
-            min-width: 160px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
         }
 
         .close-button:hover {
-            background: #333;
-            transform: translateY(-1px);
+            background-color: #f0f0f0;
         }
 
-        .close-button:active {
-            transform: translateY(0);
+        .modal-content {
+            padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto;
         }
 
-        /* Scrollbar styling */
-        .release-content::-webkit-scrollbar {
-            width: 6px;
+        /* Hide scrollbar but keep functionality */
+        .modal-content::-webkit-scrollbar {
+            display: none;
         }
 
-        .release-content::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 3px;
+        .modal-content {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
 
-        .release-content::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 3px;
+        .version-info {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        .release-content::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8;
+        .version-number {
+            font-size: 17px;
+            font-weight: 600;
+            color: #000;
         }
 
-        /* Responsive design */
-        @media (max-width: 768px) {
-            .header {
-                padding: 20px;
-            }
+        .release-date {
+            font-size: 15px;
+            color: #8e8e93;
+        }
 
-            .content {
-                padding: 20px;
-            }
+        .changelog-list {
+            list-style-type: none;
+        }
 
-            .footer {
-                padding: 20px;
-            }
+        .changelog-item {
+            margin-bottom: 16px;
+            padding-left: 20px;
+            position: relative;
+            font-size: 15px;
+            line-height: 1.4;
+            color: #000;
+        }
 
-            .title-section h1 {
-                font-size: 24px;
-            }
+        .changelog-item:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #8e8e93;
+        }
+
+        .fixed-label {
+            color: #8e8e93;
+            font-weight: 500;
         }
     </style>
 </head>
 
 <body>
-    <div class="header">
-        <div class="header-content">
-            <div class="title-section">
-                <h1 id="release-title">Release Notes</h1>
-                <div class="subtitle">Explore the latest updates and improvements</div>
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">What's New</div>
+                <button class="close-button" id="closeButton">×</button>
             </div>
-            <div class="version-section">
-                <div class="version-badge" id="version-badge">Version 1.4.1</div>
-                <button class="close-btn" onclick="closeWindow()">×</button>
+            <div class="modal-content">
+                <div class="version-info">
+                    <div class="version-number">Version 3.29</div>
+                    <div class="release-date" id="releaseDate">18h ago</div>
+                </div>
+                <ul class="changelog-list">
+                    <li class="changelog-item">Oh happy day: A tricksy bug was finally squished, and audio files now
+                        work over bluetooth. Because it is 2017 after all.</li>
+                    <li class="changelog-item">We added a new, simpler way to sign into all workspaces associated with
+                        one email address.</li>
+                    <li class="changelog-item"><span class="fixed-label">Fixed:</span> Copy and pasting text in the
+                        message input now, thankfully, works on devices running iOS 11. Apologies for any frustration
+                        caused.</li>
+                    <li class="changelog-item"><span class="fixed-label">Fixed:</span> You can, once again, switch
+                        workspaces on your watch, as long as it is the right kind of Watch.</li>
+                    <li class="changelog-item"><span class="fixed-label">Fixed:</span> The 24-hour-clock preference had
+                        been resetting itself after app updates, and regressing to AM/PM mode even though you'd clearly
+                        made your position clear. We fixed it, so now you'll always know (precisely) what time it is.
+                    </li>
+                </ul>
             </div>
         </div>
-    </div>
-
-    <div class="content">
-        <div class="release-content" id="release-content">
-            <div class="section">
-                <div class="section-title">New Features</div>
-                <div class="feature-grid" id="new-features">
-                    <!-- Dynamic content will be inserted here -->
-                </div>
-            </div>
-
-            <div class="section">
-                <div class="section-title">Improvements</div>
-                <div class="feature-grid" id="improvements">
-                    <!-- Dynamic content will be inserted here -->
-                </div>
-            </div>
-
-            <div class="section">
-                <div class="section-title">Bug Fixes</div>
-                <div class="feature-grid" id="bug-fixes">
-                    <!-- Dynamic content will be inserted here -->
-                </div>
-            </div>
-
-            <div class="notes-section">
-                <div class="notes-title">Additional Notes</div>
-                <div class="notes-content" id="release-notes">
-                    <!-- Dynamic release notes will be inserted here -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="footer">
-        <button class="close-button" onclick="closeWindow()">Continue to Application</button>
     </div>
 
     <script>
-        const { ipcRenderer } = require('electron');
+        document.addEventListener('DOMContentLoaded', function () {
+            const modalOverlay = document.getElementById('modalOverlay');
+            const closeButton = document.getElementById('closeButton');
+            const releaseDateElement = document.getElementById('releaseDate');
 
-        function closeWindow() {
-            ipcRenderer.send('release-notes-shown');
-            const { remote } = require('electron');
-            remote.getCurrentWindow().close();
-        }
+            // Set release date (you can customize this)
+            const releaseDate = new Date();
+            releaseDate.setHours(releaseDate.getHours() - 18); // Example: 18 hours ago
+            const formattedDate = formatRelativeTime(releaseDate);
+            releaseDateElement.textContent = formattedDate;
 
-        // Listen for release notes data from main process
-        ipcRenderer.on('show-release-notes', (event, data) => {
-            updateReleaseNotes(data);
-        });
+            // Close modal
+            closeButton.addEventListener('click', function () {
+                modalOverlay.style.display = 'none';
+            });
 
-        function updateReleaseNotes(data) {
-            // Update version
-            if (data.version) {
-                document.getElementById('version-badge').textContent = `Version ${data.version}`;
+            // Close modal when clicking outside
+            modalOverlay.addEventListener('click', function (e) {
+                if (e.target === modalOverlay) {
+                    modalOverlay.style.display = 'none';
+                }
+            });
+
+            // Function to format relative time
+            function formatRelativeTime(date) {
+                const now = new Date();
+                const diffInMs = now - date;
+                const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+
+                if (diffInHours < 1) {
+                    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+                    return `${diffInMinutes}m ago`;
+                } else if (diffInHours < 24) {
+                    return `${diffInHours}h ago`;
+                } else {
+                    const diffInDays = Math.floor(diffInHours / 24);
+                    return `${diffInDays}d ago`;
+                }
             }
-
-            // Update title
-            if (data.title) {
-                document.getElementById('release-title').textContent = data.title;
-            }
-
-            // Update new features
-            if (data.newFeatures && Array.isArray(data.newFeatures)) {
-                const newFeaturesContainer = document.getElementById('new-features');
-                newFeaturesContainer.innerHTML = data.newFeatures.map(feature =>
-                    `<div class="feature-item">
-                        <div class="feature-title">${feature}</div>
-                    </div>`
-                ).join('');
-            }
-
-            // Update improvements
-            if (data.improvements && Array.isArray(data.improvements)) {
-                const improvementsContainer = document.getElementById('improvements');
-                improvementsContainer.innerHTML = data.improvements.map(improvement =>
-                    `<div class="feature-item">
-                        <div class="feature-title">${improvement}</div>
-                    </div>`
-                ).join('');
-            }
-
-            // Update bug fixes
-            if (data.bugFixes && Array.isArray(data.bugFixes)) {
-                const bugFixesContainer = document.getElementById('bug-fixes');
-                bugFixesContainer.innerHTML = data.bugFixes.map(fix =>
-                    `<div class="feature-item">
-                        <div class="feature-title">${fix}</div>
-                    </div>`
-                ).join('');
-            }
-
-            // Update release notes
-            if (data.notes) {
-                document.getElementById('release-notes').textContent = data.notes;
-            }
-        }
-
-        // Request release notes when window loads
-        window.addEventListener('DOMContentLoaded', () => {
-            ipcRenderer.send('request-release-notes');
         });
     </script>
 </body>
