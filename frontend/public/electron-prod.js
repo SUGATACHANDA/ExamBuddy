@@ -51,14 +51,14 @@ function createSplashWindow() {
 
 function createDownloadProgressWindow() {
     const progressWindow = new BrowserWindow({
-        width: 450,
-        height: 280,
+        width: 500, // <-- INCREASED FROM 450
+        height: 350,
         resizable: false,
         minimizable: false,
         maximizable: false,
         closable: true,
         show: false,
-        frame: true,
+        frame: false,
         parent: mainWindow,
         modal: true,
         webPreferences: {
@@ -243,23 +243,44 @@ autoUpdater.on('download-progress', (progressObj) => {
 
     // UPDATE DOWNLOAD PROGRESS WINDOW
     if (downloadProgressWindow && !downloadProgressWindow.isDestroyed()) {
-        const speed = progressObj.bytesPerSecond ? ` (${(progressObj.bytesPerSecond / 1024 / 1024).toFixed(1)} MB/s)` : '';
-        const transferred = progressObj.transferred ? `Transferred: ${(progressObj.transferred / 1024 / 1024).toFixed(1)} MB` : '';
-        const total = progressObj.total ? `Total: ${(progressObj.total / 1024 / 1024).toFixed(1)} MB` : '';
+        const speed = progressObj.bytesPerSecond ?
+            (progressObj.bytesPerSecond > 1024 * 1024 ?
+                `${(progressObj.bytesPerSecond / 1024 / 1024).toFixed(1)} MB/s` :
+                `${(progressObj.bytesPerSecond / 1024).toFixed(1)} KB/s`) :
+            '0 KB/s';
 
-        const details = `
-            • Downloading update package<br>
-            • ${transferred}<br>
-            • ${total}<br>
-            • Speed: ${speed}<br>
-            • Estimated time: ${progressObj.eta ? progressObj.eta + 's' : 'calculating...'}
-        `.trim();
+        const downloaded = progressObj.transferred ?
+            `${(progressObj.transferred / 1024 / 1024).toFixed(1)} MB` :
+            '0 MB';
+
+        const total = progressObj.total ?
+            `${(progressObj.total / 1024 / 1024).toFixed(1)} MB` :
+            '0 MB';
+
+        const timeLeft = progressObj.eta ?
+            `${Math.floor(progressObj.eta / 60)}m ${progressObj.eta % 60}s` :
+            'Calculating...';
+
+        // Determine download stage based on progress
+        let stage = 'Downloading update...';
+        let status = `Downloading update... ${percent}% complete`;
+
+        if (percent < 10) stage = 'Initializing download...';
+        else if (percent < 30) stage = 'Downloading files...';
+        else if (percent < 70) stage = 'Download in progress...';
+        else if (percent < 95) stage = 'Finalizing download...';
+        else stage = 'Almost complete...';
 
         // Send progress update to the window
         downloadProgressWindow.webContents.send('progress-update', {
             percent: percent,
-            status: `Downloading update... ${percent}% complete`,
-            details: details
+            status: status,
+            stage: stage,
+            speed: speed,
+            downloaded: downloaded,
+            total: total,
+            timeLeft: timeLeft,
+            version: autoUpdater.currentVersion ? autoUpdater.currentVersion.version : '1.4.1'
         });
     }
 });

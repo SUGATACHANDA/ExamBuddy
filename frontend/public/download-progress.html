@@ -8,49 +8,99 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 0;
             background: white;
             color: #333;
             height: 100vh;
             display: flex;
             flex-direction: column;
+        }
+
+        .custom-header {
+            display: flex;
             justify-content: space-between;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
+            align-items: center;
+            padding: 20px 25px 15px 25px;
             border-bottom: 1px solid #e0e0e0;
-            padding-bottom: 15px;
+            background: #f8f9fa;
+            -webkit-app-region: drag;
         }
 
-        .header h2 {
+        .header-content {
+            flex: 1;
+        }
+
+        .header-content h2 {
             margin: 0 0 5px 0;
             font-size: 18px;
             font-weight: 600;
             color: #2c3e50;
         }
 
-        .header p {
+        .header-content p {
             margin: 0;
             font-size: 12px;
-            color: #7f8c8d;
+            color: #6c757d;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #6c757d;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.2s;
+            -webkit-app-region: no-drag;
+        }
+
+        .close-btn:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .content {
+            padding: 25px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .progress-section {
+            display: flex;
+            gap: 25px;
+            margin-bottom: 20px;
+        }
+
+        .progress-visual {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .progress-details {
+            flex: 1;
+            min-width: 200px;
         }
 
         .progress-container {
             background: #f8f9fa;
             border-radius: 8px;
-            padding: 15px;
-            margin: 10px 0;
+            padding: 20px;
             border: 1px solid #e9ecef;
         }
 
         .progress-info {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 12px;
+            margin-bottom: 15px;
+            font-size: 14px;
             color: #495057;
+            font-weight: 500;
         }
 
         .progress-bar {
@@ -60,6 +110,7 @@
             border-radius: 10px;
             overflow: hidden;
             border: 1px solid #dee2e6;
+            margin-bottom: 15px;
         }
 
         .progress-fill {
@@ -70,44 +121,92 @@
             width: 0%;
         }
 
-        .status {
-            text-align: center;
-            font-size: 14px;
-            margin: 10px 0;
-            font-weight: 500;
-            color: #2c3e50;
+        .progress-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 12px;
+            color: #6c757d;
         }
 
-        .details {
-            background: #f8f9fa;
-            border-radius: 5px;
-            padding: 10px;
-            font-size: 11px;
-            margin: 10px 0;
-            max-height: 60px;
-            overflow-y: auto;
-            border: 1px solid #e9ecef;
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+        }
+
+        .stat-value {
+            font-weight: 500;
             color: #495057;
+        }
+
+        .details-container {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+            height: 100%;
+        }
+
+        .details-container h3 {
+            margin: 0 0 15px 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .details-content {
+            font-size: 12px;
+            line-height: 1.6;
+            color: #6c757d;
+        }
+
+        .details-line {
+            margin-bottom: 6px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .details-line:before {
+            content: "•";
+            margin-right: 8px;
+            color: #4CAF50;
+        }
+
+        .status-section {
+            background: #e7f3ff;
+            border-radius: 6px;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+        }
+
+        .status-text {
+            font-size: 13px;
+            font-weight: 500;
+            color: #0056b3;
+            margin: 0;
         }
 
         .buttons {
             display: flex;
             justify-content: flex-end;
-            gap: 10px;
-            margin-top: 15px;
+            gap: 12px;
+            margin-top: auto;
             border-top: 1px solid #e0e0e0;
-            padding-top: 15px;
+            padding-top: 20px;
         }
 
         button {
-            padding: 8px 16px;
+            padding: 8px 20px;
             border: 1px solid #ddd;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 500;
             transition: all 0.2s;
             background: white;
+            min-width: 90px;
         }
 
         .show-btn {
@@ -117,15 +216,15 @@
         }
 
         .cancel-btn {
-            background: #6c757d;
+            background: #dc3545;
             color: white;
-            border-color: #6c757d;
+            border-color: #dc3545;
         }
 
         .other-btn {
-            background: #28a745;
+            background: #6c757d;
             color: white;
-            border-color: #28a745;
+            border-color: #6c757d;
         }
 
         button:hover {
@@ -136,44 +235,111 @@
 </head>
 
 <body>
-    <div class="header">
-        <h2>Downloading Update</h2>
-        <p>Exam Buddy is being updated to the latest version</p>
-    </div>
-
-    <div class="progress-container">
-        <div class="progress-info">
-            <span>Progress:</span>
-            <span id="progress-percent">0%</span>
+    <div class="custom-header">
+        <div class="header-content">
+            <h2 id="window-title">Downloading Update</h2>
+            <p id="window-subtitle">Preparing download...</p>
         </div>
-        <div class="progress-bar">
-            <div class="progress-fill" id="progress-fill"></div>
+        <button class="close-btn" onclick="closeWindow()">×</button>
+    </div>
+
+    <div class="content">
+        <div class="status-section">
+            <p class="status-text" id="status">Initializing download process...</p>
         </div>
-    </div>
 
-    <div class="status" id="status">Initializing download...</div>
+        <div class="progress-section">
+            <div class="progress-visual">
+                <div class="progress-container">
+                    <div class="progress-info">
+                        <span>Download Progress</span>
+                        <span id="progress-percent">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <div class="progress-stats">
+                        <div class="stat-item">
+                            <span>Speed:</span>
+                            <span class="stat-value" id="speed">0 KB/s</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>Downloaded:</span>
+                            <span class="stat-value" id="downloaded">0 MB</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>Total Size:</span>
+                            <span class="stat-value" id="total">0 MB</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>Time Left:</span>
+                            <span class="stat-value" id="time-left">Calculating...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-    <div class="details" id="details">
-        • Preparing update package<br>
-        • Connecting to update server
-    </div>
+            <div class="progress-details">
+                <div class="details-container">
+                    <h3>Download Details</h3>
+                    <div class="details-content" id="details">
+                        <div class="details-line">Preparing update package</div>
+                        <div class="details-line">Connecting to update server</div>
+                        <div class="details-line">Checking available disk space</div>
+                        <div class="details-line">Verifying download integrity</div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    <div class="buttons">
-        <button class="show-btn" onclick="showDetails()">Show details</button>
-        <button class="other-btn" onclick="showOther()">Other</button>
-        <button class="cancel-btn" onclick="cancelDownload()">Cancel</button>
+        <div class="buttons">
+            <button class="show-btn" onclick="showDetails()">Show Details</button>
+            <button class="other-btn" onclick="togglePause()" id="pause-btn">Pause</button>
+            <button class="cancel-btn" onclick="cancelDownload()">Cancel</button>
+        </div>
     </div>
 
     <script>
         const { ipcRenderer } = require('electron');
 
-        function showDetails() {
-            const details = document.getElementById('details');
-            details.style.display = details.style.display === 'none' ? 'block' : 'none';
+        let isPaused = false;
+        let currentProgress = 0;
+
+        function closeWindow() {
+            const { remote } = require('electron');
+            remote.getCurrentWindow().close();
         }
 
-        function showOther() {
-            alert('Other options would appear here');
+        function showDetails() {
+            const details = document.querySelector('.progress-details');
+            const showBtn = document.querySelector('.show-btn');
+            if (details.style.display === 'none') {
+                details.style.display = 'block';
+                showBtn.textContent = 'Hide Details';
+            } else {
+                details.style.display = 'none';
+                showBtn.textContent = 'Show Details';
+            }
+        }
+
+        function togglePause() {
+            const pauseBtn = document.getElementById('pause-btn');
+            isPaused = !isPaused;
+
+            if (isPaused) {
+                pauseBtn.textContent = 'Resume';
+                pauseBtn.style.background = '#28a745';
+                pauseBtn.style.borderColor = '#28a745';
+                document.getElementById('status').textContent = 'Download paused at ' + currentProgress + '%';
+            } else {
+                pauseBtn.textContent = 'Pause';
+                pauseBtn.style.background = '#6c757d';
+                pauseBtn.style.borderColor = '#6c757d';
+                document.getElementById('status').textContent = 'Resuming download... ' + currentProgress + '%';
+            }
+
+            // Send pause/resume signal to main process
+            ipcRenderer.send('download-pause-toggle', isPaused);
         }
 
         function cancelDownload() {
@@ -184,10 +350,108 @@
 
         // Listen for progress updates from main process
         ipcRenderer.on('progress-update', (event, data) => {
+            if (isPaused) return; // Don't update if paused
+
+            currentProgress = data.percent;
+
+            // Update progress bar
             document.getElementById('progress-percent').textContent = data.percent + '%';
             document.getElementById('progress-fill').style.width = data.percent + '%';
+
+            // Update status
             document.getElementById('status').textContent = data.status;
-            document.getElementById('details').innerHTML = data.details;
+
+            // Update window title and subtitle
+            if (data.version) {
+                document.getElementById('window-title').textContent = `Downloading Update v${data.version}`;
+            }
+            if (data.stage) {
+                document.getElementById('window-subtitle').textContent = data.stage;
+            }
+
+            // Update stats
+            if (data.speed) document.getElementById('speed').textContent = data.speed;
+            if (data.downloaded) document.getElementById('downloaded').textContent = data.downloaded;
+            if (data.total) document.getElementById('total').textContent = data.total;
+            if (data.timeLeft) document.getElementById('time-left').textContent = data.timeLeft;
+
+            // Update details dynamically
+            updateDetails(data);
+        });
+
+        function updateDetails(data) {
+            const detailsContainer = document.getElementById('details');
+            let detailsHTML = '';
+
+            // Dynamic details based on progress
+            if (data.percent < 10) {
+                detailsHTML = `
+                    <div class="details-line">Initializing download...</div>
+                    <div class="details-line">Connecting to update server</div>
+                    <div class="details-line">Checking available disk space</div>
+                    <div class="details-line">Preparing download queue</div>
+                `;
+            } else if (data.percent < 30) {
+                detailsHTML = `
+                    <div class="details-line">Download in progress</div>
+                    <div class="details-line">Downloaded: ${data.downloaded || '0 MB'}</div>
+                    <div class="details-line">Speed: ${data.speed || '0 KB/s'}</div>
+                    <div class="details-line">Establishing stable connection</div>
+                `;
+            } else if (data.percent < 70) {
+                detailsHTML = `
+                    <div class="details-line">Download in progress</div>
+                    <div class="details-line">Downloaded: ${data.downloaded || '0 MB'}</div>
+                    <div class="details-line">Remaining: ${data.total ? calculateRemaining(data.downloaded, data.total) : 'Calculating...'}</div>
+                    <div class="details-line">Speed: ${data.speed || '0 KB/s'}</div>
+                    <div class="details-line">Time left: ${data.timeLeft || 'Calculating...'}</div>
+                `;
+            } else if (data.percent < 95) {
+                detailsHTML = `
+                    <div class="details-line">Finalizing download</div>
+                    <div class="details-line">Downloaded: ${data.downloaded || '0 MB'}</div>
+                    <div class="details-line">Speed: ${data.speed || '0 KB/s'}</div>
+                    <div class="details-line">Time left: ${data.timeLeft || 'Calculating...'}</div>
+                    <div class="details-line">Preparing for installation</div>
+                `;
+            } else {
+                detailsHTML = `
+                    <div class="details-line">Download nearly complete</div>
+                    <div class="details-line">Finalizing file transfer</div>
+                    <div class="details-line">Verifying file integrity</div>
+                    <div class="details-line">Preparing installation package</div>
+                    <div class="details-line">Ready to install update</div>
+                `;
+            }
+
+            detailsContainer.innerHTML = detailsHTML;
+        }
+
+        function calculateRemaining(downloaded, total) {
+            // Simple function to calculate remaining data
+            const downloadedMB = parseFloat(downloaded);
+            const totalMB = parseFloat(total);
+            if (!isNaN(downloadedMB) && !isNaN(totalMB)) {
+                return (totalMB - downloadedMB).toFixed(1) + ' MB';
+            }
+            return 'Calculating...';
+        }
+
+        // Listen for download completion
+        ipcRenderer.on('download-complete', (event, data) => {
+            document.getElementById('status').textContent = 'Download complete! Ready to install.';
+            document.getElementById('progress-percent').textContent = '100%';
+            document.getElementById('progress-fill').style.width = '100%';
+            document.getElementById('pause-btn').style.display = 'none';
+            document.querySelector('.show-btn').textContent = 'Install Now';
+        });
+
+        // Listen for download error
+        ipcRenderer.on('download-error', (event, error) => {
+            document.getElementById('status').textContent = 'Download error: ' + error;
+            document.getElementById('status').style.background = '#f8d7da';
+            document.getElementById('status').style.borderLeftColor = '#dc3545';
+            document.getElementById('status').style.color = '#721c24';
         });
     </script>
 </body>
