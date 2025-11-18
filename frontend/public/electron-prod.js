@@ -77,8 +77,6 @@ function createDownloadProgressWindow() {
 
 function createReleaseNotesWindow(releaseData) {
     // Create a new browser window for release notes
-    // Assign to the outer-scoped variable instead of declaring a new constant,
-    // so the closed handler can null out the shared reference.
     releaseNotesWindow = new BrowserWindow({
         width: 450,
         height: 600,
@@ -90,14 +88,21 @@ function createReleaseNotesWindow(releaseData) {
         titleBarStyle: 'hidden', // Hide title bar for modal look
         webPreferences: {
             nodeIntegration: true,
-            contextIsolation: false
+            contextIsolation: false,
+            webSecurity: false // Add this to allow local file access
         },
         modal: true,
         parent: BrowserWindow.getFocusedWindow() // Make it modal to main window
     });
 
-    // Load the release notes HTML template
-    releaseNotesWindow.loadFile('release-notes.html');
+    // Load the release notes HTML template with proper protocol
+    if (app.isPackaged) {
+        // In production - load from app resources
+        releaseNotesWindow.loadFile(path.join(process.resourcesPath, 'app', 'release-notes.html'));
+    } else {
+        // In development - load from project directory
+        releaseNotesWindow.loadFile(path.join(__dirname, 'release-notes.html'));
+    }
 
     // When window is ready to show, inject the release data
     releaseNotesWindow.webContents.once('did-finish-load', () => {
@@ -179,6 +184,11 @@ function showReleaseNotes(releaseData) {
 
         releaseNotesWindow.once('ready-to-show', () => {
             releaseNotesWindow.show();
+        });
+
+        // Handle window closed event
+        releaseNotesWindow.on('closed', () => {
+            releaseNotesWindow = null;
         });
     } else {
         // If window already exists, just show it and update content
