@@ -27,7 +27,7 @@ const MAX_STRIKES = 3;
 
 let splashWindow;
 let downloadProgressWindow;
-let releaseNotesWindow;
+let releaseNotesWindow = null;
 
 function createSplashWindow() {
     splashWindow = new BrowserWindow({
@@ -85,32 +85,92 @@ function createReleaseNotesWindow(releaseData) {
         minimizable: false,
         maximizable: false,
         fullscreenable: false,
-        titleBarStyle: 'hidden', // Hide title bar for modal look
+        titleBarStyle: 'hidden',
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
-            webSecurity: false // Add this to allow local file access
+            webSecurity: false
         },
         modal: true,
-        parent: BrowserWindow.getFocusedWindow() // Make it modal to main window
+        parent: BrowserWindow.getFocusedWindow()
     });
 
-    // Load the release notes HTML template with proper protocol
+    // Remove the menu bar
+    releaseNotesWindow.setMenuBarVisibility(false);
+
+    // Get the correct path for release-notes.html
+    let htmlPath;
     if (app.isPackaged) {
-        // In production - load from app resources
-        releaseNotesWindow.loadFile(path.join(process.resourcesPath, 'app', 'release-notes.html'));
+        htmlPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'release-notes.html');
+        // Fallback if unpacked doesn't exist
+        if (!fs.existsSync(htmlPath)) {
+            htmlPath = path.join(process.resourcesPath, 'app', 'release-notes.html');
+        }
     } else {
-        // In development - load from project directory
-        releaseNotesWindow.loadFile(path.join(__dirname, 'release-notes.html'));
+        htmlPath = path.join(__dirname, 'release-notes.html');
     }
+
+    console.log('Loading release notes from:', htmlPath);
+    console.log('File exists:', fs.existsSync(htmlPath));
+
+    // Load the HTML file
+    releaseNotesWindow.loadFile(htmlPath).catch(err => {
+        console.error('Failed to load release notes:', err);
+        // Fallback: Create basic HTML content
+        const fallbackHtml = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { 
+                        font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+                        padding: 20px; 
+                        background: #f5f5f5;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        height: 100vh;
+                        margin: 0;
+                    }
+                    .modal { 
+                        background: white; 
+                        padding: 20px; 
+                        border-radius: 12px; 
+                        max-width: 400px; 
+                        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="modal">
+                    <h3>What's New</h3>
+                    <p>Version ${releaseData.version}</p>
+                    <ul>
+                        ${releaseData.notes.map(note => `<li>${note}</li>`).join('')}
+                    </ul>
+                    <button onclick="window.close()">Close</button>
+                </div>
+            </body>
+            </html>
+        `;
+        releaseNotesWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(fallbackHtml)}`);
+    });
 
     // When window is ready to show, inject the release data
     releaseNotesWindow.webContents.once('did-finish-load', () => {
+        console.log('Release notes window loaded, sending data...');
         releaseNotesWindow.webContents.send('load-release-data', releaseData);
     });
 
+    // Handle window closed
     releaseNotesWindow.on('closed', () => {
         releaseNotesWindow = null;
+    });
+
+    // Handle window ready to show
+    releaseNotesWindow.once('ready-to-show', () => {
+        console.log('Release notes window ready to show');
+        releaseNotesWindow.show();
     });
 
     return releaseNotesWindow;
@@ -177,23 +237,19 @@ function handlePostUpdateLaunch() {
 }
 
 function showReleaseNotes(releaseData) {
+    console.log('Showing release notes with data:', releaseData);
+
     if (!releaseNotesWindow || releaseNotesWindow.isDestroyed()) {
         // Enhance release data with structured content
         const enhancedData = enhanceReleaseData(releaseData);
+        console.log('Enhanced data:', enhancedData);
         releaseNotesWindow = createReleaseNotesWindow(enhancedData);
-
-        releaseNotesWindow.once('ready-to-show', () => {
-            releaseNotesWindow.show();
-        });
-
-        // Handle window closed event
-        releaseNotesWindow.on('closed', () => {
-            releaseNotesWindow = null;
-        });
     } else {
         // If window already exists, just show it and update content
+        console.log('Window exists, updating content...');
         releaseNotesWindow.webContents.send('load-release-data', releaseData);
         releaseNotesWindow.show();
+        releaseNotesWindow.focus();
     }
 }
 
@@ -236,8 +292,11 @@ function enhanceReleaseData(releaseData) {
 
 ipcMain.on('request-release-notes', () => {
     try {
+        console.log('Release notes requested, checking update info...');
         if (fs.existsSync(updateInfoPath)) {
             const data = JSON.parse(fs.readFileSync(updateInfoPath, 'utf8'));
+            console.log('Update data found:', data);
+
             if (data && data.showOnNextLaunch) {
                 // Reset the flag so it doesn't show again
                 data.showOnNextLaunch = false;
@@ -245,7 +304,11 @@ ipcMain.on('request-release-notes', () => {
 
                 const enhancedData = enhanceReleaseData(data);
                 showReleaseNotes(enhancedData);
+            } else {
+                console.log('showOnNextLaunch is false, not showing release notes');
             }
+        } else {
+            console.log('No update info file found at:', updateInfoPath);
         }
     } catch (err) {
         console.error("Error handling release notes request:", err);
