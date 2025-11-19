@@ -29,6 +29,32 @@ let splashWindow;
 let downloadProgressWindow;
 let releaseNotesWindow = null;
 
+function getLocalChangelogNotes() {
+    try {
+        // packaged path
+        const prodPath = path.join(process.resourcesPath, "app", "public", "changelog.md");
+
+        // dev path
+        const devPath = path.join(__dirname, "changelog.md");
+
+        const fileToLoad = fs.existsSync(prodPath) ? prodPath : devPath;
+
+        const markdown = fs.readFileSync(fileToLoad, "utf8");
+
+        // Extract bullet notes (- or *)
+        const notes = markdown
+            .split("\n")
+            .map(line => line.trim())
+            .filter(line => line.startsWith("-") || line.startsWith("*"))
+            .map(line => line.replace(/^[-*]\s*/, "").trim());
+
+        return notes.length > 0 ? notes : ["No release notes available."];
+    } catch (err) {
+        console.error("ERROR reading changelog.md:", err);
+        return ["No release notes available."];
+    }
+}
+
 function createSplashWindow() {
     splashWindow = new BrowserWindow({
         width: 400,
@@ -154,7 +180,7 @@ function createReleaseNotesWindow(releaseData) {
     // Inject data into the window after load
     releaseNotesWindow.webContents.on('dom-ready', () => {
         console.log("Sending release data on dom-ready");
-        releaseNotesWindow.webContents.send('load-release-data', releaseData);
+        releaseNotesWindow.webContents.send('load-release-data', enhanceReleaseData(releaseData));
     });
 
     releaseNotesWindow.once('ready-to-show', () => {
@@ -282,62 +308,21 @@ function showReleaseNotes(releaseData) {
     } else {
         // If window already exists, just show it and update content
         console.log('Window exists, updating content...');
-        releaseNotesWindow.webContents.send('load-release-data', releaseData);
+        releaseNotesWindow.webContents.send('load-release-data', enhanceReleaseData(releaseData));
         releaseNotesWindow.show();
         releaseNotesWindow.focus();
     }
 }
 
 function enhanceReleaseData(releaseData) {
-
-    // Your own default notes (when updater does NOT provide any)
-    const defaultNotes = [
-        "Added a new feature: Changelog for every release.",
-        "Fixed the redirection route to Login page from Password Reset Page",
-        "Some minor bugs fixed."
-    ];
-
-    const output = {
+    return {
         version: releaseData.version || "1.0.0",
         title: releaseData.title || "What's New",
         releaseDate: releaseData.releaseDate || new Date().toISOString(),
-        notes: defaultNotes      // <-- your notes here as fallback
+        notes: getLocalChangelogNotes()   // ALWAYS load from changelog.md
     };
-
-    const raw = releaseData.notes;
-
-    // If Updater did NOT send notes → use your default notes
-    if (!raw) {
-        return output;
-    }
-
-    // CASE 1: Array of objects (electron-updater GitHub format)
-    if (Array.isArray(raw) && typeof raw[0] === "object") {
-        output.notes = raw.map(x => x.note || JSON.stringify(x));
-        return output;
-    }
-
-    // CASE 2: Array of strings
-    if (Array.isArray(raw)) {
-        output.notes = raw;
-        return output;
-    }
-
-    // CASE 3: String (HTML or plain text)
-    if (typeof raw === "string") {
-        const cleaned = raw
-            .replace(/<[^>]+>/g, "\n")
-            .split("\n")
-            .map(x => x.trim())
-            .filter(x => x.length > 0);
-
-        output.notes = cleaned.length > 0 ? cleaned : defaultNotes;
-        return output;
-    }
-
-    // FINAL fallback → your notes
-    return output;
 }
+
 ipcMain.on('request-release-notes', () => {
     try {
         console.log('Release notes requested, checking update info...');
@@ -351,7 +336,7 @@ ipcMain.on('request-release-notes', () => {
                 fs.writeFileSync(updateInfoPath, JSON.stringify(data, null, 2));
 
                 const enhancedData = enhanceReleaseData(data);
-                showReleaseNotes(enhancedData);
+                showReleaseNotes(enhanceReleaseData(data));
             } else {
                 console.log('showOnNextLaunch is false, not showing release notes');
             }
@@ -519,7 +504,7 @@ autoUpdater.on('update-downloaded', (info) => {
     try {
         const updateData = {
             version: info.version,
-            notes: info.releaseNotes || "No release notes provided.",
+            notes: null,
             showOnNextLaunch: true
         };
         fs.writeFileSync(updateInfoPath, JSON.stringify(updateData));

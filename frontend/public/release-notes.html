@@ -6,11 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Changelog Modal</title>
     <style>
-        *::-webkit-scrollbar {
-            display: none;
-            /* Chrome, Safari, Opera */
-        }
-
         * {
             margin: 0;
             padding: 0;
@@ -53,10 +48,10 @@
         .modal-header {
             padding: 16px 20px;
             border-bottom: 1px solid #e5e5e5;
-            position: relative;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: relative;
         }
 
         .modal-title {
@@ -97,11 +92,6 @@
             display: none;
         }
 
-        .modal-content {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-
         .version-info {
             margin-bottom: 20px;
             display: flex;
@@ -139,11 +129,6 @@
             left: 0;
             color: #8e8e93;
         }
-
-        .fixed-label {
-            color: #8e8e93;
-            font-weight: 500;
-        }
     </style>
 </head>
 
@@ -154,77 +139,71 @@
                 <div class="modal-title">What's New</div>
                 <button class="close-button" id="closeButton">×</button>
             </div>
-
             <div class="modal-content">
                 <div class="version-info">
-                    <!-- DYNAMIC VERSION -->
-                    <div class="version-number" id="versionNumber">Version</div>
-
-                    <!-- DYNAMIC DATE -->
-                    <div class="release-date" id="releaseDate"></div>
+                    <div class="version-number">Version</div>
+                    <div class="release-date" id="releaseDate">Loading…</div>
                 </div>
-
-                <!-- DYNAMIC NOTE LIST -->
-                <ul class="changelog-list" id="changelogList"></ul>
+                <ul class="changelog-list"></ul>
             </div>
         </div>
     </div>
 
     <script>
         window.addEventListener("DOMContentLoaded", () => {
-            const { ipcRenderer } = require('electron');
+            const { ipcRenderer } = require("electron");
 
-            const modalOverlay = document.getElementById('modalOverlay');
-            const closeButton = document.getElementById('closeButton');
-            const releaseDateElement = document.getElementById('releaseDate');
-            const versionNumberElement = document.getElementById('versionNumber');
-            const changelogList = document.getElementById('changelogList');
+            const modalOverlay = document.getElementById("modalOverlay");
+            const closeButton = document.getElementById("closeButton");
 
-            closeButton.addEventListener('click', () => {
-                modalOverlay.style.display = 'none';
+            closeButton.addEventListener("click", () => {
+                modalOverlay.style.display = "none";
             });
 
-            modalOverlay.addEventListener('click', (e) => {
-                if (e.target === modalOverlay) modalOverlay.style.display = 'none';
+            modalOverlay.addEventListener("click", e => {
+                if (e.target === modalOverlay) modalOverlay.style.display = "none";
             });
 
-            function formatTime(dateString) {
+            function formatTime(t) {
                 const now = new Date();
-                const time = new Date(dateString);
-                const diffMs = now - time;
-                const mins = Math.floor(diffMs / 60000);
+                const diffMs = now - new Date(t);
+                const mins = diffMs / 60000;
                 if (mins < 1) return "0m ago";
-                if (mins < 60) return `${mins}m ago`;
-                const hrs = Math.floor(mins / 60);
-                if (hrs < 24) return `${hrs}h ago`;
-                const days = Math.floor(hrs / 24);
-                return `${days}d ago`;
+                if (mins < 60) return `${Math.floor(mins)}m ago`;
+                const hrs = mins / 60;
+                if (hrs < 24) return `${Math.floor(hrs)}h ago`;
+                return `${Math.floor(hrs / 24)}d ago`;
             }
 
-            function updateReleaseData(releaseData) {
-                // Title
-                document.querySelector(".modal-title").textContent =
-                    releaseData.title || "What's New";
+            function updateReleaseData(data) {
+                document.querySelector(".modal-title").textContent = data.title || "What's New";
+                document.querySelector(".version-number").textContent = `Version ${data.version}`;
+                document.getElementById("releaseDate").textContent = formatTime(data.releaseDate);
 
-                // Version
-                versionNumberElement.textContent = `Version ${releaseData.version}`;
+                const list = document.querySelector(".changelog-list");
+                list.innerHTML = "";
 
-                // Date
-                releaseDateElement.textContent = formatTime(releaseData.releaseDate);
+                // SAFELY convert notes to array (no more errors ever)
+                let notes = data.notes;
 
-                // Notes
-                changelogList.innerHTML = "";
-                releaseData.notes.forEach(note => {
+                if (!Array.isArray(notes)) {
+                    if (typeof notes === "string") {
+                        notes = notes
+                            .split("\n")
+                            .map(x => x.trim())
+                            .filter(x => x.length > 0);
+                    } else if (typeof notes === "object") {
+                        notes = Object.values(notes);
+                    } else {
+                        notes = ["No release notes available."];
+                    }
+                }
+
+                notes.forEach(note => {
                     const li = document.createElement("li");
                     li.className = "changelog-item";
-
-                    if (note.toLowerCase().startsWith("fixed:")) {
-                        li.innerHTML = `<span class="fixed-label">Fixed:</span> ${note.substring(6).trim()}`;
-                    } else {
-                        li.textContent = note;
-                    }
-
-                    changelogList.appendChild(li);
+                    li.textContent = note;
+                    list.appendChild(li);
                 });
             }
 
