@@ -289,37 +289,55 @@ function showReleaseNotes(releaseData) {
 }
 
 function enhanceReleaseData(releaseData) {
+
+    // Your own default notes (when updater does NOT provide any)
+    const defaultNotes = [
+        "Added a new feature: Changelog for every release.",
+        "Fixed the redirection route to Login page from Password Reset Page",
+        "Some minor bugs fixed."
+    ];
+
     const output = {
         version: releaseData.version || "1.0.0",
         title: releaseData.title || "What's New",
         releaseDate: releaseData.releaseDate || new Date().toISOString(),
-        notes: []
+        notes: defaultNotes      // <-- your notes here as fallback
     };
 
-    // If electron-updater passed HTML notes (common)
-    if (typeof releaseData.notes === "string") {
-        // Remove HTML tags
-        const clean = releaseData.notes
-            .replace(/<[^>]*>/g, "\n")
+    const raw = releaseData.notes;
+
+    // If Updater did NOT send notes → use your default notes
+    if (!raw) {
+        return output;
+    }
+
+    // CASE 1: Array of objects (electron-updater GitHub format)
+    if (Array.isArray(raw) && typeof raw[0] === "object") {
+        output.notes = raw.map(x => x.note || JSON.stringify(x));
+        return output;
+    }
+
+    // CASE 2: Array of strings
+    if (Array.isArray(raw)) {
+        output.notes = raw;
+        return output;
+    }
+
+    // CASE 3: String (HTML or plain text)
+    if (typeof raw === "string") {
+        const cleaned = raw
+            .replace(/<[^>]+>/g, "\n")
             .split("\n")
             .map(x => x.trim())
             .filter(x => x.length > 0);
 
-        output.notes = clean;
+        output.notes = cleaned.length > 0 ? cleaned : defaultNotes;
         return output;
     }
 
-    // If array already (good)
-    if (Array.isArray(releaseData.notes) && releaseData.notes.length > 0) {
-        output.notes = releaseData.notes;
-        return output;
-    }
-
-    // FINAL fallback if nothing was provided
-    output.notes = ["No detailed release notes were provided for this version."];
+    // FINAL fallback → your notes
     return output;
 }
-
 ipcMain.on('request-release-notes', () => {
     try {
         console.log('Release notes requested, checking update info...');
