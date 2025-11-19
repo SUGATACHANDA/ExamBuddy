@@ -79,7 +79,7 @@ function createSplashWindow() {
 function createDownloadProgressWindow() {
     const progressWindow = new BrowserWindow({
         width: 500, // <-- INCREASED FROM 450
-        height: 350,
+        height: 450,
         resizable: false,
         minimizable: false,
         maximizable: false,
