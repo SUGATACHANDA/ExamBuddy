@@ -98,63 +98,42 @@ function createReleaseNotesWindow(releaseData) {
     // Remove the menu bar
     releaseNotesWindow.setMenuBarVisibility(false);
 
-    // Get the correct path for release-notes.html
+    // SIMPLIFIED PATH RESOLUTION - Use the same approach as your main window
     let htmlPath;
     if (app.isPackaged) {
+        // In production, use the same method as your main window
         htmlPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'release-notes.html');
-        // Fallback if unpacked doesn't exist
+        console.log('Trying packaged path:', htmlPath);
+
         if (!fs.existsSync(htmlPath)) {
+            // Fallback to regular app path
             htmlPath = path.join(process.resourcesPath, 'app', 'release-notes.html');
+            console.log('Trying fallback path:', htmlPath);
         }
     } else {
+        // In development, use __dirname like your main window
         htmlPath = path.join(__dirname, 'release-notes.html');
+        console.log('Development path:', htmlPath);
     }
 
-    console.log('Loading release notes from:', htmlPath);
+    console.log('Final release notes path:', htmlPath);
     console.log('File exists:', fs.existsSync(htmlPath));
 
-    // Load the HTML file
-    releaseNotesWindow.loadFile(htmlPath).catch(err => {
-        console.error('Failed to load release notes:', err);
-        // Fallback: Create basic HTML content
-        const fallbackHtml = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body { 
-                        font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
-                        padding: 20px; 
-                        background: #f5f5f5;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        height: 100vh;
-                        margin: 0;
-                    }
-                    .modal { 
-                        background: white; 
-                        padding: 20px; 
-                        border-radius: 12px; 
-                        max-width: 400px; 
-                        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="modal">
-                    <h3>What's New</h3>
-                    <p>Version ${releaseData.version}</p>
-                    <ul>
-                        ${releaseData.notes.map(note => `<li>${note}</li>`).join('')}
-                    </ul>
-                    <button onclick="window.close()">Close</button>
-                </div>
-            </body>
-            </html>
-        `;
+    // If file doesn't exist, use data URL as fallback
+    if (!fs.existsSync(htmlPath)) {
+        console.log('Release notes HTML not found, using fallback content');
+        const fallbackHtml = generateFallbackHTML(releaseData);
         releaseNotesWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(fallbackHtml)}`);
-    });
+    } else {
+        // Load the HTML file using the same method as your main window
+        const fileUrl = url.format({
+            pathname: htmlPath,
+            protocol: 'file:',
+            slashes: true
+        });
+        console.log('Loading release notes from:', fileUrl);
+        releaseNotesWindow.loadURL(fileUrl);
+    }
 
     // When window is ready to show, inject the release data
     releaseNotesWindow.webContents.once('did-finish-load', () => {
@@ -174,6 +153,45 @@ function createReleaseNotesWindow(releaseData) {
     });
 
     return releaseNotesWindow;
+}
+
+function generateFallbackHTML(releaseData) {
+    const enhancedData = enhanceReleaseData(releaseData);
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+            padding: 20px; 
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .modal { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 12px; 
+            max-width: 400px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="modal">
+        <h3>What's New</h3>
+        <p>Version ${enhancedData.version}</p>
+        <ul>
+            ${enhancedData.notes.map(note => `<li>${note}</li>`).join('')}
+        </ul>
+        <button onclick="window.close()">Close</button>
+    </div>
+</body>
+</html>`;
 }
 
 function createWindow() {
