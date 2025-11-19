@@ -289,40 +289,35 @@ function showReleaseNotes(releaseData) {
 }
 
 function enhanceReleaseData(releaseData) {
-    const defaultData = {
-        version: releaseData.version || '1.4.1',
-        title: "What's New",
+    const output = {
+        version: releaseData.version || "1.0.0",
+        title: releaseData.title || "What's New",
         releaseDate: releaseData.releaseDate || new Date().toISOString(),
-        notes: [
-            "Added a new feature: Changelog for every release.",
-            "Fixed the redirection route to Login page from Password Reset Page",
-            "Some minor bugs fixed."
-        ]
+        notes: []
     };
 
-    // If releaseData has custom notes, use them instead
-    if (releaseData.notes && releaseData.notes !== "No release notes provided.") {
-        // Handle both string and array formats for notes
-        if (typeof releaseData.notes === 'string') {
-            // Try to parse bullet points from string
-            defaultData.notes = releaseData.notes.split('\n')
-                .filter(line => line.trim().startsWith('-'))
-                .map(line => line.replace(/^- /, '').trim());
+    // If electron-updater passed HTML notes (common)
+    if (typeof releaseData.notes === "string") {
+        // Remove HTML tags
+        const clean = releaseData.notes
+            .replace(/<[^>]*>/g, "\n")
+            .split("\n")
+            .map(x => x.trim())
+            .filter(x => x.length > 0);
 
-            // If no bullet points found, use the string as a single note
-            if (defaultData.notes.length === 0) {
-                defaultData.notes = [releaseData.notes];
-            }
-        } else if (Array.isArray(releaseData.notes)) {
-            defaultData.notes = releaseData.notes;
-        }
+        output.notes = clean;
+        return output;
     }
 
-    // Preserve any additional properties from the original releaseData
-    return {
-        ...defaultData,
-        ...releaseData
-    };
+    // If array already (good)
+    if (Array.isArray(releaseData.notes) && releaseData.notes.length > 0) {
+        output.notes = releaseData.notes;
+        return output;
+    }
+
+    // FINAL fallback if nothing was provided
+    output.notes = ["No detailed release notes were provided for this version."];
+    return output;
 }
 
 ipcMain.on('request-release-notes', () => {
