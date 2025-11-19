@@ -1,9 +1,7 @@
-# Version 1.4.21
+# Version 1.4.22
 - Redesigned the Changelog Modal
-- Some minor size specification changes made in Download Modal  
-***
-# Version 1.4.20
-- Added new login flow
-- Fixed password reset bug
-- Improved UI performance
-- Security patches applied
+- Some minor size specification changes made in Download Modal
+- Minoe Bugs Fixed
+  
+
+
