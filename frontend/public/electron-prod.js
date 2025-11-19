@@ -152,8 +152,8 @@ function createReleaseNotesWindow(releaseData) {
     }
 
     // Inject data into the window after load
-    releaseNotesWindow.webContents.once('did-finish-load', () => {
-        console.log('Injecting release notes data into modal...');
+    releaseNotesWindow.webContents.on('dom-ready', () => {
+        console.log("Sending release data on dom-ready");
         releaseNotesWindow.webContents.send('load-release-data', releaseData);
     });
 
@@ -252,6 +252,10 @@ function handlePostUpdateLaunch() {
     try {
         if (fs.existsSync(updateInfoPath)) {
             const data = JSON.parse(fs.readFileSync(updateInfoPath, 'utf8'));
+            if (!data.showOnNextLaunch) {
+                console.log("Release notes already shown. Skipping.");
+                return;
+            }
             if (data && data.showOnNextLaunch) {
                 if (isMainWindowVisible && mainWindow) {
                     console.log(`First launch after update. Showing release notes for version ${data.version}.`);
@@ -633,12 +637,12 @@ ipcMain.handle('get-release-notes', () => {
 });
 
 // Another handler to mark the notes as "read" so they don't show again.
-ipcMain.on('release-notes-shown', () => {
+ipcMain.on("release-notes-shown", () => {
     try {
         if (fs.existsSync(updateInfoPath)) {
-            const data = JSON.parse(fs.readFileSync(updateInfoPath, 'utf8'));
+            const data = JSON.parse(fs.readFileSync(updateInfoPath, "utf8"));
             data.showOnNextLaunch = false;
-            fs.writeFileSync(updateInfoPath, JSON.stringify(data));
+            fs.writeFileSync(updateInfoPath, JSON.stringify(data, null, 2));
             console.log("Release notes marked as shown.");
         }
     } catch (err) {

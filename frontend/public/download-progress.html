@@ -5,6 +5,11 @@
     <meta charset="UTF-8">
     <title>Download Progress</title>
     <style>
+        *::-webkit-scrollbar {
+            display: none;
+            /* Chrome, Safari, Opera */
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
@@ -278,24 +283,6 @@
                     </div>
                 </div>
             </div>
-
-            <div class="progress-details">
-                <div class="details-container">
-                    <h3>Download Details</h3>
-                    <div class="details-content" id="details">
-                        <div class="details-line">Preparing update package</div>
-                        <div class="details-line">Connecting to update server</div>
-                        <div class="details-line">Checking available disk space</div>
-                        <div class="details-line">Verifying download integrity</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="buttons">
-            <button class="show-btn" onclick="showDetails()">Show Details</button>
-            <button class="other-btn" onclick="togglePause()" id="pause-btn">Pause</button>
-            <button class="cancel-btn" onclick="cancelDownload()">Cancel</button>
         </div>
     </div>
 

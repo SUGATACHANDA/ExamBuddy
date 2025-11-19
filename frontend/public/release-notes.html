@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Changelog Modal</title>
     <style>
+        *::-webkit-scrollbar {
+            display: none;
+            /* Chrome, Safari, Opera */
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -88,7 +93,6 @@
             overflow-y: auto;
         }
 
-        /* Hide scrollbar but keep functionality */
         .modal-content::-webkit-scrollbar {
             display: none;
         }
@@ -150,113 +154,84 @@
                 <div class="modal-title">What's New</div>
                 <button class="close-button" id="closeButton">×</button>
             </div>
+
             <div class="modal-content">
                 <div class="version-info">
-                    <div class="version-number">Version 3.29</div>
-                    <div class="release-date" id="releaseDate">18h ago</div>
+                    <!-- DYNAMIC VERSION -->
+                    <div class="version-number" id="versionNumber">Version</div>
+
+                    <!-- DYNAMIC DATE -->
+                    <div class="release-date" id="releaseDate"></div>
                 </div>
-                <ul class="changelog-list">
-                    <li class="changelog-item">Oh happy day: A tricksy bug was finally squished, and audio files now
-                        work over bluetooth. Because it is 2017 after all.</li>
-                    <li class="changelog-item">We added a new, simpler way to sign into all workspaces associated with
-                        one email address.</li>
-                    <li class="changelog-item"><span class="fixed-label">Fixed:</span> Copy and pasting text in the
-                        message input now, thankfully, works on devices running iOS 11. Apologies for any frustration
-                        caused.</li>
-                    <li class="changelog-item"><span class="fixed-label">Fixed:</span> You can, once again, switch
-                        workspaces on your watch, as long as it is the right kind of Watch.</li>
-                    <li class="changelog-item"><span class="fixed-label">Fixed:</span> The 24-hour-clock preference had
-                        been resetting itself after app updates, and regressing to AM/PM mode even though you'd clearly
-                        made your position clear. We fixed it, so now you'll always know (precisely) what time it is.
-                    </li>
-                </ul>
+
+                <!-- DYNAMIC NOTE LIST -->
+                <ul class="changelog-list" id="changelogList"></ul>
             </div>
         </div>
     </div>
 
     <script>
-        const { ipcRenderer } = require('electron');
+        window.addEventListener("DOMContentLoaded", () => {
+            const { ipcRenderer } = require('electron');
 
-        document.addEventListener('DOMContentLoaded', function () {
             const modalOverlay = document.getElementById('modalOverlay');
             const closeButton = document.getElementById('closeButton');
             const releaseDateElement = document.getElementById('releaseDate');
+            const versionNumberElement = document.getElementById('versionNumber');
+            const changelogList = document.getElementById('changelogList');
 
-            // Set release date (you can customize this)
-            const releaseDate = new Date();
-            releaseDate.setHours(releaseDate.getHours() - 18); // Example: 18 hours ago
-            const formattedDate = formatRelativeTime(releaseDate);
-            releaseDateElement.textContent = formattedDate;
-
-            // Close modal
-            closeButton.addEventListener('click', function () {
+            closeButton.addEventListener('click', () => {
                 modalOverlay.style.display = 'none';
             });
 
-            // Close modal when clicking outside
-            modalOverlay.addEventListener('click', function (e) {
-                if (e.target === modalOverlay) {
-                    modalOverlay.style.display = 'none';
-                }
+            modalOverlay.addEventListener('click', (e) => {
+                if (e.target === modalOverlay) modalOverlay.style.display = 'none';
             });
 
-            // Function to update the modal content with release data
-            function updateReleaseData(releaseData) {
-                // Update title
-                document.querySelector('.modal-title').textContent = releaseData.title || "What's New";
-
-                // Update version
-                document.querySelector('.version-number').textContent = `Version ${releaseData.version}`;
-
-                // Update release date
-                if (releaseData.releaseDate) {
-                    const releaseDate = new Date(releaseData.releaseDate);
-                    releaseDateElement.textContent = formatRelativeTime(releaseDate);
-                }
-
-                // Update notes
-                const changelogList = document.querySelector('.changelog-list');
-                changelogList.innerHTML = ''; // Clear existing items
-
-                if (releaseData.notes && Array.isArray(releaseData.notes)) {
-                    releaseData.notes.forEach(note => {
-                        const listItem = document.createElement('li');
-                        listItem.className = 'changelog-item';
-
-                        // Check if note starts with "Fixed:" and apply special styling
-                        if (note.toLowerCase().startsWith('fixed:')) {
-                            const fixedText = note.substring(6); // Remove "Fixed:" part
-                            listItem.innerHTML = `<span class="fixed-label">Fixed:</span> ${fixedText.trim()}`;
-                        } else {
-                            listItem.textContent = note;
-                        }
-
-                        changelogList.appendChild(listItem);
-                    });
-                }
-            }
-
-            // Listen for release data from main process
-            ipcRenderer.on('load-release-data', (event, releaseData) => {
-                updateReleaseData(releaseData);
-            });
-
-            // Function to format relative time
-            function formatRelativeTime(date) {
+            function formatTime(dateString) {
                 const now = new Date();
-                const diffInMs = now - date;
-                const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
-
-                if (diffInHours < 1) {
-                    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
-                    return `${diffInMinutes}m ago`;
-                } else if (diffInHours < 24) {
-                    return `${diffInHours}h ago`;
-                } else {
-                    const diffInDays = Math.floor(diffInHours / 24);
-                    return `${diffInDays}d ago`;
-                }
+                const time = new Date(dateString);
+                const diffMs = now - time;
+                const mins = Math.floor(diffMs / 60000);
+                if (mins < 1) return "0m ago";
+                if (mins < 60) return `${mins}m ago`;
+                const hrs = Math.floor(mins / 60);
+                if (hrs < 24) return `${hrs}h ago`;
+                const days = Math.floor(hrs / 24);
+                return `${days}d ago`;
             }
+
+            function updateReleaseData(releaseData) {
+                // Title
+                document.querySelector(".modal-title").textContent =
+                    releaseData.title || "What's New";
+
+                // Version
+                versionNumberElement.textContent = `Version ${releaseData.version}`;
+
+                // Date
+                releaseDateElement.textContent = formatTime(releaseData.releaseDate);
+
+                // Notes
+                changelogList.innerHTML = "";
+                releaseData.notes.forEach(note => {
+                    const li = document.createElement("li");
+                    li.className = "changelog-item";
+
+                    if (note.toLowerCase().startsWith("fixed:")) {
+                        li.innerHTML = `<span class="fixed-label">Fixed:</span> ${note.substring(6).trim()}`;
+                    } else {
+                        li.textContent = note;
+                    }
+
+                    changelogList.appendChild(li);
+                });
+            }
+
+            ipcRenderer.on("load-release-data", (_, data) => {
+                updateReleaseData(data);
+                ipcRenderer.send("release-notes-shown");
+            });
         });
     </script>
 </body>
