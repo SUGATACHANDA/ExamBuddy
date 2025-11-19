@@ -76,7 +76,45 @@ function createDownloadProgressWindow() {
 }
 
 function createReleaseNotesWindow(releaseData) {
-    // Create a new browser window for release notes
+    // Resolve release-notes.html for dev + packaged builds
+    function resolveReleaseNotesHTMLPath() {
+        // Development
+        if (!app.isPackaged) {
+            const devPath = path.join(__dirname, 'release-notes.html');
+            console.log('DEV release-notes path:', devPath);
+            return devPath;
+        }
+
+        // Packaged — possible locations depending on your build config
+        const candidatePaths = [
+            // If you used "files": [ "public/**" ]
+            path.join(process.resourcesPath, 'app', 'public', 'release-notes.html'),
+
+            // If electron-builder placed it directly under app/
+            path.join(process.resourcesPath, 'app', 'release-notes.html'),
+
+            // Very rare but possible fallback location
+            path.join(process.resourcesPath, 'release-notes.html'),
+
+            // If ASAR is on and this file is unpacked (not your case, but safe)
+            path.join(process.resourcesPath, 'app.asar.unpacked', 'public', 'release-notes.html'),
+            path.join(process.resourcesPath, 'app.asar.unpacked', 'release-notes.html')
+        ];
+
+        for (const p of candidatePaths) {
+            try {
+                if (fs.existsSync(p)) {
+                    console.log('Resolved packaged release-notes path:', p);
+                    return p;
+                }
+            } catch (e) { /* ignore errors and try next */ }
+        }
+
+        console.warn('release-notes.html not found in any known packaged locations. Using fallback HTML.');
+        return null;
+    }
+
+    // Create window
     releaseNotesWindow = new BrowserWindow({
         width: 450,
         height: 600,
@@ -86,70 +124,45 @@ function createReleaseNotesWindow(releaseData) {
         maximizable: false,
         fullscreenable: false,
         titleBarStyle: 'hidden',
+        modal: true,
+        parent: BrowserWindow.getFocusedWindow(),
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
             webSecurity: false
-        },
-        modal: true,
-        parent: BrowserWindow.getFocusedWindow()
+        }
     });
 
-    // Remove the menu bar
     releaseNotesWindow.setMenuBarVisibility(false);
 
-    // SIMPLIFIED PATH RESOLUTION - Use the same approach as your main window
-    let htmlPath;
-    if (app.isPackaged) {
-        // In production, use the same method as your main window
-        htmlPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'release-notes.html');
-        console.log('Trying packaged path:', htmlPath);
+    const htmlPath = resolveReleaseNotesHTMLPath();
 
-        if (!fs.existsSync(htmlPath)) {
-            // Fallback to regular app path
-            htmlPath = path.join(process.resourcesPath, 'app', 'release-notes.html');
-            console.log('Trying fallback path:', htmlPath);
-        }
-    } else {
-        // In development, use __dirname like your main window
-        htmlPath = path.join(__dirname, 'release-notes.html');
-        console.log('Development path:', htmlPath);
-    }
-
-    console.log('Final release notes path:', htmlPath);
-    console.log('File exists:', fs.existsSync(htmlPath));
-
-    // If file doesn't exist, use data URL as fallback
-    if (!fs.existsSync(htmlPath)) {
-        console.log('Release notes HTML not found, using fallback content');
+    if (!htmlPath) {
+        // If file missing, load fallback HTML content
         const fallbackHtml = generateFallbackHTML(releaseData);
         releaseNotesWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(fallbackHtml)}`);
     } else {
-        // Load the HTML file using the same method as your main window
-        const fileUrl = url.format({
-            pathname: htmlPath,
-            protocol: 'file:',
-            slashes: true
-        });
-        console.log('Loading release notes from:', fileUrl);
-        releaseNotesWindow.loadURL(fileUrl);
+        try {
+            releaseNotesWindow.loadFile(htmlPath);
+        } catch (err) {
+            console.error('Error loading release-notes.html. Using fallback.', err);
+            const fallbackHtml = generateFallbackHTML(releaseData);
+            releaseNotesWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(fallbackHtml)}`);
+        }
     }
 
-    // When window is ready to show, inject the release data
+    // Inject data into the window after load
     releaseNotesWindow.webContents.once('did-finish-load', () => {
-        console.log('Release notes window loaded, sending data...');
+        console.log('Injecting release notes data into modal...');
         releaseNotesWindow.webContents.send('load-release-data', releaseData);
     });
 
-    // Handle window closed
-    releaseNotesWindow.on('closed', () => {
-        releaseNotesWindow = null;
+    releaseNotesWindow.once('ready-to-show', () => {
+        releaseNotesWindow.show();
     });
 
-    // Handle window ready to show
-    releaseNotesWindow.once('ready-to-show', () => {
-        console.log('Release notes window ready to show');
-        releaseNotesWindow.show();
+    releaseNotesWindow.on('closed', () => {
+        releaseNotesWindow = null;
     });
 
     return releaseNotesWindow;

@@ -1,6 +1,6 @@
 {
   "name": "exambuddy",
-  "version": "1.4.15",
+  "version": "1.4.16",
   "productName": "Exam Buddy",
   "author": {
     "name": "SUGATA CHANDA",
@@ -108,7 +108,8 @@
     "files": [
       "build/**/*",
       "public/electron-prod.js",
-      "public/preload.js"
+      "public/preload.js",
+      "public/release-notes.html"
     ],
     "extraMetadata": {
       "main": "build/electron.js"
