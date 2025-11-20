@@ -1,4 +1,3 @@
-# Version 1.4.25
+# Version 1.4.26
 
--  Student Dashboard Header **Fixed**.
--  Minor Bugs Fixed.
+-  **Added** full markdown for the release notes modal
