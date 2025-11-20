@@ -4885,6 +4885,7 @@ body.keyboard-open .question-footer-final {
   align-items: center;
   max-width: 1200px;
   margin: 0 auto;
+  gap: 20px;
 }
 
 .user-profile {
