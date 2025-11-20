@@ -1,7 +1,5 @@
-# Version 1.4.22
+# Version 1.4.23
+
 - Redesigned the Changelog Modal
-- Some minor size specification changes made in Download Modal
-- Minoe Bugs Fixed
-  
-
-
+- Fixed the redirection url to the Login Page after Password Reset
+- Minor Bugs Fixed

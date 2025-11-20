@@ -1,6 +1,6 @@
 // src/App.js
 import React, { useEffect } from "react";
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, useNavigate, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -42,15 +42,16 @@ import ResultDetailsPage from "screens/ResultDetailsPage";
 
 function App() {
   const location = useLocation();
+  const navigate = useNavigate()
   useEffect(() => {
     if (window.electronAPI) {
       window.electronAPI.onResetToken((token) => {
         console.log("Received reset token:", token);
         // Navigate to reset password page with token
-        Navigate(`/reset-password/${token}`); // using react-router
+        navigate(`/reset-password/${token}`); // using react-router
       });
     }
-  }, []);
+  }, [navigate]);
 
   const [email, setEmail] = React.useState("");
   const [otp, setOtp] = React.useState("");
@@ -80,7 +81,7 @@ function App() {
             <ResetPasswordOTP
               email={email}
               otp={otp}
-              onDone={() => (<Navigate to={'/login'} />)}
+              onDone={() => navigate('/login')}
             />
           } />
 
