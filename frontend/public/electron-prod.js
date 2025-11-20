@@ -485,7 +485,7 @@ autoUpdater.on('download-progress', (progressObj) => {
             downloaded: downloaded,
             total: total,
             timeLeft: timeLeft,
-            version: autoUpdater.currentVersion ? autoUpdater.currentVersion.version : '1.4.1'
+            version: autoUpdater.currentVersion ? autoUpdater.currentVersion.version : ''
         });
     }
 });
