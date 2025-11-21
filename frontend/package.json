@@ -1,6 +1,6 @@
 {
   "name": "exambuddy",
-  "version": "1.4.27",
+  "version": "1.4.28",
   "productName": "Exam Buddy",
   "author": {
     "name": "SUGATA CHANDA",
@@ -23,13 +23,11 @@
     "@testing-library/user-event": "^13.5.0",
     "ajv": "^8.17.1",
     "axios": "^1.11.0",
-    "dompurify": "^3.3.0",
     "electron-is-dev": "^3.0.1",
     "electron-log": "^5.4.3",
     "electron-updater": "^6.6.2",
     "face-api.js": "^0.22.2",
     "fs": "^0.0.1-security",
-    "jsdom": "^27.2.0",
     "lucide-react": "^0.544.0",
     "marked": "^17.0.0",
     "node-powershell": "^5.0.1",

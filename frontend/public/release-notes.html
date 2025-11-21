@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Changelog Modal</title>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.2/dist/purify.min.js"></script>
 
     <style>
         *::-webkit-scrollbar {
@@ -204,31 +205,24 @@
     <script>
         const { ipcRenderer } = require("electron");
         const { marked } = require("marked");
-        const createDOMPurify = require("dompurify");
-        const { JSDOM } = require("jsdom");
 
-        // Create DOMPurify without overwriting real window
-        const jsdomWindow = new JSDOM("").window;
-        const DOMPurify = createDOMPurify(jsdomWindow);
-
-        // GitHub-style markdown config
+        // Configure markdown renderer
         marked.setOptions({
-            breaks: true,
             gfm: true,
+            breaks: true,
             headerIds: false,
             mangle: false
         });
 
-        // Close button handler
+        // Close button
         document.getElementById("closeButton").addEventListener("click", () => {
-            globalThis.window.close();
+            window.close();
         });
 
         function formatTime(t) {
-            const now = new Date();
-            const diff = now - new Date(t);
+            const diff = Date.now() - new Date(t);
             const mins = diff / 60000;
-            if (mins < 1) return "0m ago";
+            if (mins < 1) return "Just now";
             if (mins < 60) return `${Math.floor(mins)}m ago`;
             const hrs = mins / 60;
             if (hrs < 24) return `${Math.floor(hrs)}h ago`;
@@ -246,7 +240,7 @@
 
             if (!Array.isArray(notes)) {
                 notes = typeof notes === "string"
-                    ? notes.split("\n").map(x => x.trim()).filter(Boolean)
+                    ? notes.split("\n").map(line => line.trim()).filter(Boolean)
                     : Object.values(notes);
             }
 
@@ -254,14 +248,15 @@
                 const li = document.createElement("li");
                 li.className = "changelog-item";
 
-                const unsafeHTML = marked.parse(note);
-                li.innerHTML = DOMPurify.sanitize(unsafeHTML);
+                // Markdown → HTML → Sanitized
+                const rendered = marked(note);
+                li.innerHTML = DOMPurify.sanitize(rendered);
 
                 list.appendChild(li);
             });
         }
 
-        // Load IPC data
+        // ---- LISTEN FOR IPC EVENT ----
         ipcRenderer.on("load-release-data", (_, data) => {
             updateReleaseData(data);
             ipcRenderer.send("release-notes-shown");
