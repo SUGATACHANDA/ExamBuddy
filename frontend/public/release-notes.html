@@ -203,16 +203,15 @@
 
     <script>
         const { ipcRenderer } = require("electron");
-
         const { marked } = require("marked");
         const createDOMPurify = require("dompurify");
         const { JSDOM } = require("jsdom");
 
-        // Create DOMPurify instance
-        const window = new JSDOM("").window;
-        const DOMPurify = createDOMPurify(window);
+        // Create DOMPurify without overwriting real window
+        const jsdomWindow = new JSDOM("").window;
+        const DOMPurify = createDOMPurify(jsdomWindow);
 
-        // Enable GitHub-style markdown options
+        // GitHub-style markdown config
         marked.setOptions({
             breaks: true,
             gfm: true,
@@ -220,9 +219,9 @@
             mangle: false
         });
 
-        // Handle close
+        // Close button handler
         document.getElementById("closeButton").addEventListener("click", () => {
-            window.close();
+            globalThis.window.close();
         });
 
         function formatTime(t) {
@@ -255,15 +254,14 @@
                 const li = document.createElement("li");
                 li.className = "changelog-item";
 
-                // Render & sanitize markdown → HTML
                 const unsafeHTML = marked.parse(note);
-                const safeHTML = DOMPurify.sanitize(unsafeHTML);
+                li.innerHTML = DOMPurify.sanitize(unsafeHTML);
 
-                li.innerHTML = safeHTML;
                 list.appendChild(li);
             });
         }
 
+        // Load IPC data
         ipcRenderer.on("load-release-data", (_, data) => {
             updateReleaseData(data);
             ipcRenderer.send("release-notes-shown");

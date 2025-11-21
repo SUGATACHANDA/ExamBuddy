@@ -28,6 +28,7 @@ const MAX_STRIKES = 3;
 let splashWindow;
 let downloadProgressWindow;
 let releaseNotesWindow = null;
+let newVersion = '';
 
 function getLocalChangelogNotes() {
     try {
@@ -406,6 +407,7 @@ autoUpdater.on('update-not-available', () => {
 // This event fires when a new version is found, BEFORE downloading.
 autoUpdater.on('update-available', (info) => {
     log.info(`Update found: version ${info.version}. Prompting user to download.`);
+    newVersion = info.version;
 
     const showDownloadPrompt = () => {
         dialog.showMessageBox({
@@ -462,9 +464,16 @@ autoUpdater.on('download-progress', (progressObj) => {
             `${(progressObj.total / 1024 / 1024).toFixed(1)} MB` :
             '0 MB';
 
-        const timeLeft = progressObj.eta ?
-            `${Math.floor(progressObj.eta / 60)}m ${progressObj.eta % 60}s` :
-            'Calculating...';
+        let timeLeft = 'Calculating...';
+        if (progressObj.eta && progressObj.eta > 0) {
+            const minutes = Math.floor(progressObj.eta / 60);
+            const seconds = progressObj.eta % 60;
+            if (minutes > 0) {
+                timeLeft = `${minutes}m ${seconds}s`;
+            } else {
+                timeLeft = `${seconds}s`;
+            }
+        }
 
         // Determine download stage based on progress
         let stage = 'Downloading update...';
@@ -476,6 +485,8 @@ autoUpdater.on('download-progress', (progressObj) => {
         else if (percent < 95) stage = 'Finalizing download...';
         else stage = 'Almost complete...';
 
+        const displayVersion = newVersion || (autoUpdater.currentVersion ? autoUpdater.currentVersion.version : '1.4.1');
+
         // Send progress update to the window
         downloadProgressWindow.webContents.send('progress-update', {
             percent: percent,
@@ -485,7 +496,8 @@ autoUpdater.on('download-progress', (progressObj) => {
             downloaded: downloaded,
             total: total,
             timeLeft: timeLeft,
-            version: autoUpdater.currentVersion ? autoUpdater.currentVersion.version : ''
+            ersion: displayVersion, // This will now show the new version
+            newVersion: newVersion
         });
     }
 });
@@ -497,8 +509,17 @@ autoUpdater.on('update-downloaded', (info) => {
 
     // CLOSE DOWNLOAD PROGRESS WINDOW
     if (downloadProgressWindow && !downloadProgressWindow.isDestroyed()) {
-        downloadProgressWindow.close();
-        downloadProgressWindow = null;
+        downloadProgressWindow.webContents.send('download-complete', {
+            version: info.version // This is the new version
+        });
+
+        // Close progress window after a delay
+        setTimeout(() => {
+            if (downloadProgressWindow && !downloadProgressWindow.isDestroyed()) {
+                downloadProgressWindow.close();
+                downloadProgressWindow = null;
+            }
+        }, 2000);
     }
 
     try {
@@ -535,6 +556,7 @@ autoUpdater.on('update-downloaded', (info) => {
         console.log("Update downloaded, but window not visible. Queuing restart dialog.");
         updateDialogQueue.push(showRestartPrompt);
     }
+    newVersion = '';
 });
 
 autoUpdater.on('error', (err) => {

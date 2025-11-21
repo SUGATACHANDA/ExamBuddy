@@ -370,6 +370,8 @@
             const detailsContainer = document.getElementById('details');
             let detailsHTML = '';
 
+            const versionText = data.version ? `v${data.version}` : 'latest version';
+
             // Dynamic details based on progress
             if (data.percent < 10) {
                 detailsHTML = `
@@ -426,7 +428,7 @@
 
         // Listen for download completion
         ipcRenderer.on('download-complete', (event, data) => {
-            document.getElementById('status').textContent = 'Download complete! Ready to install.';
+            document.getElementById('status').textContent = `Download complete! Ready to install v${data.version}.`;
             document.getElementById('progress-percent').textContent = '100%';
             document.getElementById('progress-fill').style.width = '100%';
             document.getElementById('pause-btn').style.display = 'none';
