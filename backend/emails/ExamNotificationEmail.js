@@ -1,6 +1,6 @@
 // --- START OF FILE ExamNotificationEmail.js ---
 
-const ExamNotificationEmail = ({ name, examTitle, subject, startTime, duration }) => {
+const ExamNotificationEmail = ({ name, examTitle, subject, startTime, examId, duration }) => {
   const startDate = new Date(startTime);
   const formattedDate = startDate.toLocaleString("en-IN", {
     weekday: "long",
@@ -153,7 +153,7 @@ const ExamNotificationEmail = ({ name, examTitle, subject, startTime, duration }
         <div class="info-row"><span class="label">Duration:</span> ${duration} minutes</div>
       </div>
 
-      <a href="https://exam-buddy-backend.vercel.app/open?examId=${exam._id}">
+      <a href="https://exam-buddy-backend.vercel.app/open?examId=${examId}">
         Open Exam
       </a>
 
