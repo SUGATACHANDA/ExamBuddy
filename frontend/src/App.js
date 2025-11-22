@@ -39,6 +39,7 @@ import VerifyOTP from "screens/VerifyOTP";
 import ResetPasswordOTP from "screens/ResetPasswordOTP";
 import { loadFaceModels } from "utils/faceUtils";
 import ResultDetailsPage from "screens/ResultDetailsPage";
+import OpenDeepLink from "screens/OpenDeepLink";
 
 function App() {
   const location = useLocation();
@@ -329,6 +330,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/open" element={<OpenDeepLink />} />
         </Routes>
         {!location.pathname.startsWith("/exam") && <FloatingSupportButton />}
       </div>
