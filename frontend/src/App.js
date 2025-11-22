@@ -44,6 +44,16 @@ function App() {
   const location = useLocation();
   const navigate = useNavigate()
   useEffect(() => {
+    window.electronAPI.onDeepLink((url) => {
+      const params = new URLSearchParams(url.split("?")[1]);
+      const examId = params.get("examId");
+
+      if (examId) {
+        window.location.href = `/exam/${examId}`;
+      }
+    });
+  }, []);
+  useEffect(() => {
     if (window.electronAPI) {
       window.electronAPI.onResetToken((token) => {
         console.log("Received reset token:", token);

@@ -153,6 +153,10 @@ const ExamNotificationEmail = ({ name, examTitle, subject, startTime, duration }
         <div class="info-row"><span class="label">Duration:</span> ${duration} minutes</div>
       </div>
 
+      <a href="https://exam-buddy-backend.vercel.app/open?examId=${exam._id}">
+        Open Exam
+      </a>
+
       <p>Prepare well and stay confident. Wishing you success!</p>
       <p>Best regards,<br><b>ExamBuddy Team</b></p>
     </div>
