@@ -35,6 +35,7 @@ function createWindow() {
             devTools: isDev,
         }
     });
+    mainWindow.loadURL("file://" + __dirname + "/index.html");
 
     const startUrl = isDev
         ? 'http://localhost:3000'
@@ -67,7 +68,16 @@ app.whenReady().then(() => {
 
 app.on("open-url", (event, url) => {
     event.preventDefault();
-    window.webContents.send("deep-link", url);
+    mainWindow.webContents.send("deep-link", url);
+});
+app.on("second-instance", (event, argv) => {
+    const deepLinkUrl = argv.find(arg => arg.startsWith("exam-buddy://"));
+    if (deepLinkUrl) {
+        if (mainWindow) {
+            mainWindow.webContents.send("deep-link", deepLinkUrl);
+            mainWindow.focus();
+        }
+    }
 });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 app.on('activate', () => { if (mainWindow === null) createWindow(); });

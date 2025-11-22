@@ -44,14 +44,18 @@ function App() {
   const location = useLocation();
   const navigate = useNavigate()
   useEffect(() => {
-    window.electronAPI.onDeepLink((url) => {
-      const params = new URLSearchParams(url.split("?")[1]);
-      const examId = params.get("examId");
+    if (window.electronAPI?.onDeepLink) {
+      window.electronAPI.onDeepLink((url) => {
+        console.log("Deep link received:", url);
 
-      if (examId) {
-        window.location.href = `/exam/${examId}`;
-      }
-    });
+        const params = new URLSearchParams(url.split("?")[1]);
+        const examId = params.get("examId");
+
+        if (examId) {
+          window.location.href = `/exam/${examId}`;
+        }
+      });
+    }
   }, []);
   useEffect(() => {
     if (window.electronAPI) {

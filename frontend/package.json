@@ -96,6 +96,14 @@
         "to": "models"
       }
     ],
+    "protocols": [
+      {
+        "name": "Exam Buddy Protocol",
+        "schemes": [
+          "exam-buddy"
+        ]
+      }
+    ],
     "releaseInfo": {
       "releaseNotesFile": "CHANGELOG.md",
       "releaseNotes": "Release 1.4.2"
