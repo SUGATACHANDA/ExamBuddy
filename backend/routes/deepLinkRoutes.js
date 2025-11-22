@@ -13,4 +13,4 @@ router.get("/open", (req, res) => {
     return res.redirect(`https://exam-buddy.vercel.app/open?examId=${examId}`);
 });
 
-export default router;
+module.exports = router;
