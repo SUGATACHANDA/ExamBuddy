@@ -55,7 +55,6 @@ router.get("/open", (req, res) => {
       line-height: 1.5;
     }
 
-    /* Spinner */
     .loader {
       width: 48px;
       height: 48px;
@@ -64,8 +63,22 @@ router.get("/open", (req, res) => {
       border-radius: 50%;
       animation: spin 0.9s linear infinite;
       margin: 20px auto;
+      transition: opacity 0.3s;
     }
 
+    .hidden {
+      display: none;
+    }
+
+    .success-message {
+      margin-top: 15px;
+      font-size: 14px;
+      color: #3b6cff;
+      font-weight: 500;
+      display: none;
+    }
+
+    /* Buttons */
     a.button {
       display: block;
       width: 100%;
@@ -98,11 +111,8 @@ router.get("/open", (req, res) => {
       background: #eaf0ff;
     }
 
-    /* Animations */
     @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
+      to { transform: rotate(360deg); }
     }
 
     @keyframes fadeIn {
@@ -125,19 +135,35 @@ router.get("/open", (req, res) => {
 
 <body>
   <div class="container">
-    <h2>Opening ExamBuddy...</h2>
+    <h2>Opening ExamBuddy…</h2>
     <p>Please wait, the app should launch shortly.</p>
 
-    <div class="loader"></div>
+    <div id="loader" class="loader"></div>
+    <p id="success" class="success-message">✔ App launch detected — you may close this page if the app opened.</p>
 
     <p>If nothing happens, use the button below:</p>
-    <a href="${deeplink}" class="button primary-btn">Open ExamBuddy App</a>
+    <a id="openBtn" href="${deeplink}" class="button primary-btn">Open ExamBuddy App</a>
 
     <p style="margin-top: 20px;">Don't have the app installed?</p>
     <a href="https://example.com/download" class="button outline-btn">Download ExamBuddy</a>
   </div>
+
+  <script>
+    const loader = document.getElementById("loader");
+    const success = document.getElementById("success");
+    const openBtn = document.getElementById("openBtn");
+
+    openBtn.addEventListener("click", () => {
+      // Give browser time to show confirmation popup
+      setTimeout(() => {
+        loader.classList.add("hidden");
+        success.style.display = "block";
+      }, 800);
+    });
+  </script>
 </body>
 </html>
+
   `);
 });
 
