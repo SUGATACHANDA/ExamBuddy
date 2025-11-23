@@ -1,4 +1,4 @@
-# Version 1.4.28
+# Version 1.5.0
 
--  **Added** full markdown for the release notes modal
--  **Fixed** the time left in Download Modal
+-  **Added** Deep Linking Feature
+-  **Fixed** Minor Bugs

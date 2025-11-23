@@ -30,6 +30,17 @@ let downloadProgressWindow;
 let releaseNotesWindow = null;
 let newVersion = '';
 
+const PROTOCOL = "exam-buddy";
+
+if (app.isPackaged) {
+    app.setAsDefaultProtocolClient(PROTOCOL);
+} else {
+    // Fix for dev mode (Windows needs exe and arguments)
+    app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [
+        path.resolve(process.argv[1])
+    ]);
+}
+
 function getLocalChangelogNotes() {
     try {
         // packaged path
@@ -392,6 +403,24 @@ app.whenReady().then(() => {
     }, 1000 * 60 * 60 * 4);
 });
 
+let deeplinkUrl = null;
+
+// Windows deep linking handler
+if (process.platform === "win32") {
+    const deeplinkArg = process.argv.find(arg => arg.startsWith(`${PROTOCOL}://`));
+    if (deeplinkArg) {
+        deeplinkUrl = deeplinkArg;
+    }
+}
+
+app.on('open-url', (event, url) => {
+    event.preventDefault();
+    deeplinkUrl = url;
+    if (mainWindow) {
+        mainWindow.webContents.send("deeplink", url);
+    }
+});
+
 
 
 // ------------------------------------------
@@ -618,6 +647,9 @@ ipcMain.on('login-screen-ready', () => {
             if (splashWindow && !splashWindow.isDestroyed()) {
                 splashWindow.close();
                 splashWindow = null;
+            }
+            if (deeplinkUrl) {
+                mainWindow.webContents.send("deeplink", deeplinkUrl);
             }
             mainWindow.show();
             handlePostUpdateLaunch();

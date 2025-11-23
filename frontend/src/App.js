@@ -46,9 +46,15 @@ function App() {
   const navigate = useNavigate()
   useEffect(() => {
     if (window.electronAPI?.onDeepLink) {
-      window.electronAPI.onDeepLink(url => {
-        const examId = new URL(url).searchParams.get("examId");
-        navigate(`/`);
+      window.electronAPI.onDeepLink((url) => {
+        console.log("🔗 Deep link received:", url);
+
+        const params = new URL(url).searchParams;
+        const examId = params.get("examId");
+
+        if (examId) {
+          navigate(`/exam/${examId}`);
+        }
       });
     }
   }, []);

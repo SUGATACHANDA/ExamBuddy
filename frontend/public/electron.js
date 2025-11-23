@@ -10,7 +10,16 @@ let isExamInProgress = false;
 
 let violationStrikes = 0;
 const MAX_STRIKES = 3;
-app.setAsDefaultProtocolClient("exambuddy");
+const PROTOCOL = "exam-buddy";
+
+if (app.isPackaged) {
+    app.setAsDefaultProtocolClient(PROTOCOL);
+} else {
+    // Fix for dev mode (Windows needs exe and arguments)
+    app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [
+        path.resolve(process.argv[1])
+    ]);
+}
 
 
 // --- Function to Create the Application Window ---
@@ -62,14 +71,30 @@ function createWindow() {
 // --- App Lifecycle ---
 app.whenReady().then(() => {
     createWindow();
+    if (deeplinkUrl) {
+        mainWindow.webContents.send("deeplink", deeplinkUrl);
+    }
 });
 
-app.on("open-url", (event, url) => {
+let deeplinkUrl = null;
+
+// Windows deep linking handler
+if (process.platform === "win32") {
+    const deeplinkArg = process.argv.find(arg => arg.startsWith(`${PROTOCOL}://`));
+    if (deeplinkArg) {
+        deeplinkUrl = deeplinkArg;
+    }
+}
+
+app.on('open-url', (event, url) => {
     event.preventDefault();
-
-    // Always send user to home screen
-    mainWindow.webContents.send("deep-link", "open-app");
+    deeplinkUrl = url;
+    if (mainWindow) {
+        mainWindow.webContents.send("deeplink", url);
+    }
 });
+
+
 app.on("second-instance", (event, argv) => {
     const url = argv.find(arg => arg.startsWith("exambuddy://"));
     if (url && mainWindow) {
