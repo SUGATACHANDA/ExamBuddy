@@ -153,7 +153,7 @@ const ExamNotificationEmail = ({ name, examTitle, subject, startTime, examId, du
         <div class="info-row"><span class="label">Duration:</span> ${duration} minutes</div>
       </div>
 
-      <a href="https://exam-buddy-backend.vercel.app/open?examId=${examId}">
+      <a href="https://exam-buddy-backend.vercel.app/open">
         Open Exam
       </a>
 

@@ -85,9 +85,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     requestReleaseNotes: () => ipcRenderer.send('request-release-notes'),
     releaseNotesShown: () => ipcRenderer.send('release-notes-shown'),
 
-    onDeepLink: (callback) => {
-        ipcRenderer.on("deep-link", (_, url) => callback(url));
-    },
+    onDeepLink: (callback) => ipcRenderer.on("deep-link", (event, data) => callback(data)),
 
     exitApp: () => ipcRenderer.send('exit-app'),
 

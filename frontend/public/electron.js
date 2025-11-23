@@ -1,5 +1,5 @@
 
-const { app, BrowserWindow, ipcMain, screen, session } = require('electron');
+const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const path = require('path');
 const url = require('url');
 const isDev = require('electron-is-dev');
@@ -11,7 +11,7 @@ let isExamInProgress = false;
 let violationStrikes = 0;
 const MAX_STRIKES = 3;
 
-const protocol = 'exambuddy';
+const protocol = 'exam-buddy';
 app.setAsDefaultProtocolClient(protocol);
 
 
@@ -68,7 +68,9 @@ app.whenReady().then(() => {
 
 app.on("open-url", (event, url) => {
     event.preventDefault();
-    mainWindow.webContents.send("deep-link", url);
+
+    // Always send user to home screen
+    mainWindow.webContents.send("deep-link", "open-app");
 });
 app.on("second-instance", (event, argv) => {
     const deepLinkUrl = argv.find(arg => arg.startsWith("exam-buddy://"));

@@ -46,18 +46,13 @@ function App() {
   const navigate = useNavigate()
   useEffect(() => {
     if (window.electronAPI?.onDeepLink) {
-      window.electronAPI.onDeepLink((url) => {
-        console.log("Deep link received:", url);
-
-        const params = new URLSearchParams(url.split("?")[1]);
-        const examId = params.get("examId");
-
-        if (examId) {
-          window.location.href = `/exam/${examId}`;
+      window.electronAPI.onDeepLink((action) => {
+        if (action === "open-app") {
+          navigate("/"); // redirect to home page
         }
       });
     }
-  }, []);
+  }, [navigate]);
   useEffect(() => {
     if (window.electronAPI) {
       window.electronAPI.onResetToken((token) => {
