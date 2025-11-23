@@ -7,12 +7,50 @@ const { exec } = require('child_process');
 
 let mainWindow;
 let isExamInProgress = false;
+let deeplinkURL = null;
 
 let violationStrikes = 0;
 const MAX_STRIKES = 3;
 
-const protocol = 'exam-buddy';
-app.setAsDefaultProtocolClient(protocol);
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+    app.quit();
+} else {
+    app.on('second-instance', (event, argv) => {
+        // Windows: deep link arrives in argv, e.g. exambuddy://open?examId=...
+        const urlArg = argv.find(a => typeof a === 'string' && a.startsWith('exambuddy://'));
+        if (urlArg) {
+            deeplinkURL = urlArg;
+            if (mainWindow) {
+                mainWindow.webContents.send('deep-link', urlArg);
+                if (mainWindow.isMinimized()) mainWindow.restore();
+                mainWindow.focus();
+            }
+        }
+    });
+
+    app.whenReady().then(() => {
+        createWindow();
+
+        // Register protocol handler on startup
+        // For Windows when packaged this registers the app to handle exambuddy://
+        // For dev we pass process.execPath + args (this helps when running via electron .)
+        if (process.defaultApp) {
+            // running with `electron .` in dev
+            app.setAsDefaultProtocolClient('exambuddy', process.execPath, [path.resolve(process.argv[1])]);
+        } else {
+            // packaged
+            app.setAsDefaultProtocolClient('exambuddy');
+        }
+
+        // macOS: open-url event
+        app.on('open-url', (event, url) => {
+            event.preventDefault();
+            deeplinkURL = url;
+            if (mainWindow) mainWindow.webContents.send('deep-link', url);
+        });
+    });
+}
 
 
 // --- Function to Create the Application Window ---
@@ -59,12 +97,18 @@ function createWindow() {
     mainWindow.on('blur', () => { if (isExamInProgress) mainWindow.focus(); });
     mainWindow.on('close', (e) => { if (isExamInProgress) e.preventDefault(); });
     mainWindow.on('closed', () => (mainWindow = null));
+
+    if (deeplinkURL) {
+        mainWindow.webContents.once('dom-ready', () => {
+            mainWindow.webContents.send('deep-link', deeplinkURL);
+        });
+    }
 }
 
 // --- App Lifecycle ---
-app.whenReady().then(() => {
-    createWindow();
-});
+// app.whenReady().then(() => {
+//     createWindow();
+// });
 
 app.on("open-url", (event, url) => {
     event.preventDefault();

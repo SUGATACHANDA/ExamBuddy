@@ -45,12 +45,29 @@ function App() {
   const location = useLocation();
   const navigate = useNavigate()
   useEffect(() => {
-    if (window.electronAPI?.onDeepLink) {
-      window.electronAPI.onDeepLink((action) => {
-        if (action === "open-app") {
-          navigate("/"); // redirect to home page
+    // Guard: window.electronAPI may be undefined in non-electron environments
+    if (window?.electronAPI?.onDeepLink) {
+      window.electronAPI.onDeepLink((url) => {
+        try {
+          console.log('Deep-link received:', url);
+          // parse url like exambuddy://open?examId=....
+          const parsed = new URL(url);
+          const examId = parsed.searchParams.get('examId');
+          // route to homepage or specific page
+          if (examId) {
+            navigate(`/`); // open app homepage: adapt if you want to go specific route
+            // Optionally pass state or query param:
+            // navigate(`/`, { state: { examId }});
+          } else {
+            navigate(`/`);
+          }
+        } catch (e) {
+          console.error('Invalid deep link URL', e);
         }
       });
+    } else {
+      // Not running inside electron or preload not ready
+      // No op
     }
   }, [navigate]);
   useEffect(() => {

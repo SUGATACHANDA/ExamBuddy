@@ -153,9 +153,7 @@ const ExamNotificationEmail = ({ name, examTitle, subject, startTime, examId, du
         <div class="info-row"><span class="label">Duration:</span> ${duration} minutes</div>
       </div>
 
-      <a href="https://exam-buddy-backend.vercel.app/open">
-        Open Exam
-      </a>
+      <a class="cta-button" href="exambuddy://open?examId=${examId}">Open ExamBuddy App</a>
 
       <p>Prepare well and stay confident. Wishing you success!</p>
       <p>Best regards,<br><b>ExamBuddy Team</b></p>
