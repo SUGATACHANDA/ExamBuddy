@@ -1,9 +1,16 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
-const deepLinkTokenSchema = new mongoose.Schema({
-    token: { type: String, required: true, unique: true },
-    examId: { type: mongoose.Schema.Types.ObjectId, ref: "Exam" },
-    createdAt: { type: Date, default: Date.now, expires: 300 } // auto delete in 5 min
-});
+const deepLinkSchema = new mongoose.Schema(
+    {
+        token: { type: String, required: true, unique: true },
+        expiresAt: { type: Date, required: true }, // expiry support
+        used: { type: Boolean, default: false }
+    },
+    { timestamps: true }
+);
 
-export default mongoose.model("DeepLinkToken", deepLinkTokenSchema);
+// auto delete expired tokens
+deepLinkSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+const DeepLinkToken = mongoose.model("DeepLinkToken", deepLinkSchema)
+module.exports = DeepLinkToken;
