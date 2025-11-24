@@ -153,7 +153,7 @@ router.get("/open", async (req, res) => {
     <a id="openBtn" href="${deeplink}" class="button primary-btn">Open ExamBuddy App</a>
 
     <p style="margin-top: 20px;">Don't have the app installed?</p>
-    <a href="https://example.com/download" class="button outline-btn">Download ExamBuddy</a>
+    <a href="https://welcometoexambuddy.vercel.app/download.html" class="button outline-btn">Download ExamBuddy</a>
   </div>
 
   <script>
