@@ -12,9 +12,12 @@ const ExamNotificationEmail = async ({ name, examTitle, subject, startTime, exam
   });
 
   const token = crypto.randomUUID(); // NEW
-  await DeepLinkToken.create({ token, examId });
+  const tokenRecord = await DeepLinkToken.create({
+    token,
+    expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+  });
 
-  const redirectUrl = `https://exam-buddy-backend.vercel.app/open?token=${token}`;
+  const redirectUrl = `https://exam-buddy-backend.vercel.app/open?token=${tokenRecord.token}`;
 
   return `
   <!DOCTYPE html>
