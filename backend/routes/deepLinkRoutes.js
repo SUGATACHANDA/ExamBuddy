@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const DeepLinkToken = require('../models/DeepLinkToken')
 
 // redirect to frontend deep link handling page
 router.get("/open", async (req, res) => {
