@@ -70,7 +70,7 @@ const createExam = asyncHandler(async (req, res) => {
         const start = new Date(exam.startTime);
         const hoursLeft = Math.ceil((start - now) / (1000 * 60 * 60));
 
-        const html = ExamNotificationEmail({
+        const html = await ExamNotificationEmail({
             name: student.name,
             examTitle: exam.title,
             subject: subjectDoc.name,

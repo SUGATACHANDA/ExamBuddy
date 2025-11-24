@@ -1,5 +1,7 @@
 // --- START OF FILE ExamNotificationEmail.js ---
 const DeepLinkToken = require('../models/DeepLinkToken')
+const crypto = require("crypto");
+
 const ExamNotificationEmail = async ({ name, examTitle, subject, startTime, examId, duration }) => {
   const startDate = new Date(startTime);
   const formattedDate = startDate.toLocaleString("en-IN", {
