@@ -1,6 +1,6 @@
 // --- START OF FILE ExamNotificationEmail.js ---
 
-const ExamNotificationEmail = ({ name, examTitle, subject, startTime, examId, duration }) => {
+const ExamNotificationEmail = async ({ name, examTitle, subject, startTime, examId, duration }) => {
   const startDate = new Date(startTime);
   const formattedDate = startDate.toLocaleString("en-IN", {
     weekday: "long",
@@ -10,6 +10,11 @@ const ExamNotificationEmail = ({ name, examTitle, subject, startTime, examId, du
     hour: "2-digit",
     minute: "2-digit"
   });
+
+  const token = crypto.randomUUID(); // NEW
+  await DeepLinkToken.create({ token, examId });
+
+  const redirectUrl = `https://exam-buddy-backend.vercel.app/open?token=${token}`;
 
   return `
   <!DOCTYPE html>
@@ -153,7 +158,7 @@ const ExamNotificationEmail = ({ name, examTitle, subject, startTime, examId, du
         <div class="info-row"><span class="label">Duration:</span> ${duration} minutes</div>
       </div>
 
-      <a href="https://exam-buddy-backend.vercel.app/open"
+      <a href="${redirectUrl}"
    style="padding:12px 18px; background:#136CFB;color:white;border-radius:6px;text-decoration:none;">
    Open ExamBuddy
 </a>

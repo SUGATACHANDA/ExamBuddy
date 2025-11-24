@@ -1,4 +1,2 @@
-# Version 1.5.0
-
--  **Added** Deep Linking Feature
--  **Fixed** Minor Bugs
+# Version 1.5.1
+-  **Fixed** Deeplink routing bugs

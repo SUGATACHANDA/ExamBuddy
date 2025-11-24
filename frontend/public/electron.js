@@ -9,7 +9,7 @@ let mainWindow;
 let isExamInProgress = false;
 
 let violationStrikes = 0;
-const MAX_STRIKES = 3;
+const MAX_STRIKES = process.env.MAX_STRIKES;
 const PROTOCOL = "exam-buddy";
 
 if (app.isPackaged) {
@@ -89,8 +89,10 @@ if (process.platform === "win32") {
 app.on('open-url', (event, url) => {
     event.preventDefault();
     deeplinkUrl = url;
+    const params = new URL(url);
+    const examId = params.searchParams.get("examId");
     if (mainWindow) {
-        mainWindow.webContents.send("deeplink", url);
+        mainWindow.webContents.send("deeplink", { examId });
     }
 });
 

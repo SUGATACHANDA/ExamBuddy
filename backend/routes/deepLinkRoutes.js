@@ -2,7 +2,14 @@ const express = require("express");
 const router = express.Router();
 
 // redirect to frontend deep link handling page
-router.get("/open", (req, res) => {
+router.get("/open", async (req, res) => {
+
+  const { token } = req.query;
+  if (!token) return res.status(400).send("Missing token");
+
+  // Look up token
+  const record = await DeepLinkToken.findOne({ token });
+  if (!record) return res.status(404).send("Invalid or expired link");
 
   // Deep link to open the app homepage
   const deeplink = `exam-buddy://open-app`;
