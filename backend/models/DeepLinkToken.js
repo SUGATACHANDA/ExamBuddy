@@ -12,5 +12,4 @@ const deepLinkSchema = new mongoose.Schema(
 // auto delete expired tokens
 deepLinkSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-const DeepLinkToken = mongoose.model("DeepLinkToken", deepLinkSchema)
-module.exports = DeepLinkToken;
+module.exports = mongoose.models.DeepLinkToken || mongoose.model("DeepLinkToken", deepLinkSchema);
