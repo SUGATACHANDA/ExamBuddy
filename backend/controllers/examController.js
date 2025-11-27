@@ -81,10 +81,11 @@ const createExam = asyncHandler(async (req, res) => {
             subject: subjectDoc.name,
             startTime: exam.scheduledAt,
             duration: exam.duration,
-            examId: exam._id
+            examId: exam._id,
+            timeZone: exam.timeZone
         });
 
-        await sendEmail(student.email, `Upcoming Exam: ${exam.title}`, html);
+        await sendEmail(student.email, `Upcoming Assessment – ${exam.title} • ${subjectDoc.name} • ${totalMarks} Marks • ${duration} Minutes • Starts: ${formattedDate}`, html);
     };
     const students = await User.find({ semester, role: "student" });
 

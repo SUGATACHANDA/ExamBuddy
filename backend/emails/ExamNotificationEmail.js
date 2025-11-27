@@ -3,7 +3,7 @@ const DeepLinkToken = require('../models/DeepLinkToken')
 const crypto = require("crypto");
 const { DateTime } = require("luxon");
 
-const ExamNotificationEmail = async ({ name, examTitle, subject, startTime, examId, duration }) => {
+const ExamNotificationEmail = async ({ name, examTitle, subject, startTime, examId, duration, timeZone }) => {
   const startDate = new Date(startTime);
   const formattedDate = DateTime
     .fromJSDate(startTime, { zone: "utc" })  // stored value

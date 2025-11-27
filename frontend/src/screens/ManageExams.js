@@ -111,7 +111,7 @@ const ManageExams = () => {
             // This is the new, correct payload structure for the backend            
             const payload = {
                 title, subject: selectedSubject, semester: selectedSemester,
-                scheduledAt: new Date(scheduledAt).toISOString(),
+                scheduledAt: scheduledAt,
                 timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                 examType,
                 duration: examType === 'timed' ? Number(duration) : undefined,
