@@ -1,17 +1,17 @@
 // --- START OF FILE ExamNotificationEmail.js ---
 const DeepLinkToken = require('../models/DeepLinkToken')
 const crypto = require("crypto");
+const { DateTime } = require("luxon");
 
 const ExamNotificationEmail = async ({ name, examTitle, subject, startTime, examId, duration }) => {
   const startDate = new Date(startTime);
-  const formattedDate = startDate.toLocaleString("en-IN", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
+  const formattedDate = DateTime
+    .fromJSDate(startTime, { zone: "utc" })  // stored value
+    .setZone(timeZone)                      // user timezone value from DB
+    .toLocaleString(DateTime.DATETIME_FULL)
+    .toFormat("cccc, dd LLLL yyyy • hh:mm a z");
+
+
 
   const token = crypto.randomUUID(); // NEW
   const tokenRecord = await DeepLinkToken.create({

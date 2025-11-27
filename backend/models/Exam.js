@@ -66,6 +66,10 @@ const examSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    timeZone: {
+        type: String,
+        default: Intl.DateTimeFormat().resolvedOptions().timeZone // optional
+    },
 }, {
     timestamps: true,
 });

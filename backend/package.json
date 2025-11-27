@@ -28,6 +28,7 @@
     "image-hash": "^6.0.1",
     "jimp": "^0.22.12",
     "jsonwebtoken": "^9.0.2",
+    "luxon": "^3.7.2",
     "mongoose": "^8.18.0",
     "multer": "^2.0.2",
     "nodemailer": "^7.0.6",

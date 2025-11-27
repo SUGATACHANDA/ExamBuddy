@@ -8,6 +8,7 @@ const Subject = require('../models/Subject');
 const { default: mongoose } = require('mongoose');
 const ExamNotificationEmail = require('../emails/ExamNotificationEmail');
 const sendEmail = require('../utils/mailer');
+const { DateTime } = require("luxon");
 
 // @desc    Create a new exam
 // @route   POST /api/exams
@@ -23,6 +24,7 @@ const createExam = asyncHandler(async (req, res) => {
         subject,
         semester,
         scheduledAt,
+        timeZone,
         examType,
         duration,
         sections,
@@ -50,13 +52,16 @@ const createExam = asyncHandler(async (req, res) => {
         res.status(404);
         throw new Error("Subject not found");
     }
+
+    const utcDate = DateTime.fromISO(scheduledAt, { zone: timeZone }).toUTC().toJSDate();
     const examPayload = {
         title,
         subject: new mongoose.Types.ObjectId(subject),
         semester,
         sections, // The sections array is passed directly
         createdBy: req.user._id,
-        scheduledAt,
+        scheduledAt: utcDate,
+        timeZone: timeZone,
         duration,
         examType,
         enableCameraProctoring,

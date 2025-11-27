@@ -108,10 +108,11 @@ const ManageExams = () => {
         }
         setIsScheduling(true);
         try {
-            // This is the new, correct payload structure for the backend
+            // This is the new, correct payload structure for the backend            
             const payload = {
                 title, subject: selectedSubject, semester: selectedSemester,
                 scheduledAt: new Date(scheduledAt).toISOString(),
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                 examType,
                 duration: examType === 'timed' ? Number(duration) : undefined,
                 // Send the sections array, ensuring question objects are just IDs
