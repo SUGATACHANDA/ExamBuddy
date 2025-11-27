@@ -85,7 +85,7 @@ const createExam = asyncHandler(async (req, res) => {
             timeZone: exam.timeZone
         });
 
-        await sendEmail(student.email, `Upcoming Assessment – ${exam.title} • ${subjectDoc.name} • ${totalMarks} Marks • ${duration} Minutes • Starts: ${formattedDate}`, html);
+        await sendEmail(student.email, `Upcoming Assessment – ${exam.title} • ${subjectDoc.name} • ${duration} Minutes • Starts: ${formattedDate}`, html);
     };
     const students = await User.find({ semester, role: "student" });
 
