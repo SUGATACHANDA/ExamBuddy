@@ -6,10 +6,9 @@ const { DateTime } = require("luxon");
 const ExamNotificationEmail = async ({ name, examTitle, subject, startTime, examId, duration, timeZone }) => {
   const startDate = new Date(startTime);
   const formattedDate = DateTime
-    .fromJSDate(startTime, { zone: "utc" })  // stored value
-    .setZone(timeZone)                      // user timezone value from DB
-    .toLocaleString(DateTime.DATETIME_FULL)
-    .toFormat("cccc, dd LLLL yyyy • hh:mm a z");
+    .fromJSDate(startTime, { zone: "utc" })
+    .setZone(timeZone)
+    .toFormat("cccc, dd LLLL yyyy • hh:mm a ZZZZ");
 
 
 
