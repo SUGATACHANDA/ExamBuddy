@@ -19,7 +19,7 @@ const {
     getCoursesForHOD,
     getAllDepartmentExams,
     getExamsWithResults,
-    get
+    bulkCSVUpload
 } = require('../controllers/hodController');
 const { getResultsForExam } = require('../controllers/resultController');
 const upload = require("../middlewares/upload");
@@ -54,4 +54,10 @@ router.get('/my-courses', getCoursesForHOD);
 router.get('/department-exams', getAllDepartmentExams);
 router.get('/exams-with-results', getExamsWithResults);
 router.get('/results/:examId', getResultsForExam);
+router.post(
+    "/users/bulk-upload",
+    authorize('HOD'),      // your existing HOD auth middleware
+    upload.single("file"),
+    bulkCSVUpload
+);
 module.exports = router;

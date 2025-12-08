@@ -493,6 +493,9 @@ const ExamScreen = () => {
             if (window.electronAPI?.examFinished) {
                 try { window.electronAPI.examFinished(); } catch (e) { console.warn("electronAPI examFinished failed", e); }
             }
+            if (window.electronAPI?.stopLiveDisplayMonitor) {
+                window.electronAPI.stopLiveDisplayMonitor();
+            }
         } catch (e) { }
 
     }, [examId, screenState, studentId]);
@@ -650,6 +653,19 @@ const ExamScreen = () => {
                     if (window.electronAPI && window.electronAPI.examStarted) {
                         window.electronAPI.examStarted();
                     }
+                    if (window.electronAPI?.startLiveDisplayMonitor) {
+                        window.electronAPI.startLiveDisplayMonitor({
+                            examId,
+                            studentId
+                        }).then(() => {
+                            console.log("Live display monitor started!");
+                        });
+                    }
+                    window.electronAPI.onDisplayViolation((data) => {
+                        console.warn("DISPLAY VIOLATION:", data);
+                        setError("Multiple displays or screen mirroring detected.");
+                        handleViolation("DISPLAY_VIOLATION");
+                    });
                     if (window.electronAPI && window.electronAPI.onViolation) {
                         window.electronAPI.onViolation(handleViolation);
                     }

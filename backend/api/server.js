@@ -33,6 +33,7 @@ const hodRoutes = require('../routes/hodRoutes');
 const faceRoutes = require('../routes/faceRoutes.js');
 const subjectRoutes = require("../routes/subjectRoutes.js");
 const deepLinkRoutes = require("../routes/deepLinkRoutes.js");
+const studentRoutes = require("../routes/studentRoutes");
 
 const startServer = async () => {
     await connectDB();
@@ -333,6 +334,7 @@ app.use('/api/hod', hodRoutes);
 app.use('/api/face', faceRoutes);
 app.use("/api/subjects", subjectRoutes);
 app.use("/", deepLinkRoutes);
+app.use("/api/student", studentRoutes);
 
 app.get('/', (req, res) => {
     res.send('Exam App API is running...');

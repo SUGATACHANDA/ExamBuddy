@@ -35,6 +35,10 @@ const HODManageUsers = () => {
     const [studentSearchQuery, setStudentSearchQuery] = useState("");
     const [teacherSearchQuery, setTeacherSearchQuery] = useState("");
 
+    const [csvFile, setCsvFile] = useState(null);
+    const [csvRole, setCsvRole] = useState("student");
+    const [csvUploadResult, setCsvUploadResult] = useState(null);
+
     const usersPerPage = 6;
 
     const resetForm = useCallback((role) => {
@@ -286,6 +290,12 @@ const HODManageUsers = () => {
                     >
                         + Register New User
                     </button>
+                    <button
+                        className={`tab-button ${activeTab === "create" ? "active" : ""}`}
+                        onClick={() => handleTabChange("createBulk")}
+                    >
+                        + Register New User
+                    </button>
                 </div>
 
                 <div className="tab-content">
@@ -404,6 +414,45 @@ const HODManageUsers = () => {
                                         : `Register ${formRole.charAt(0).toUpperCase() + formRole.slice(1)}`}
                                 </button>
                             </form>
+                        </div>
+                    )}
+                    {activeTab === "createBulk" && (
+                        <div className="csv-upload-box">
+                            <h3>Bulk Upload via CSV</h3>
+
+                            <select value={csvRole} onChange={(e) => setCsvRole(e.target.value)}>
+                                <option value="student">Student CSV</option>
+                                <option value="teacher">Teacher CSV</option>
+                            </select>
+
+                            <input
+                                type="file"
+                                accept=".csv"
+                                onChange={(e) => setCsvFile(e.target.files[0])}
+                            />
+
+                            <button
+                                disabled={!csvFile}
+                                onClick={async () => {
+                                    const fd = new FormData();
+                                    fd.append("file", csvFile);
+                                    fd.append("role", csvRole);
+
+                                    const res = await api.post("/hod/users/bulk-upload", fd, {
+                                        headers: { "Content-Type": "multipart/form-data" },
+                                    });
+
+                                    setCsvUploadResult(res.data);
+                                    fetchData();
+                                }}
+                                className="btn btn-primary"
+                            >
+                                Upload CSV
+                            </button>
+
+                            {csvUploadResult && (
+                                <pre>{JSON.stringify(csvUploadResult, null, 2)}</pre>
+                            )}
                         </div>
                     )}
 

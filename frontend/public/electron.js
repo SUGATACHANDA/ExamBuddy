@@ -68,6 +68,65 @@ function createWindow() {
     mainWindow.on('closed', () => (mainWindow = null));
 }
 
+function hasMultipleDisplays() {
+    const displays = screen.getAllDisplays();
+    const realDisplays = displays.filter(d => {
+        const { width, height } = d.size || d.bounds || {};
+        // filter weird tiny/virtual devices — adjust threshold if needed
+        return (width && height && Math.max(width, height) >= 100);
+    });
+    return realDisplays.length > 1;
+}
+
+async function checkForbiddenProcesses() {
+    return new Promise((resolve) => {
+        const platform = process.platform;
+        const forbidden = [
+            'TeamViewer.exe', 'AnyDesk.exe', 'VNC', 'vncserver', 'vncviewer',
+            'LogMeIn.exe', 'RemoteDesktop', 'mstsc.exe', 'rdesktop', 'xrdp'
+        ];
+
+        // Windows
+        if (platform === 'win32') {
+            exec('tasklist /FI "STATUS eq running"', (err, stdout) => {
+                if (err) return resolve(false);
+                const out = stdout.toLowerCase();
+                const found = forbidden.some(p => out.includes(p.toLowerCase()));
+                resolve(found);
+            });
+            return;
+        }
+
+        // macOS / Linux - use ps aux
+        exec('ps aux', (err, stdout) => {
+            if (err) return resolve(false);
+            const out = stdout.toLowerCase();
+            const found = forbidden.some(p => out.includes(p.toLowerCase()));
+            resolve(found);
+        });
+    });
+}
+
+function hasSuspiciousVirtualDisplay() {
+    const ds = screen.getAllDisplays();
+    return ds.some(d => {
+        const name = (d.displayId || d.id || '').toString().toLowerCase();
+        const { width, height } = d.size || d.bounds || {};
+        const label = (d?.workAreaSize?.width ? '' : '') + (d?.name || '');
+        if ((width && height) && Math.max(width, height) < 200) return true;
+        if ((d?.internal === false) && /virtual|displaylink|dummy|mirroring/i.test(String(d?.name || '') + name)) return true;
+        return false;
+    });
+}
+
+
+
+let liveMonitor = {
+    listeningWindowId: null
+};
+
+
+
 // --- App Lifecycle ---
 app.whenReady().then(() => {
     createWindow();
@@ -220,7 +279,6 @@ ipcMain.on('exam-finished', () => {
     violationStrikes = 0;
 });
 
-
 // --- THE NEW, DEFINITIVE VIOLATION HANDLER with 3-STRIKES LOGIC ---
 ipcMain.on('ipc-violation', (event, violationType) => {
     if (!isExamInProgress) return; // Ignore violations if exam is not active
@@ -248,5 +306,84 @@ ipcMain.on('ipc-violation', (event, violationType) => {
                 type: violationType
             });
         }
+    }
+});
+
+ipcMain.handle('security-checks-at-start', async () => {
+    try {
+        const multiple = hasMultipleDisplays();
+        const forbiddenProcRunning = await checkForbiddenProcesses();
+        const suspiciousVirtual = hasSuspiciousVirtualDisplay();
+        // Additionally detect RDP session: on Windows, SESSIONNAME env sometimes equals "RDP-Tcp"
+        const isRdpSession = !!process.env.SESSIONNAME && process.env.SESSIONNAME.toLowerCase().includes('rdp');
+
+        return {
+            multipleDisplays: multiple,
+            forbiddenProcess: forbiddenProcRunning,
+            suspiciousVirtual,
+            isRdpSession
+        };
+    } catch (e) {
+        console.error('security-checks-at-start error', e);
+        return { error: true };
+    }
+});
+
+ipcMain.handle('start-live-display-monitor', (event, { examId, studentId }) => {
+    liveMonitor.listeningWindowId = event.sender.id;
+
+    const sendViolation = (reason) => {
+        if (!isExamInProgress) return;
+        if (mainWindow) {
+            mainWindow.webContents.send(
+                "display-monitor-violation",
+                { reason, examId, studentId }
+            );
+        }
+    };
+
+    const onDisplayAdded = () => {
+        if (hasMultipleDisplays()) {
+            sendViolation("MULTIPLE_DISPLAYS_DETECTED");
+        }
+        if (hasSuspiciousVirtualDisplay()) {
+            sendViolation("VIRTUAL_DISPLAY_DETECTED");
+        }
+    };
+
+    const onDisplayRemoved = () => {
+        if (hasMultipleDisplays()) {
+            sendViolation("MULTIPLE_DISPLAYS_DETECTED");
+        }
+    };
+
+    const onDisplayMetricsChanged = () => {
+        if (hasMultipleDisplays()) {
+            sendViolation("DISPLAY_CHANGED_MULTIPLE_DETECTED");
+        }
+    };
+
+    screen.on("display-added", onDisplayAdded);
+    screen.on("display-removed", onDisplayRemoved);
+    screen.on("display-metrics-changed", onDisplayMetricsChanged);
+
+    return true;
+});
+
+ipcMain.handle('stop-live-display-monitor', (event) => {
+    try {
+        if (liveMonitor._procInterval) clearInterval(liveMonitor._procInterval);
+
+        if (liveMonitor._onDisplayAdded) {
+            screen.removeListener('display-added', liveMonitor._onDisplayAdded);
+            screen.removeListener('display-removed', liveMonitor._onDisplayRemoved);
+            screen.removeListener('display-metrics-changed', liveMonitor._onDisplayAdded);
+        }
+
+        liveMonitor = { listeningWindowId: null };
+        return { stopped: true };
+    } catch (e) {
+        console.error('stop-live-display-monitor error', e);
+        return { error: true };
     }
 });

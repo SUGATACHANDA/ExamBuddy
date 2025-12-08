@@ -85,11 +85,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
     requestReleaseNotes: () => ipcRenderer.send('request-release-notes'),
     releaseNotesShown: () => ipcRenderer.send('release-notes-shown'),
 
+
+
     onDeepLink: (callback) => ipcRenderer.on("deeplink", (_, url) => callback(url)),
 
     exitApp: () => ipcRenderer.send('exit-app'),
     sendToMain: (channel, data) => {
         ipcRenderer.send(channel, data);
+    },
+
+    securityChecksAtStart: () => ipcRenderer.invoke('security-checks-at-start'),
+    startLiveDisplayMonitor: (payload) => ipcRenderer.invoke('start-live-display-monitor', payload),
+    stopLiveDisplayMonitor: () => ipcRenderer.invoke('stop-live-display-monitor'),
+    onDisplayViolation: (cb) => {
+        ipcRenderer.on('display-monitor-violation', (e, data) => cb(data));
     },
 
 

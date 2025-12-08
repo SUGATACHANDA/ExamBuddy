@@ -40,6 +40,19 @@ export interface IElectronAPI {
 
     toggleKeyboardLock: (lock: boolean) => void;
     onShowWarningDialog: (callback: (data: { strike: number, max: number, type: string }) => void) => void;
+
+    getDisplayCount: () => Promise<number>;
+
+    startLiveDisplayMonitor: (payload: {
+        examId: string;
+        studentId: string;
+    }) => Promise<{ started: boolean } | boolean>;
+
+    stopLiveDisplayMonitor: () => Promise<{ stopped: boolean } | boolean>;
+
+    onDisplayViolation: (
+        callback: (data: { reason: string }) => void
+    ) => void;
 }
 
 // Now, we augment the global Window interface to include our `electronAPI` property

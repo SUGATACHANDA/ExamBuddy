@@ -12,6 +12,9 @@ const sendEmail = require('../utils/mailer');
 const streamifier = require("streamifier");
 const fs = require('fs')
 const { v2: cloudinary } = require('cloudinary');
+const csv = require("csv-parser");
+const multer = require("multer");
+const upload = multer({ dest: "uploads/" });
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -131,6 +134,88 @@ exports.registerStudent = asyncHandler(async (req, res) => {
     await sendEmail(user.email, "Welcome to ExamBuddy – Your Account Details", html);
     res.status(201).json({ _id: user._id, name: user.name });
 });
+
+exports.bulkCSVUpload = asyncHandler(async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ message: "CSV file is required." });
+    }
+
+    const { role } = req.body; // "student" or "teacher"
+    if (!["student", "teacher"].includes(role)) {
+        return res.status(400).json({ message: "Invalid role for bulk upload." });
+    }
+
+    const results = [];
+    const failed = [];
+
+    fs.createReadStream(req.file.path)
+        .pipe(csv())
+        .on("data", (row) => results.push(row))
+        .on("end", async () => {
+            for (let row of results) {
+                try {
+                    if (role === "teacher") {
+                        await createTeacherFromCSV(row, req.user);
+                    } else {
+                        await createStudentFromCSV(row, req.user);
+                    }
+                } catch (err) {
+                    failed.push({
+                        row,
+                        error: err.message,
+                    });
+                }
+            }
+
+            fs.unlinkSync(req.file.path);
+
+            res.json({
+                total: results.length,
+                success: results.length - failed.length,
+                failed,
+            });
+        });
+});
+
+// --------------------------------------
+// HELPERS
+// --------------------------------------
+async function createTeacherFromCSV(row, hodUser) {
+    const { name, collegeId, email, password } = row;
+
+    const exists = await User.findOne({ $or: [{ email }, { collegeId }] });
+    if (exists) throw new Error("User already exists.");
+
+    await User.create({
+        name,
+        collegeId,
+        email,
+        password,
+        role: "teacher",
+        college: hodUser.college,
+        department: hodUser.department,
+    });
+}
+
+async function createStudentFromCSV(row, hodUser) {
+    const { name, collegeId, email, password, courseId, semesterId } = row;
+
+    const exists = await User.findOne({ $or: [{ email }, { collegeId }] });
+    if (exists) throw new Error("User already exists.");
+
+    await User.create({
+        name,
+        collegeId,
+        email,
+        password,
+        role: "student",
+        college: hodUser.college,
+        department: hodUser.department,
+        course: courseId,
+        semester: semesterId,
+        degree: (await Course.findById(courseId)).degree,
+    });
+}
 
 
 // =========================================================================

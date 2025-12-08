@@ -7,6 +7,7 @@ import PermissionModal from "../components/PermissionModal";
 import ChangePasswordModal from "components/ui/ChangePasswordModal";
 import Countdown from "../components/Countdown";
 import { ClockIcon, CalendarIcon, AlertCircleIcon, CheckCircleIcon, LogOutIcon, KeyIcon, RefreshCwIcon } from "lucide-react";
+import BiometricRegisterModal from "components/BiometricRegisterModal";
 
 // --- Clock Component ---
 export const Clock = () => {
@@ -36,9 +37,34 @@ const StudentDashboard = () => {
     const [isChangePassModalOpen, setIsChangePassModalOpen] = useState(false);
     const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
     const [targetExamId, setTargetExamId] = useState(null);
+    const [isBiometricModalOpen, setBiometricModalOpen] = useState(false);
 
     const { userInfo, logout } = useAuth();
     const navigate = useNavigate();
+
+    React.useEffect(() => {
+        const checkDisplays = async () => {
+            try {
+                const result = await window.electronAPI.getDisplayCount();
+                if (result > 1) {
+                    alert(
+                        "Multiple monitors detected!\n\n" +
+                        "Please disconnect all external displays, projectors or screen casting.\n" +
+                        "You can start the exam only with a single monitor."
+                    );
+                }
+            } catch (err) {
+                console.error("Display check failed:", err);
+            }
+        };
+
+        checkDisplays();
+    }, []);
+    useEffect(() => {
+        if (userInfo?.role === "student" && !userInfo.faceDescriptor?.length) {
+            setBiometricModalOpen(true);
+        }
+    }, [userInfo]);
 
     const fetchData = useCallback(async () => {
         if (!isRefreshing) setLoading(true);
@@ -176,6 +202,13 @@ const StudentDashboard = () => {
 
     return (
         <div className="professional-dashboard">
+            <BiometricRegisterModal
+                isOpen={isBiometricModalOpen}
+                onComplete={() => {
+                    setBiometricModalOpen(false);
+                    window.location.reload();
+                }}
+            />
             {/* Header */}
             <header className="dashboard-header">
                 <div className="header-content">
@@ -285,7 +318,15 @@ const StudentDashboard = () => {
                                                             />
                                                         </div>
                                                         <button
-                                                            onClick={() => handleStartExamClick(exam._id)}
+                                                            onClick={() => {
+                                                                window.electronAPI.getDisplayCount().then(count => {
+                                                                    if (count > 1) {
+                                                                        alert("❌ Cannot start exam.\nMultiple displays detected.\nDisconnect external screens.");
+                                                                        return;
+                                                                    }
+                                                                    handleStartExamClick(exam._id);
+                                                                });
+                                                            }}
                                                             className="btn-primary"
                                                         >
                                                             Start Exam
