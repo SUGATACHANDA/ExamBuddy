@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 // src/screens/StudentDashboard.js
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -8,6 +9,8 @@ import ChangePasswordModal from "components/ui/ChangePasswordModal";
 import Countdown from "../components/Countdown";
 import { ClockIcon, CalendarIcon, AlertCircleIcon, CheckCircleIcon, LogOutIcon, KeyIcon, RefreshCwIcon } from "lucide-react";
 import BiometricRegisterModal from "components/BiometricRegisterModal";
+import AlertModal from "../components/ui/AlertModal";
+import { useAlert } from "../hooks/useAlert";
 
 // --- Clock Component ---
 export const Clock = () => {
@@ -39,19 +42,56 @@ const StudentDashboard = () => {
     const [targetExamId, setTargetExamId] = useState(null);
     const [isBiometricModalOpen, setBiometricModalOpen] = useState(false);
 
-    const { userInfo, logout } = useAuth();
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [activePanel, setActivePanel] = useState(null);
+
+    const [userLoaded, setUserLoaded] = useState(false);
+
+    const [alertConfig, setAlertConfig, openAlert, closeAlert] = useAlert();
+
+    const { userInfo, logout, updateUser } = useAuth();
     const navigate = useNavigate();
+
+    useEffect(() => {
+        async function refreshUser() {
+            try {
+                const fresh = (await api.get("/auth/me")).data;
+                updateUser(fresh);
+            } finally {
+                setUserLoaded(true);
+            }
+        }
+        refreshUser();
+    }, []);
+
+    useEffect(() => {
+        if (!userLoaded) return;
+        if (!userInfo) return;
+
+        const desc = userInfo.faceDescriptor;
+
+        const hasBiometric =
+            (Array.isArray(desc) && desc.length > 0) ||
+            (desc && typeof desc === "object" && desc.type === "Buffer") ||
+            typeof desc === "string";
+
+        setBiometricModalOpen(!hasBiometric);
+    }, [userLoaded, userInfo]);
+
 
     React.useEffect(() => {
         const checkDisplays = async () => {
             try {
                 const result = await window.electronAPI.getDisplayCount();
                 if (result > 1) {
-                    alert(
-                        "Multiple monitors detected!\n\n" +
-                        "Please disconnect all external displays, projectors or screen casting.\n" +
-                        "You can start the exam only with a single monitor."
-                    );
+                    openAlert({
+                        type: "warning",
+                        title: "Multiple Displays Detected",
+                        message: "Please disconnect external displays to start the exam.",
+                        confirmText: "Understood",
+                        showCancel: false,
+                        onConfirm: () => console.log("acknowledged")
+                    });
                 }
             } catch (err) {
                 console.error("Display check failed:", err);
@@ -59,12 +99,8 @@ const StudentDashboard = () => {
         };
 
         checkDisplays();
-    }, []);
-    useEffect(() => {
-        if (userInfo?.role === "student" && !userInfo.faceDescriptor?.length) {
-            setBiometricModalOpen(true);
-        }
-    }, [userInfo]);
+    }, [openAlert]);
+
 
     const fetchData = useCallback(async () => {
         if (!isRefreshing) setLoading(true);
@@ -202,11 +238,25 @@ const StudentDashboard = () => {
 
     return (
         <div className="professional-dashboard">
+
+            <AlertModal
+                {...alertConfig}
+                isOpen={alertConfig.isOpen}
+                onConfirm={() => {
+                    alertConfig.onConfirm?.();
+                    closeAlert();
+                }}
+                onCancel={() => {
+                    alertConfig.onCancel?.();
+                    closeAlert();
+                }}
+            />
+
             <BiometricRegisterModal
                 isOpen={isBiometricModalOpen}
-                onComplete={() => {
+                onComplete={(freshUser) => {
+                    updateUser(freshUser);          // update context
                     setBiometricModalOpen(false);
-                    window.location.reload();
                 }}
             />
             {/* Header */}
@@ -236,25 +286,83 @@ const StudentDashboard = () => {
                         </div>
                         <div className="header-actions">
                             <button
-                                onClick={() => setIsChangePassModalOpen(true)}
-                                className="header-btn"
-                                title="Change Password"
+                                className="menu-btn"
+                                onClick={() => setIsMenuOpen(true)}
+                                title="Menu"
                             >
-                                <KeyIcon size={18} />
-                                Change Password
-                            </button>
-                            <button
-                                onClick={logout}
-                                className="header-btn logout"
-                                title="Logout"
-                            >
-                                <LogOutIcon size={18} />
-                                Logout
+                                ☰
                             </button>
                         </div>
                     </div>
                 </div>
             </header>
+
+            <div className={`menu-drawer ${isMenuOpen ? "open" : ""}`}>
+                <div className="menu-header">
+                    <h3>Menu</h3>
+                    <button onClick={() => { setIsMenuOpen(false); setActivePanel(null); }}>✕</button>
+                </div>
+
+                <div className="menu-items">
+
+                    <button onClick={() => setActivePanel("profile")} className="menu-item">
+                        Profile
+                    </button>
+
+                    <button onClick={() => setActivePanel("password")} className="menu-item">
+                        Change Password
+                    </button>
+
+                    <button onClick={() => setActivePanel("biometric")} className="menu-item">
+                        Biometric Registration
+                    </button>
+
+                    <button onClick={logout} className="menu-item logout">
+                        Logout
+                    </button>
+                </div>
+            </div>
+
+            <div className={`side-panel ${activePanel ? "open" : ""}`}>
+
+                {activePanel === "profile" && (
+                    <div className="panel-content">
+                        <h2>Profile Details</h2>
+                        <p><strong>Name:</strong> {userInfo?.name}</p>
+                        <p><strong>College ID:</strong> {userInfo?.collegeId}</p>
+                        <p><strong>College:</strong> {userInfo?.college?.name}</p>
+                        <p><strong>Department:</strong> {userInfo?.department?.name}</p>
+                        <p><strong>Degree:</strong> {userInfo?.degree}</p>
+                        <p><strong>Course:</strong> {userInfo?.course}</p>
+                        <p><strong>Semester:</strong> {userInfo?.semester}</p>
+                    </div>
+                )}
+
+                {activePanel === "password" && (
+                    <div className="panel-content">
+                        <h2>Change Password</h2>
+                        <ChangePasswordModal onClose={() => setActivePanel(null)} embed />
+                    </div>
+                )}
+
+                {activePanel === "biometric" && (
+                    <div className="panel-content">
+                        <h2>Biometric Registration</h2>
+
+                        <p>Your biometric data is {userInfo.faceDescriptor ? "registered" : "not registered"}.</p>
+
+                        <button
+                            className="btn-primary"
+                            onClick={() => {
+                                setActivePanel(null);
+                                setBiometricModalOpen(true);
+                            }}
+                        >
+                            Retake Biometric
+                        </button>
+                    </div>
+                )}
+            </div>
 
             {isChangePassModalOpen && (
                 <ChangePasswordModal

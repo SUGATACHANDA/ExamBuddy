@@ -8,6 +8,7 @@ import UserCard from "../../components/ui/UserCard";
 import Pagination from "../../components/teacher/Pagination";
 import LoadingScreen from "components/LoadingScreen";
 import { getDescriptorFromFile } from '../../utils/faceUtils';
+import CSVPreviewUploader from "components/CSVPreviewUploader";
 
 const HODManageUsers = () => {
     const { userInfo } = useAuth();
@@ -294,7 +295,7 @@ const HODManageUsers = () => {
                         className={`tab-button ${activeTab === "create" ? "active" : ""}`}
                         onClick={() => handleTabChange("createBulk")}
                     >
-                        + Register New User
+                        + Register New User via Excel File(CSV)
                     </button>
                 </div>
 
@@ -417,43 +418,9 @@ const HODManageUsers = () => {
                         </div>
                     )}
                     {activeTab === "createBulk" && (
-                        <div className="csv-upload-box">
-                            <h3>Bulk Upload via CSV</h3>
 
-                            <select value={csvRole} onChange={(e) => setCsvRole(e.target.value)}>
-                                <option value="student">Student CSV</option>
-                                <option value="teacher">Teacher CSV</option>
-                            </select>
+                        <CSVPreviewUploader />
 
-                            <input
-                                type="file"
-                                accept=".csv"
-                                onChange={(e) => setCsvFile(e.target.files[0])}
-                            />
-
-                            <button
-                                disabled={!csvFile}
-                                onClick={async () => {
-                                    const fd = new FormData();
-                                    fd.append("file", csvFile);
-                                    fd.append("role", csvRole);
-
-                                    const res = await api.post("/hod/users/bulk-upload", fd, {
-                                        headers: { "Content-Type": "multipart/form-data" },
-                                    });
-
-                                    setCsvUploadResult(res.data);
-                                    fetchData();
-                                }}
-                                className="btn btn-primary"
-                            >
-                                Upload CSV
-                            </button>
-
-                            {csvUploadResult && (
-                                <pre>{JSON.stringify(csvUploadResult, null, 2)}</pre>
-                            )}
-                        </div>
                     )}
 
                     {/* --- VIEW STUDENTS --- */}

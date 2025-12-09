@@ -30,6 +30,11 @@ export const AuthProvider = ({ children }) => {
         setSubmitExamHandler(null);
     };
 
+    const updateUser = (newUserData) => {
+        localStorage.getItem("user", JSON.stringify(newUserData));
+        setUserInfo(newUserData);
+    };
+
     const storeSubmitHandler = useCallback((handler) => {
         // We store the function directly. The handler is a function that returns a function.
         setSubmitExamHandler(() => handler);
@@ -43,7 +48,8 @@ export const AuthProvider = ({ children }) => {
         <AuthContext.Provider value={{
             userInfo, login, logout, submitExamHandler,
             storeSubmitHandler,
-            clearContextSubmitHandler
+            clearContextSubmitHandler,
+            updateUser
         }}>
             {!loading && children}
         </AuthContext.Provider>

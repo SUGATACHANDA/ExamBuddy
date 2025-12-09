@@ -44,9 +44,9 @@ body {
   -moz-osx-font-smoothing: grayscale;
   /* overflow: hidden; */
 }
-* {
+/* * {
   user-select: none;
-}
+} */
 
 .App {
   text-align: center;
@@ -6107,4 +6107,286 @@ body.keyboard-open .question-footer-final {
   border: 1px solid #e5e7eb;
   white-space: pre-wrap;
   overflow-x: auto;
+}
+.csv-container {
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  margin-top: 30px;
+  background: #fff;
+  overflow-x: auto;
+}
+
+/* Error Box */
+.csv-error-box {
+  background: #ffe0e0;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  color: #b80000;
+}
+
+/* CSV table wrapper with scroll */
+.csv-preview-wrapper {
+  max-height: 300px;
+  overflow-y: auto; /* vertical scroll */
+  overflow-x: auto; /* horizontal scroll */
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  margin-top: 10px;
+  white-space: nowrap; /* prevents cells from wrapping */
+}
+
+/* Table styling */
+.csv-preview-table {
+  border-collapse: collapse;
+  min-width: 1200px; /* ensures horizontal scrolling */
+  background: white;
+  overflow-x: auto;
+}
+
+.csv-preview-table th {
+  background: #f7f7f7;
+  padding: 8px;
+  border: 1px solid #ccc;
+  font-weight: 600;
+  text-align: left;
+}
+
+.csv-preview-table td {
+  border: 1px solid #ddd;
+  padding: 6px;
+  font-size: 14px;
+}
+.csv-upload-report {
+  margin-top: 20px;
+  background: #e8ffe8;
+  padding: 12px;
+  border-radius: 8px;
+  white-space: pre-wrap;
+}
+.video-container {
+  position: relative;
+  width: 100%;
+  height: 360px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #000; /* helps contrast */
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.video-feed {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* blue alignment box */
+.blue-face-box {
+  position: absolute;
+  width: 240px;
+  height: 300px;
+  border: 4px solid rgba(33, 150, 243, 0.9);
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(33, 150, 243, 0.25);
+  pointer-events: none;
+  transition: box-shadow 180ms ease, border-color 180ms ease;
+  /* center the box */
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* when face is ready turn green */
+.blue-face-box.green-ready {
+  border-color: rgba(34, 197, 94, 0.95);
+  box-shadow: 0 0 28px rgba(34, 197, 94, 0.35);
+}
+
+.instruction {
+  text-align: center;
+  margin: 10px 0;
+  font-weight: 500;
+  color: #fff;
+}
+
+/* Alert Modal */
+/* Backdrop */
+.alert-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.6); /* semi-opaque dark */
+  z-index: 6000;
+}
+
+/* Modal box */
+.alert-box {
+  width: 480px;
+  max-width: calc(100% - 32px);
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(2, 6, 23, 0.35);
+  padding: 18px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial;
+}
+
+/* Header */
+.alert-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.alert-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: white;
+  font-size: 18px;
+}
+
+/* Title */
+.alert-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Body */
+.alert-body {
+  margin-top: 12px;
+  color: #1f2937;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+/* Footer */
+.alert-footer {
+  margin-top: 18px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Buttons */
+.alert-btn {
+  min-width: 96px;
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* Confirm (primary) */
+.alert-confirm {
+  background: #2563eb;
+  color: white;
+}
+
+.alert-confirm:hover {
+  background: #1e40af;
+}
+
+/* Cancel */
+.alert-cancel {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.alert-cancel:hover {
+  background: #e5e7eb;
+}
+
+/* Variants - change icon background and title color slightly */
+.alert-info .alert-icon {
+  background: #0284c7;
+}
+.alert-success .alert-icon {
+  background: #10b981;
+}
+.alert-error .alert-icon {
+  background: #ef4444;
+}
+.alert-warning .alert-icon {
+  background: #f59e0b;
+}
+.menu-drawer {
+  width: 260px;
+  background: #ffffff;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  right: -260px;
+  transition: right 0.3s ease;
+  box-shadow: -3px 0 12px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
+  padding: 20px;
+}
+.menu-drawer.open {
+  right: 0;
+}
+.menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.menu-item {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  margin: 6px 0;
+  border: none;
+  background: #f1f1f1;
+  cursor: pointer;
+  font-size: 16px;
+  border-radius: 6px;
+  text-align: left;
+}
+.menu-item.logout {
+  background: #ffe6e6;
+  color: red;
+}
+
+/* Side Panel */
+.side-panel {
+  position: fixed;
+  top: 0;
+  right: -400px;
+  width: 400px;
+  height: 100vh;
+  background: #fff;
+  transition: right 0.3s ease;
+  box-shadow: -4px 0 15px rgba(0, 0, 0, 0.25);
+  z-index: 99999;
+  padding: 25px;
+}
+.side-panel.open {
+  right: 0;
+}
+
+.panel-content h2 {
+  margin-bottom: 16px;
+}
+
+.menu-btn {
+  padding: 7px 10px;
+  background: none;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 18px;
 }

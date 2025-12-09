@@ -23,6 +23,7 @@ const {
 } = require('../controllers/hodController');
 const { getResultsForExam } = require('../controllers/resultController');
 const upload = require("../middlewares/upload");
+const uploadCsv = require('../middlewares/uploadCsv');
 
 // Apply security middleware to all routes in this file
 router.use(protect, authorize('HOD'));
@@ -57,7 +58,7 @@ router.get('/results/:examId', getResultsForExam);
 router.post(
     "/users/bulk-upload",
     authorize('HOD'),      // your existing HOD auth middleware
-    upload.single("file"),
+    uploadCsv.single("file"),
     bulkCSVUpload
 );
 module.exports = router;

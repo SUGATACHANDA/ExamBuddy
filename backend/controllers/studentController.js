@@ -28,5 +28,10 @@ exports.updateStudentBiometric = asyncHandler(async (req, res) => {
 
     await user.save();
 
-    res.json({ message: "Biometric registered successfully" });
+    const updatedUser = await User.findById(req.user._id).select("-password");
+
+    res.json({
+        message: "Biometric registered successfully",
+        user: updatedUser,
+    });
 });

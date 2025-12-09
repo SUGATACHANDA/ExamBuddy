@@ -3,8 +3,8 @@ import axios from 'axios';
 
 const api = axios.create({
     // baseURL: 'https://exam-app-backend-sable.vercel.app/api', // Your backend URL
-    // baseURL: 'http://localhost:5000/api', // Your backend URL
-    baseURL: 'https://exam-buddy-backend.vercel.app/api', // Your backend URL
+    baseURL: 'http://localhost:5000/api', // Your backend URL
+    // baseURL: 'https://exam-buddy-backend.vercel.app/api', // Your backend URL
 
 });
 

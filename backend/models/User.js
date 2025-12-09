@@ -64,8 +64,6 @@ const userSchema = new mongoose.Schema(
 
         photoPublicId: { type: String },
 
-        photoVerified: { type: Boolean, default: false },
-
         faceDescriptor: { type: [Number] },
     },
     { timestamps: true }

@@ -60,6 +60,13 @@ const authUser = asyncHandler(async (req, res) => {
             // Include other necessary fields based on role if needed in the future
             token: generateToken(user._id, user.role),
             photoUrl: user.photoUrl,   // Token is generated here
+            faceDescriptor: user.faceDescriptor
+                ? Array.isArray(user.faceDescriptor)
+                    ? user.faceDescriptor              // already array
+                    : user.faceDescriptor?.data        // Buffer → Uint8Array → array
+                        ? Array.from(user.faceDescriptor.data)
+                        : []
+                : [],
 
         });
 

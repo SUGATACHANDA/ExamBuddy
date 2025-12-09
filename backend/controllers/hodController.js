@@ -12,15 +12,30 @@ const sendEmail = require('../utils/mailer');
 const streamifier = require("streamifier");
 const fs = require('fs')
 const { v2: cloudinary } = require('cloudinary');
-const csv = require("csv-parser");
-const multer = require("multer");
-const upload = multer({ dest: "uploads/" });
+const csvParser = require("csv-parser");
+const { Readable } = require("stream");
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
+
+function removeBOM(str) {
+    if (typeof str === "string") {
+        return str.replace(/^\uFEFF/, "");
+    }
+    return str;
+}
+
+function cleanObjectId(value) {
+    if (!value) return value;
+
+    // Matches: ObjectId('xxxxxxx')
+    const match = value.match(/ObjectId\('(.+)'\)/);
+
+    return match ? match[1] : value; // return only the hex value
+}
 
 // =========================================================================
 // == USER REGISTRATION (BY HOD)
@@ -137,20 +152,35 @@ exports.registerStudent = asyncHandler(async (req, res) => {
 
 exports.bulkCSVUpload = asyncHandler(async (req, res) => {
     if (!req.file) {
-        return res.status(400).json({ message: "CSV file is required." });
+        return res.status(400).json({ message: "CSV file is required" });
     }
 
-    const { role } = req.body; // "student" or "teacher"
+    const role = req.body.role;
     if (!["student", "teacher"].includes(role)) {
-        return res.status(400).json({ message: "Invalid role for bulk upload." });
+        return res.status(400).json({ message: "Invalid role" });
     }
 
     const results = [];
     const failed = [];
 
-    fs.createReadStream(req.file.path)
-        .pipe(csv())
-        .on("data", (row) => results.push(row))
+    // Convert buffer → stream to parse CSV
+    const stream = Readable.from(req.file.buffer.toString());
+
+    stream
+        .pipe(csvParser())
+        .on("data", (row) => {
+            const cleanRow = {};
+            Object.keys(row).forEach((key) => {
+                let cleanKey = key.replace(/^\uFEFF/, "");
+                let cleanValue = row[key];
+
+                // Convert ObjectId('xxx') → xxx
+                cleanValue = cleanObjectId(cleanValue);
+
+                cleanRow[cleanKey] = cleanValue;
+            });
+            results.push(cleanRow);
+        })
         .on("end", async () => {
             for (let row of results) {
                 try {
@@ -160,20 +190,18 @@ exports.bulkCSVUpload = asyncHandler(async (req, res) => {
                         await createStudentFromCSV(row, req.user);
                     }
                 } catch (err) {
-                    failed.push({
-                        row,
-                        error: err.message,
-                    });
+                    failed.push({ row, error: err.message });
                 }
             }
-
-            fs.unlinkSync(req.file.path);
 
             res.json({
                 total: results.length,
                 success: results.length - failed.length,
-                failed,
+                failed: failed,
             });
+        })
+        .on("error", (err) => {
+            res.status(500).json({ message: "Failed to process CSV", error: err.message });
         });
 });
 
@@ -183,8 +211,12 @@ exports.bulkCSVUpload = asyncHandler(async (req, res) => {
 async function createTeacherFromCSV(row, hodUser) {
     const { name, collegeId, email, password } = row;
 
+    if (!name || !collegeId || !email || !password) {
+        throw new Error("Missing required teacher fields");
+    }
+
     const exists = await User.findOne({ $or: [{ email }, { collegeId }] });
-    if (exists) throw new Error("User already exists.");
+    if (exists) throw new Error("User already exists");
 
     await User.create({
         name,
@@ -197,13 +229,21 @@ async function createTeacherFromCSV(row, hodUser) {
     });
 }
 
+
+// Create student from CSV row
 async function createStudentFromCSV(row, hodUser) {
-    const { name, collegeId, email, password, courseId, semesterId } = row;
+    const { name, collegeId, email, password } = row;
 
-    const exists = await User.findOne({ $or: [{ email }, { collegeId }] });
-    if (exists) throw new Error("User already exists.");
+    // Clean ObjectId fields
+    const degree = cleanObjectId(row.degree);
+    const course = cleanObjectId(row.course);
+    const semester = cleanObjectId(row.semester);
 
-    await User.create({
+    if (!name || !collegeId || !email || !password || !course || !semester) {
+        throw new Error("Missing required student fields");
+    }
+
+    const createdUser = await User.create({
         name,
         collegeId,
         email,
@@ -211,10 +251,26 @@ async function createStudentFromCSV(row, hodUser) {
         role: "student",
         college: hodUser.college,
         department: hodUser.department,
-        course: courseId,
-        semester: semesterId,
-        degree: (await Course.findById(courseId)).degree,
+        degree,
+        course,
+        semester
     });
+
+    // 2️⃣ PREPARE EMAIL HTML
+    const html = UserRegistrationEmail({
+        name: createdUser.name,
+        role: createdUser.role,
+        collegeId: createdUser.collegeId,
+        password: password, // temporary password
+    });
+
+    // 3️⃣ SEND EMAIL
+    await sendEmail(
+        createdUser.email,
+        `Welcome ${createdUser.name} – Your ExamBuddy Login Details`,
+        html
+    );
+
 }
 
 

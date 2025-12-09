@@ -31,6 +31,7 @@
     "lucide-react": "^0.544.0",
     "marked": "^17.0.0",
     "node-powershell": "^5.0.1",
+    "papaparse": "^5.5.3",
     "ps-list": "^8.1.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
