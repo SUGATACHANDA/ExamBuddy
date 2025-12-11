@@ -5,9 +5,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/axiosConfig";
 import PermissionModal from "../components/PermissionModal";
-import ChangePasswordModal from "components/ui/ChangePasswordModal";
 import Countdown from "../components/Countdown";
-import { ClockIcon, CalendarIcon, AlertCircleIcon, CheckCircleIcon, LogOutIcon, KeyIcon, RefreshCwIcon } from "lucide-react";
+import { ClockIcon, CalendarIcon, AlertCircleIcon, CheckCircleIcon, RefreshCwIcon } from "lucide-react";
 import BiometricRegisterModal from "components/BiometricRegisterModal";
 import AlertModal from "../components/ui/AlertModal";
 import { useAlert } from "../hooks/useAlert";
@@ -36,14 +35,9 @@ const StudentDashboard = () => {
     const [completedExamIds, setCompletedExamIds] = useState(new Set());
     const [loading, setLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
-
-    const [isChangePassModalOpen, setIsChangePassModalOpen] = useState(false);
     const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
     const [targetExamId, setTargetExamId] = useState(null);
     const [isBiometricModalOpen, setBiometricModalOpen] = useState(false);
-
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [activePanel, setActivePanel] = useState(null);
 
     const [userLoaded, setUserLoaded] = useState(false);
 
@@ -258,6 +252,7 @@ const StudentDashboard = () => {
                     updateUser(freshUser);          // update context
                     setBiometricModalOpen(false);
                 }}
+                allowClose={false}
             />
             {/* Header */}
             <header className="dashboard-header">
@@ -286,89 +281,15 @@ const StudentDashboard = () => {
                         </div>
                         <div className="header-actions">
                             <button
-                                className="menu-btn"
-                                onClick={() => setIsMenuOpen(true)}
-                                title="Menu"
+                                onClick={() => navigate(`/student/profile/${userInfo._id}`)}
+                                className="header-btn profile-btn"
                             >
-                                ☰
+                                Profile
                             </button>
                         </div>
                     </div>
                 </div>
             </header>
-
-            <div className={`menu-drawer ${isMenuOpen ? "open" : ""}`}>
-                <div className="menu-header">
-                    <h3>Menu</h3>
-                    <button onClick={() => { setIsMenuOpen(false); setActivePanel(null); }}>✕</button>
-                </div>
-
-                <div className="menu-items">
-
-                    <button onClick={() => setActivePanel("profile")} className="menu-item">
-                        Profile
-                    </button>
-
-                    <button onClick={() => setActivePanel("password")} className="menu-item">
-                        Change Password
-                    </button>
-
-                    <button onClick={() => setActivePanel("biometric")} className="menu-item">
-                        Biometric Registration
-                    </button>
-
-                    <button onClick={logout} className="menu-item logout">
-                        Logout
-                    </button>
-                </div>
-            </div>
-
-            <div className={`side-panel ${activePanel ? "open" : ""}`}>
-
-                {activePanel === "profile" && (
-                    <div className="panel-content">
-                        <h2>Profile Details</h2>
-                        <p><strong>Name:</strong> {userInfo?.name}</p>
-                        <p><strong>College ID:</strong> {userInfo?.collegeId}</p>
-                        <p><strong>College:</strong> {userInfo?.college?.name}</p>
-                        <p><strong>Department:</strong> {userInfo?.department?.name}</p>
-                        <p><strong>Degree:</strong> {userInfo?.degree}</p>
-                        <p><strong>Course:</strong> {userInfo?.course}</p>
-                        <p><strong>Semester:</strong> {userInfo?.semester}</p>
-                    </div>
-                )}
-
-                {activePanel === "password" && (
-                    <div className="panel-content">
-                        <h2>Change Password</h2>
-                        <ChangePasswordModal onClose={() => setActivePanel(null)} embed />
-                    </div>
-                )}
-
-                {activePanel === "biometric" && (
-                    <div className="panel-content">
-                        <h2>Biometric Registration</h2>
-
-                        <p>Your biometric data is {userInfo.faceDescriptor ? "registered" : "not registered"}.</p>
-
-                        <button
-                            className="btn-primary"
-                            onClick={() => {
-                                setActivePanel(null);
-                                setBiometricModalOpen(true);
-                            }}
-                        >
-                            Retake Biometric
-                        </button>
-                    </div>
-                )}
-            </div>
-
-            {isChangePassModalOpen && (
-                <ChangePasswordModal
-                    onClose={() => setIsChangePassModalOpen(false)}
-                />
-            )}
 
             {/* Main Content */}
             <main className="dashboard-main">

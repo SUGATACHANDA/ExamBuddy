@@ -40,6 +40,8 @@ import ResetPasswordOTP from "screens/ResetPasswordOTP";
 import { loadFaceModels } from "utils/faceUtils";
 import ResultDetailsPage from "screens/ResultDetailsPage";
 import OpenDeepLink from "screens/OpenDeepLink";
+import StudentProfilePage from "components/StudentProfilePage";
+import TeacherProfilePage from "screens/TeacherProfilePage";
 
 function App() {
   const location = useLocation();
@@ -115,6 +117,14 @@ function App() {
             element={
               <ProtectedRoute role="student">
                 <StudentDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/profile/:id"
+            element={
+              <ProtectedRoute role="student">
+                <StudentProfilePage />
               </ProtectedRoute>
             }
           />
@@ -206,6 +216,13 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/teacher/profile/:id"
+            element={
+              <ProtectedRoute role="teacher">
+                <TeacherProfilePage />
+              </ProtectedRoute>
+            } />
           <Route
             path="/teacher/results/:examId"
             element={

@@ -1,69 +1,79 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { Clock, getInitials } from './StudentDashboad';
-import ChangePasswordModal from 'components/ui/ChangePasswordModal';
-import { ClockIcon } from 'lucide-react';
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { Clock, getInitials } from "./StudentDashboad";
+import { ClockIcon, FileText, Layers, UserCircle2 } from "lucide-react";
 
-const TeacherDashboard = () => {
-    const { userInfo, logout } = useAuth();
-    const [isChangePassModalOpen, setIsChangePassModalOpen] = useState(false);
-
+export default function TeacherDashboard() {
+    const { userInfo } = useAuth();
+    const navigate = useNavigate();
     const initials = getInitials(userInfo?.name);
 
     return (
-        <div className="student-dashboard-container">
-            <header className="student-header">
-                <div className="student-header-left">
-                    <div className="student-avatar">{initials}</div>
+        <div className="teacher-dashboard-container">
+
+            {/* ---- HEADER ---- */}
+            <header className="teacher-header">
+                <div className="teacher-header-left">
+                    {userInfo?.photoUrl ? (
+                        <img src={userInfo.photoUrl} className="teacher-profile-photo" alt="profile" />
+                    ) : (
+                        <div className="teacher-avatar">{initials}</div>
+                    )}
                 </div>
 
-                <div className="student-header-center">
-                    <div className="student-name">{userInfo?.name}</div>
-                    <div className="student-department">
-                        {userInfo?.department?.name}
-                    </div>
-                    <div className="student-department">
-                        {userInfo?.college?.name}
-                    </div>
-                    <div className="student-clock">
-                        <ClockIcon className="clock-icon" />
+                <div className="teacher-header-center">
+                    <h2 className="teacher-name">{userInfo?.name}</h2>
+                    <p className="teacher-subinfo">{userInfo?.department?.name}</p>
+                    <p className="teacher-subinfo college">{userInfo?.college?.name}</p>
+                </div>
+
+                <div className="teacher-header-right">
+                    <div className="teacher-clock">
+                        <ClockIcon size={18} />
                         <Clock />
                     </div>
-                </div>
 
-                <div className="student-header-right">
                     <button
-                        onClick={() => setIsChangePassModalOpen(true)}
-                        className="oval-btn secondary"
+                        className="teacher-profile-btn"
+                        onClick={() => navigate(`/teacher/profile/${userInfo._id}`)}
                     >
-                        Change Password
-                    </button>
-                    <button onClick={logout} className="oval-btn danger">
-                        Logout
+                        <UserCircle2 size={20} />
+                        Profile
                     </button>
                 </div>
             </header>
 
+            {/* ---- MAIN BODY ---- */}
+            <div className="teacher-main">
 
+                {/* Welcome Box */}
+                {/* <div className="teacher-welcome-card">
+                    <h1>Hello, {userInfo?.name.split(" ")[0]} 👋</h1>
+                    <p>Manage questions, schedule exams, evaluate results — all from one dashboard.</p>
+                </div> */}
 
-            {isChangePassModalOpen && (
-                <ChangePasswordModal
-                    onClose={() => setIsChangePassModalOpen(false)}
-                />
-            )}
+                {/* ACTION CARDS */}
+                <div className="teacher-cards-grid">
 
-            <div className="teacher-actions-grid">
-                <Link to="/teacher/questions" className="action-card">
-                    <h2>Manage Questions</h2>
-                    <p>Create, view, edit, and delete questions for your subject area.</p>
-                </Link>
-                <Link to="/teacher/exams" className="action-card">
-                    <h2>Manage Exams</h2>
-                    <p>Monitor live exams, proctor students, and view results of past exams.</p>
-                </Link>
+                    <Link to="/teacher/questions" className="teacher-card">
+                        <div className="icon-box">
+                            <FileText size={26} />
+                        </div>
+                        <h3>Manage Questions</h3>
+                        <p>Create, edit & organize question banks for your subjects.</p>
+                    </Link>
+
+                    <Link to="/teacher/exams" className="teacher-card">
+                        <div className="icon-box purple">
+                            <Layers size={26} />
+                        </div>
+                        <h3>Manage Exams</h3>
+                        <p>Schedule exams, proctor students & monitor exam activity.</p>
+                    </Link>
+
+                </div>
             </div>
         </div>
     );
-};
-export default TeacherDashboard;
+}

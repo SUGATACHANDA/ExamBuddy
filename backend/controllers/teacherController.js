@@ -1,7 +1,15 @@
 // backend/controllers/teacherController.js
-
 const asyncHandler = require('express-async-handler');
-const Department = require('../models/Department'); // We need the Department model
+const Department = require('../models/Department');
+const User = require('../models/User'); // We need the Department model
+
+function normalizeFaceDescriptor(fd) {
+    if (!fd) return [];
+    if (Array.isArray(fd)) return fd;
+    if (fd.data) return Array.from(fd.data);
+    return [];
+}
+
 
 /**
  * @desc    Get the department(s) associated with the logged-in teacher.
@@ -33,6 +41,37 @@ const getMyDepartments = asyncHandler(async (req, res) => {
     res.json([department]);
 });
 
+const getTeacherProfile = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const teacher = await User.findById(id)
+        .select("-password")
+        .populate("college", "name")
+        .populate("department", "name")
+        .populate("degree", "name")
+        .populate("course", "name")
+        .populate("semester", "name");
+
+    if (!teacher) return res.status(404).json({ message: "Teacher not found" });
+
+    res.json({
+        _id: teacher._id,
+        name: teacher.name,
+        email: teacher.email,
+        collegeId: teacher.collegeId,
+        role: teacher.role,
+        photoUrl: teacher.photoUrl || null,
+        college: teacher.college || null,
+        department: teacher.department || null,
+        degree: teacher.degree || null,
+        course: teacher.course || null,
+        semester: teacher.semester || null,
+        faceDescriptor: normalizeFaceDescriptor(teacher.faceDescriptor),
+        createdAt: teacher.createdAt,
+    });
+});
+
 module.exports = {
     getMyDepartments,
+    getTeacherProfile
 };
