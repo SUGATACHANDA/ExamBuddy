@@ -84,9 +84,11 @@ export default function CSVPreviewUploader() {
         fd.append("role", role);
 
         try {
-            const res = await api.post("/hod/users/bulk-upload", fd, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
+            const res = await api.post("/hod/users/bulk-upload", fd
+                // {
+                //     headers: { "Content-Type": "multipart/form-data" },
+                // }
+            );
 
             setUploadStatus(res.data);
         } catch (err) {
