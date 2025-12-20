@@ -1,6 +1,6 @@
 {
   "name": "exambuddy",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "productName": "Exam Buddy",
   "author": {
     "name": "SUGATA CHANDA",
@@ -14,7 +14,7 @@
   "private": true,
   "description": "A secure, hierarchical exam proctoring application for educational institutions",
   "license": "UNLICENSED",
-  "main": "public/electron.js",
+  "main": "public/electron-prod.js",
   "homepage": "./",
   "dependencies": {
     "@testing-library/dom": "^10.4.1",
