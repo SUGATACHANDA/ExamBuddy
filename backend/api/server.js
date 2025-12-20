@@ -42,6 +42,7 @@ const startServer = async () => {
 startServer();
 
 const app = express();
+app.use('/api/hod', hodRoutes);
 app.use(express.json());
 app.use(cors({ origin: '*' }));
 
@@ -330,7 +331,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/teacher', teacherRoutes);
 app.use('/api/data', dataRoutes);
 app.use('/api/university-affairs', universityAffairsRoutes);
-app.use('/api/hod', hodRoutes);
+
 app.use('/api/face', faceRoutes);
 app.use("/api/subjects", subjectRoutes);
 app.use("/", deepLinkRoutes);

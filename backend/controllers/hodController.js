@@ -152,7 +152,11 @@ exports.registerStudent = asyncHandler(async (req, res) => {
 
 exports.bulkCSVUpload = asyncHandler(async (req, res) => {
     if (!req.file || !req.file.buffer) {
-        return res.status(400).json({ message: "CSV file is required" });
+        return res.status(400).json({
+            message: "CSV file not present",
+            headers: req.headers["content-type"],
+            bodyKeys: Object.keys(req.body || {})
+        });
     }
 
     const role = req.body.role;
@@ -162,6 +166,8 @@ exports.bulkCSVUpload = asyncHandler(async (req, res) => {
 
     const results = [];
     const failed = [];
+
+
 
     /**
      * ✅ CORRECT: buffer → stream (NO toString)
