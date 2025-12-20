@@ -1,18 +1,22 @@
 const multer = require("multer");
-const path = require("path");
 
-// Memory storage — file is stored in RAM as buffer
 const storage = multer.memoryStorage();
 
-const fileFilter = (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const mime = file.mimetype;
-
-    if (ext === ".csv" || mime === "text/csv") {
-        cb(null, true);
-    } else {
-        cb(new Error("Unsupported file type"), false);
+const upload = multer({
+    storage,
+    limits: {
+        fileSize: 5 * 1024 * 1024 // 5MB
+    },
+    fileFilter: (req, file, cb) => {
+        if (
+            file.mimetype === "text/csv" ||
+            file.mimetype === "application/vnd.ms-excel"
+        ) {
+            cb(null, true);
+        } else {
+            cb(new Error("Only CSV files are allowed"));
+        }
     }
-};
+});
 
-module.exports = multer({ storage, fileFilter });
+module.exports = upload;
