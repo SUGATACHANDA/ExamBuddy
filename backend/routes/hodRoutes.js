@@ -23,7 +23,7 @@ const {
 } = require('../controllers/hodController');
 const { getResultsForExam } = require('../controllers/resultController');
 const upload = require("../middlewares/upload");
-const uploadCsv = require('../middlewares/uploadCsv');
+const { uploadCSV, uploadFiles } = require('../middlewares/upload');
 
 // Apply security middleware to all routes in this file
 router.use(protect, authorize('HOD'));
@@ -31,7 +31,7 @@ router.use(protect, authorize('HOD'));
 // --- User Management Routes (All scoped to the HOD's own department) ---
 
 // Register users
-router.post('/users/register-student', upload.single("photo"), registerStudent);
+router.post('/users/register-student', uploadFiles.single("photo"), registerStudent);
 router.post('/users/register-teacher', registerTeacher);
 
 // Lists
@@ -58,7 +58,7 @@ router.get('/results/:examId', getResultsForExam);
 router.post(
     "/users/bulk-upload",
     authorize('HOD'),      // your existing HOD auth middleware
-    uploadCsv.single("file"),
+    uploadCSV.single("file"),
     bulkCSVUpload
 );
 module.exports = router;
