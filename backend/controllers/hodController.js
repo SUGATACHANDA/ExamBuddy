@@ -151,7 +151,7 @@ exports.registerStudent = asyncHandler(async (req, res) => {
 });
 
 exports.bulkCSVUpload = asyncHandler(async (req, res) => {
-    if (!req.file) {
+    if (!req.file || !req.file.buffer) {
         return res.status(400).json({ message: "CSV file is required" });
     }
 
@@ -163,47 +163,66 @@ exports.bulkCSVUpload = asyncHandler(async (req, res) => {
     const results = [];
     const failed = [];
 
-    // Convert buffer → stream to parse CSV
-    const stream = Readable.from(req.file.buffer.toString());
+    /**
+     * ✅ CORRECT: buffer → stream (NO toString)
+     */
+    const stream = Readable.from(req.file.buffer);
 
     stream
-        .pipe(csvParser())
+        .pipe(csvParser({ skipLines: 0 }))
         .on("data", (row) => {
             const cleanRow = {};
-            Object.keys(row).forEach((key) => {
-                let cleanKey = key.replace(/^\uFEFF/, "");
-                let cleanValue = row[key];
 
-                // Convert ObjectId('xxx') → xxx
-                cleanValue = cleanObjectId(cleanValue);
+            for (const key in row) {
+                const cleanKey = key.replace(/^\uFEFF/, "").trim();
+                let value = row[key];
 
-                cleanRow[cleanKey] = cleanValue;
-            });
+                if (typeof value === "string") {
+                    value = value.trim();
+                    value = cleanObjectId(value);
+                }
+
+                cleanRow[cleanKey] = value;
+            }
+
             results.push(cleanRow);
         })
         .on("end", async () => {
-            for (let row of results) {
-                try {
-                    if (role === "teacher") {
-                        await createTeacherFromCSV(row, req.user);
-                    } else {
-                        await createStudentFromCSV(row, req.user);
+            try {
+                for (const row of results) {
+                    try {
+                        if (role === "teacher") {
+                            await createTeacherFromCSV(row, req.user);
+                        } else {
+                            await createStudentFromCSV(row, req.user);
+                        }
+                    } catch (err) {
+                        failed.push({ row, error: err.message });
                     }
-                } catch (err) {
-                    failed.push({ row, error: err.message });
                 }
-            }
 
-            res.json({
-                total: results.length,
-                success: results.length - failed.length,
-                failed: failed,
-            });
+                return res.json({
+                    total: results.length,
+                    success: results.length - failed.length,
+                    failed,
+                });
+            } catch (err) {
+                console.error("CSV processing failed:", err);
+                return res.status(500).json({
+                    message: "CSV processing failed",
+                    error: err.message,
+                });
+            }
         })
         .on("error", (err) => {
-            res.status(500).json({ message: "Failed to process CSV", error: err.message });
+            console.error("CSV parse error:", err);
+            return res.status(500).json({
+                message: "Failed to parse CSV",
+                error: err.message,
+            });
         });
 });
+
 
 // --------------------------------------
 // HELPERS
@@ -215,7 +234,9 @@ async function createTeacherFromCSV(row, hodUser) {
         throw new Error("Missing required teacher fields");
     }
 
-    const exists = await User.findOne({ $or: [{ email }, { collegeId }] });
+    const exists = await User.findOne({
+        $or: [{ email }, { collegeId }]
+    });
     if (exists) throw new Error("User already exists");
 
     await User.create({
@@ -234,7 +255,6 @@ async function createTeacherFromCSV(row, hodUser) {
 async function createStudentFromCSV(row, hodUser) {
     const { name, collegeId, email, password } = row;
 
-    // Clean ObjectId fields
     const degree = cleanObjectId(row.degree);
     const course = cleanObjectId(row.course);
     const semester = cleanObjectId(row.semester);
@@ -242,6 +262,14 @@ async function createStudentFromCSV(row, hodUser) {
     if (!name || !collegeId || !email || !password || !course || !semester) {
         throw new Error("Missing required student fields");
     }
+
+    /**
+     * ✅ ADD DUPLICATE CHECK (YOU WERE MISSING THIS)
+     */
+    const exists = await User.findOne({
+        $or: [{ email }, { collegeId }]
+    });
+    if (exists) throw new Error("User already exists");
 
     const createdUser = await User.create({
         name,
@@ -253,24 +281,21 @@ async function createStudentFromCSV(row, hodUser) {
         department: hodUser.department,
         degree,
         course,
-        semester
+        semester,
     });
 
-    // 2️⃣ PREPARE EMAIL HTML
     const html = UserRegistrationEmail({
         name: createdUser.name,
         role: createdUser.role,
         collegeId: createdUser.collegeId,
-        password: password, // temporary password
+        password,
     });
 
-    // 3️⃣ SEND EMAIL
     await sendEmail(
         createdUser.email,
         `Welcome ${createdUser.name} – Your ExamBuddy Login Details`,
         html
     );
-
 }
 
 
