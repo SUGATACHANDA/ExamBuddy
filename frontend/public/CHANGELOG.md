@@ -1,6 +1,6 @@
-## v1.6.1
+## v1.6.3
 
-### ✨ Features
+<!-- ### ✨ Features
 - Added **StudentProfilePage** and **TeacherProfilePage** for viewing and managing user profiles.
 - Integrated **biometric registration** via `BiometricRegisterModal` for both student and teacher profiles.
 - Implemented **password change functionality** within profile pages.
@@ -14,7 +14,7 @@
 - Enhanced **StudentDashboard** and **TeacherDashboard** to navigate to their respective profile pages.
 
 ### ⚙️ Configuration
-- Refactored Axios configuration to use the **production backend URL**.
+- Refactored Axios configuration to use the **production backend URL**. -->
 
 ### 🛠 Improvements
-- Improved **error handling** and **loading states** in profile-related components.
+- refactor: **streamline file** upload handling and enhance health check endpoint
