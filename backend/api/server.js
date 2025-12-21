@@ -41,13 +41,13 @@ const startServer = async () => {
 };
 startServer();
 
-const config = {
-    api: {
-        bodyParser: false,
-    },
-};
+// const config = {
+//     api: {
+//         bodyParser: false,
+//     },
+// };
 
-module.exports = config
+// module.exports = config
 
 const app = express();
 
@@ -329,14 +329,14 @@ async function sendErrorGif(res, message) {
     }
 }
 
-app.use((req, res, next) => {
-    const contentType = req.headers["content-type"] || "";
-    if (!contentType.includes("multipart/form-data")) {
-        express.json({ limit: "10mb" })(req, res, next);
-    } else {
-        next();
-    }
-});
+// app.use((req, res, next) => {
+//     const contentType = req.headers["content-type"] || "";
+//     if (!contentType.includes("multipart/form-data")) {
+//         express.json({ limit: "10mb" })(req, res, next);
+//     } else {
+//         next();
+//     }
+// });
 
 // --- General API Routes are mounted AFTER the specific route ---
 app.use('/api/auth', authRoutes);
