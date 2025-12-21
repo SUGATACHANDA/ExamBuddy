@@ -9,13 +9,6 @@
       }
     }
   ],
-
-  "functions": {
-    "api/**/*.js": {
-      "bodyParser": false
-    }
-  },
-
   "routes": [
     {
       "src": "/api/exams/countdown/(.*)",
