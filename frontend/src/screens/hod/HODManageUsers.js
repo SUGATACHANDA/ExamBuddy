@@ -36,10 +36,6 @@ const HODManageUsers = () => {
     const [studentSearchQuery, setStudentSearchQuery] = useState("");
     const [teacherSearchQuery, setTeacherSearchQuery] = useState("");
 
-    const [csvFile, setCsvFile] = useState(null);
-    const [csvRole, setCsvRole] = useState("student");
-    const [csvUploadResult, setCsvUploadResult] = useState(null);
-
     const usersPerPage = 6;
 
     const resetForm = useCallback((role) => {

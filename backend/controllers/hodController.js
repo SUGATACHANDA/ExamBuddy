@@ -21,6 +21,19 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+const uploadFromBuffer = (buffer) => {
+    return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+            { folder: "students/face" },
+            (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+            }
+        );
+        streamifier.createReadStream(buffer).pipe(stream);
+    });
+};
+
 function removeBOM(str) {
     if (typeof str === "string") {
         return str.replace(/^\uFEFF/, "");
@@ -82,11 +95,13 @@ exports.registerStudent = asyncHandler(async (req, res) => {
     }
 
     let photoUrl = null;
-    if (req.file) {
-        const uploadRes = await cloudinary.uploader.upload(req.file.path, { folder: "students/face" });
+    if (req.file && req.file.buffer) {
+        const uploadRes = await uploadFromBuffer(req.file.buffer);
         photoUrl = uploadRes.secure_url;
     } else if (req.body.photoBase64) {
-        const uploadRes = await cloudinary.uploader.upload(req.body.photoBase64, { folder: "students/face" });
+        const uploadRes = await cloudinary.uploader.upload(req.body.photoBase64, {
+            folder: "students/face"
+        });
         photoUrl = uploadRes.secure_url;
     }
     let descriptorArray = [];
@@ -139,7 +154,6 @@ exports.registerStudent = asyncHandler(async (req, res) => {
     // }
 
     const user = await User.create(payload);
-    fs.unlinkSync(req.file.path);
     const html = UserRegistrationEmail({
         name: user.name,
         role: user.role,

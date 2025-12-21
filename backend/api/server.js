@@ -50,19 +50,9 @@ const config = {
 module.exports = config
 
 const app = express();
-app.use('/api/hod', hodRoutes);
+
 app.use(express.json());
 app.use(cors({ origin: '*' }));
-
-app.use((req, res, next) => {
-    const contentType = req.headers["content-type"] || "";
-    if (!contentType.includes("multipart/form-data")) {
-        express.json({ limit: "10mb" })(req, res, next);
-    } else {
-        next();
-    }
-});
-
 
 // =================================================================
 //                  *** CRITICAL FIX APPLIED HERE ***
@@ -339,14 +329,14 @@ async function sendErrorGif(res, message) {
     }
 }
 
-
-app.get("/api/health", (req, res) => {
-    res.json({
-        status: "ok",
-        timestamp: new Date().toISOString(),
-    });
+app.use((req, res, next) => {
+    const contentType = req.headers["content-type"] || "";
+    if (!contentType.includes("multipart/form-data")) {
+        express.json({ limit: "10mb" })(req, res, next);
+    } else {
+        next();
+    }
 });
-
 
 // --- General API Routes are mounted AFTER the specific route ---
 app.use('/api/auth', authRoutes);
@@ -357,11 +347,18 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/teacher', teacherRoutes);
 app.use('/api/data', dataRoutes);
 app.use('/api/university-affairs', universityAffairsRoutes);
-
+app.use('/api/hod', hodRoutes);
 app.use('/api/face', faceRoutes);
 app.use("/api/subjects", subjectRoutes);
 app.use("/", deepLinkRoutes);
 app.use("/api/student", studentRoutes);
+
+app.get("/api/health", (req, res) => {
+    res.json({
+        status: "ok",
+        timestamp: new Date().toISOString(),
+    });
+});
 
 app.get('/', (req, res) => {
     res.send('Exam App API is running...');
@@ -374,6 +371,4 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 
-// server.listen(PORT, console.log(`Server running on port ${PORT}`));
-
-module.exports = app
+server.listen(PORT, console.log(`Server running on port ${PORT}`));

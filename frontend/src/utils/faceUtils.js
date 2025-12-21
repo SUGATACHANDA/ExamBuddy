@@ -33,7 +33,7 @@ export async function getDescriptorFromMedia(el, options = {}) {
         options.detectorOptions || new faceapi.TinyFaceDetectorOptions({ inputSize: 416 });
     const detection = await faceapi
         .detectSingleFace(el, detectorOptions)
-        .withFaceLandmarks()
+        .withFaceLandmarks(true)
         .withFaceDescriptor();
 
     if (!detection || !detection.descriptor) throw new Error("No face detected");

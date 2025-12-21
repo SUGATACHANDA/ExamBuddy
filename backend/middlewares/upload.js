@@ -1,70 +1,24 @@
-const multer = require("multer");
+const multer = require('multer');
 
-// -----------------------------
-// STORAGE (memory, prod-safe)
-// -----------------------------
-const storage = multer.memoryStorage();
+// Use memory storage for Vercel (serverless compatible)
+const storage = multer.memoryStorage(); // <-- CHANGE TO MEMORY STORAGE
 
-// -----------------------------
-// FILE FILTER FACTORY
-// -----------------------------
-const fileFilterFactory = (allowedTypes) => {
-    return (req, file, cb) => {
-        if (allowedTypes.includes(file.mimetype)) {
+const upload = multer({
+    storage: storage,
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB limit
+    },
+    fileFilter: (req, file, cb) => {
+        // Validate file types if needed
+        if (file.mimetype.startsWith('image/') ||
+            file.mimetype === 'application/pdf' ||
+            file.mimetype === 'application/msword' ||
+            file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
             cb(null, true);
         } else {
-            cb(
-                new Error(
-                    `Unsupported file type: ${file.mimetype}`
-                ),
-                false
-            );
+            cb(new Error('Unsupported file type'), false);
         }
-    };
-};
-
-// -----------------------------
-// COMMON MIME TYPES
-// -----------------------------
-const IMAGE_TYPES = [
-    "image/jpeg",
-    "image/png",
-    "image/jpg",
-];
-
-const DOC_TYPES = [
-    "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-];
-
-const CSV_TYPES = [
-    "text/csv",
-    "application/vnd.ms-excel",
-];
-
-// -----------------------------
-// UPLOAD HANDLERS
-// -----------------------------
-
-// 🔹 For images + documents
-const uploadFiles = multer({
-    storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-    fileFilter: fileFilterFactory([...IMAGE_TYPES, ...DOC_TYPES]),
+    }
 });
 
-// 🔹 For CSV only
-const uploadCSV = multer({
-    storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-    fileFilter: fileFilterFactory(CSV_TYPES),
-});
-
-// -----------------------------
-// EXPORTS
-// -----------------------------
-module.exports = {
-    uploadFiles, // images / pdf / docs
-    uploadCSV,   // csv only
-};
+module.exports = upload;

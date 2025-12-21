@@ -14,7 +14,11 @@ api.interceptors.request.use(
             ? JSON.parse(localStorage.getItem('userInfo'))
             : null;
 
-        if (window.electronAPI && process.env.NODE_ENV === 'production') {
+        if (
+            window.electronAPI &&
+            process.env.NODE_ENV === 'production' &&
+            !(config.data instanceof FormData)
+        ) {
             config.headers['Content-Type'] = 'application/json';
             config.headers['Accept'] = 'application/json';
         }
