@@ -151,6 +151,9 @@ exports.registerStudent = asyncHandler(async (req, res) => {
 });
 
 exports.bulkCSVUpload = asyncHandler(async (req, res) => {
+    console.log("Content-Type:", req.headers["content-type"]);
+    console.log("req.file:", req.file);
+    console.log("req.body keys:", Object.keys(req.body || {}));
     if (!req.file || !req.file.buffer) {
         return res.status(400).json({
             message: "CSV file not present",
