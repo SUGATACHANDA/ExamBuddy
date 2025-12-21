@@ -41,11 +41,13 @@ const startServer = async () => {
 };
 startServer();
 
-export const config = {
+const config = {
     api: {
         bodyParser: false,
     },
 };
+
+module.exports = config
 
 const app = express();
 app.use('/api/hod', hodRoutes);
@@ -374,4 +376,4 @@ const server = http.createServer(app);
 
 // server.listen(PORT, console.log(`Server running on port ${PORT}`));
 
-export default app
+module.exports = app
