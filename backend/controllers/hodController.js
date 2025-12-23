@@ -332,25 +332,22 @@ async function createStudentFromCSV(row, hodUser) {
 /** @route   GET /api/hod/students */
 exports.getStudentsInDepartment = asyncHandler(async (req, res) => {
     const { semester } = req.query;
+    const query = { role: 'student', department: req.user.department };
 
-    const query = {
-        role: "student",
-        department: req.user.department,
-    };
-
-    if (semester && semester !== "all") {
+    if (semester && semester !== 'all') {
         query.semester = semester;
     }
 
-    // 1 Query + 1 Populate = FAST
     const students = await User.find(query)
-        .populate([
-            { path: "semester", select: "number" },
-            { path: "course", select: "name" }
-        ])
-        .select("name email collegeId semester course photoUrl")
-        .sort({ "semester.number": 1 })   // MongoDB-level sort
-        .lean();                           // Very important!
+        .populate('semester', 'number')
+        .populate('course', 'name')
+        .select('-password');
+
+    // Optional: sort by semester number ascending
+    students.sort((a, b) => {
+        if (!a.semester || !b.semester) return 0;
+        return a.semester.number - b.semester.number;
+    });
 
     res.json(students);
 });
