@@ -10,7 +10,7 @@ const connectDB = async () => {
             useNewUrlParser: true,
             useUnifiedTopology: true,
             keepAliveInitialDelay: 300000000,
-            keepAlive: true,
+
         });
         console.log(`MongoDB Connected: ${conn.connection.host}`);
     } catch (error) {
