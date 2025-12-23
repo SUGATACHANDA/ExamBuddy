@@ -37,7 +37,7 @@ const studentRoutes = require("../routes/studentRoutes");
 
 const startServer = async () => {
     await connectDB();
-    await seedData();
+    // await seedData();
 };
 startServer();
 
