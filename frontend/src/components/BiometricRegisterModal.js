@@ -4,8 +4,10 @@ import api from "../api/axiosConfig";
 
 import AlertModal from "../components/ui/AlertModal";
 import { useAlert } from "../hooks/useAlert";
+import { getModelPath } from "utils/faceUtils";
 
-const MODEL_URL = "/models";
+
+const MODEL_URL = getModelPath();
 
 export default function BiometricRegisterModal({
     isOpen,

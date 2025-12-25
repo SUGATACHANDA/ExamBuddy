@@ -32,7 +32,7 @@ router.use(protect, authorize('HOD'));
 
 // Register users
 router.post('/users/register-student', upload.single("photo"), registerStudent);
-router.post('/users/register-teacher', registerTeacher);
+router.post('/users/register-teacher', upload.none(), registerTeacher);
 
 // Lists
 router.get('/students', getStudentsInDepartment);
