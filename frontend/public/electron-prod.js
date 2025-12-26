@@ -863,38 +863,21 @@ ipcMain.on('ipc-violation', (event, violationType) => {
     }
 });
 ipcMain.handle("perform-system-checks", async () => {
-    const results = {
-        camera: false,
-        microphone: false,
-        internet: false,
-        singleDisplay: false
+    return {
+        internet: await checkInternet(),
+        singleDisplay: screen.getAllDisplays().length === 1
     };
-
-    try {
-        // 1️⃣ Camera & Microphone
-        const devices = await session.defaultSession.getMediaDevices();
-        results.camera = devices.some(d => d.kind === "videoinput");
-        results.microphone = devices.some(d => d.kind === "audioinput");
-
-        // 2️⃣ Internet check (simple + reliable)
-        try {
-            await require("dns").promises.resolve("google.com");
-            results.internet = true;
-        } catch {
-            results.internet = false;
-        }
-
-        // 3️⃣ Single display check
-        const displays = screen.getAllDisplays();
-        results.singleDisplay = displays.length === 1;
-
-        return results;
-
-    } catch (err) {
-        console.error("System check failed:", err);
-        return results;
-    }
 });
+
+async function checkInternet() {
+    try {
+        await require("dns").promises.resolve("google.com");
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 ipcMain.on("system-check-failed", (event, failedItems) => {
     const readable = {
         camera: "Camera not detected",

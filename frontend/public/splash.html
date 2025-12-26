@@ -88,6 +88,20 @@
     <script>
         const { ipcRenderer } = require("electron");
 
+        async function checkMediaDevices() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+
+                const hasCamera = devices.some(d => d.kind === "videoinput");
+                const hasMic = devices.some(d => d.kind === "audioinput");
+
+                return { hasCamera, hasMic };
+            } catch (err) {
+                console.error("Media device check failed:", err);
+                return { hasCamera: false, hasMic: false };
+            }
+        }
+
         const update = (id, ok) => {
             const el = document.getElementById(id);
             el.innerHTML = ok
@@ -96,23 +110,32 @@
         };
 
         (async () => {
-            const results = await ipcRenderer.invoke("perform-system-checks");
+            console.log("Running splash checks...");
 
-            update("camera", results.camera);
-            update("microphone", results.microphone);
-            update("internet", results.internet);
-            update("display", results.singleDisplay);
+            const media = await checkMediaDevices();
+            update("camera", media.hasCamera);
+            update("microphone", media.hasMic);
+
+            const system = await ipcRenderer.invoke("perform-system-checks");
+
+            update("internet", system.internet);
+            update("display", system.singleDisplay);
+
+            const results = {
+                camera: media.hasCamera,
+                microphone: media.hasMic,
+                internet: system.internet,
+                singleDisplay: system.singleDisplay
+            };
 
             const failed = Object.entries(results).filter(([_, v]) => !v);
 
             if (failed.length > 0) {
                 ipcRenderer.send("system-check-failed", failed.map(f => f[0]));
+            } else {
+                ipcRenderer.send("system-checks-passed");
             }
         })();
-
-        if (Object.values(results).every(Boolean)) {
-            ipcRenderer.send("system-checks-passed");
-        }
     </script>
 </body>
 
