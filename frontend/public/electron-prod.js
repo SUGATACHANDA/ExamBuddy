@@ -23,6 +23,7 @@ let isMainWindowReady = false;
 let updateDialogQueue = [];
 let isMainWindowVisible = false;
 let violationStrikes = 0;
+let checksPassed = false;
 const MAX_STRIKES = process.env.MAX_STRIKES;
 
 let splashWindow;
@@ -388,7 +389,6 @@ app.whenReady().then(() => {
 
     createSplashWindow();
     setTimeout(() => {
-        createWindow();
         handlePostUpdateLaunch();
 
         // Perform update check after main window has initialized
@@ -619,45 +619,45 @@ ipcMain.handle('show-other', () => {
     console.log('Other button clicked');
 });
 
-ipcMain.on('login-screen-ready', () => {
-    console.log("React reports: Login screen has mounted.");
+// ipcMain.on('login-screen-ready', () => {
+//     console.log("React reports: Login screen has mounted.");
 
-    // Only proceed if BOTH sides of the handshake are complete.
-    // This is the failsafe against race conditions.
-    if (isMainWindowReady) {
-        console.log("Handshake complete. Closing splash and showing main window.");
-        if (splashWindow && !splashWindow.isDestroyed()) {
-            splashWindow.close();
-            splashWindow = null;
-        }
-        mainWindow.show();
-        isMainWindowVisible = true;
-        console.log("Gatekeeper: Main window is now visible. Dialogs are allowed.");
-        handlePostUpdateLaunch(); // Check for release notes now
+//     // Only proceed if BOTH sides of the handshake are complete.
+//     // This is the failsafe against race conditions.
+//     if (isMainWindowReady) {
+//         console.log("Handshake complete. Closing splash and showing main window.");
+//         if (splashWindow && !splashWindow.isDestroyed()) {
+//             splashWindow.close();
+//             splashWindow = null;
+//         }
+//         mainWindow.show();
+//         isMainWindowVisible = true;
+//         console.log("Gatekeeper: Main window is now visible. Dialogs are allowed.");
+//         handlePostUpdateLaunch(); // Check for release notes now
 
-        if (updateDialogQueue.length > 0) {
-            console.log("Processing queued update dialog...");
-            const showDialog = updateDialogQueue.shift(); // Get the first dialog in the queue
-            showDialog(); // Execute it now that the window is visible
-        }
+//         if (updateDialogQueue.length > 0) {
+//             console.log("Processing queued update dialog...");
+//             const showDialog = updateDialogQueue.shift(); // Get the first dialog in the queue
+//             showDialog(); // Execute it now that the window is visible
+//         }
 
-    } else {
-        // This is an edge case, but good to have. If React is ready before Electron, we wait.
-        console.log("React is ready, but waiting for Electron window...");
-        mainWindow.once('ready-to-show', () => {
-            console.log("...Electron window is now ready. Handshake complete.");
-            if (splashWindow && !splashWindow.isDestroyed()) {
-                splashWindow.close();
-                splashWindow = null;
-            }
-            if (deeplinkUrl) {
-                mainWindow.webContents.send("deeplink", deeplinkUrl);
-            }
-            mainWindow.show();
-            handlePostUpdateLaunch();
-        });
-    }
-});
+//     } else {
+//         // This is an edge case, but good to have. If React is ready before Electron, we wait.
+//         console.log("React is ready, but waiting for Electron window...");
+//         mainWindow.once('ready-to-show', () => {
+//             console.log("...Electron window is now ready. Handshake complete.");
+//             if (splashWindow && !splashWindow.isDestroyed()) {
+//                 splashWindow.close();
+//                 splashWindow = null;
+//             }
+//             if (deeplinkUrl) {
+//                 mainWindow.webContents.send("deeplink", deeplinkUrl);
+//             }
+//             mainWindow.show();
+//             handlePostUpdateLaunch();
+//         });
+//     }
+// });
 
 ipcMain.on('enter-fullscreen', () => {
     if (mainWindow) {
@@ -918,3 +918,21 @@ ipcMain.on("system-check-failed", (event, failedItems) => {
         }
     });
 });
+ipcMain.on("system-checks-passed", () => {
+    console.log("System checks passed. Launching main window.");
+
+    checksPassed = true;
+
+    if (!mainWindow) {
+        createWindow();   // 🔒 main window ONLY after checks
+    }
+
+    if (splashWindow && !splashWindow.isDestroyed()) {
+        splashWindow.close();
+        splashWindow = null;
+    }
+
+    mainWindow.show();
+    isMainWindowVisible = true;
+});
+ipcMain.handle("checks-passed", () => checksPassed);

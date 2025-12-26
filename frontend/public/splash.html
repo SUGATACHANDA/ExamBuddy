@@ -109,6 +109,10 @@
                 ipcRenderer.send("system-check-failed", failed.map(f => f[0]));
             }
         })();
+
+        if (Object.values(results).every(Boolean)) {
+            ipcRenderer.send("system-checks-passed");
+        }
     </script>
 </body>
 

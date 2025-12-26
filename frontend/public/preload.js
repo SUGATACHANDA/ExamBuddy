@@ -115,6 +115,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
         });
     },
 
+
+    systemChecksPassed: () => { ipcRenderer.invoke("checks-passed") },
+
+
     // --- Notify React about copy/paste violation ---
     onCopyPasteViolation: (callback) => ipcRenderer.on('violation', (event, type) => {
         if (type === 'COPY_PASTE_ATTEMPT') {

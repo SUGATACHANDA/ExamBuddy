@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom'; // <-- Make sure to import Link
 import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
@@ -19,11 +19,11 @@ const LoginScreen = () => {
 
     // --- EFFECT ---
     // Signal to main process that the UI is ready, so the splash screen can close.
-    useEffect(() => {
-        if (window.electronAPI && window.electronAPI.sendLoginScreenReady) {
-            window.electronAPI.sendLoginScreenReady();
-        }
-    }, []);
+    // useEffect(() => {
+    //     if (window.electronAPI && window.electronAPI.sendLoginScreenReady) {
+    //         window.electronAPI.sendLoginScreenReady();
+    //     }
+    // }, []);
 
 
     // --- HANDLERS ---
