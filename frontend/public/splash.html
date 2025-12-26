@@ -88,52 +88,70 @@
     <script>
         const { ipcRenderer } = require("electron");
 
-        async function checkMediaDevices() {
-            try {
-                const devices = await navigator.mediaDevices.enumerateDevices();
+        const sleep = (ms) => new Promise(res => setTimeout(res, ms));
 
-                const hasCamera = devices.some(d => d.kind === "videoinput");
-                const hasMic = devices.some(d => d.kind === "audioinput");
-
-                return { hasCamera, hasMic };
-            } catch (err) {
-                console.error("Media device check failed:", err);
-                return { hasCamera: false, hasMic: false };
-            }
-        }
-
-        const update = (id, ok) => {
-            const el = document.getElementById(id);
-            el.innerHTML = ok
-                ? `<span class="tick">✔</span>${el.textContent}`
-                : `<span class="cross">✖</span>${el.textContent}`;
+        const setLoader = (id) => {
+            document.getElementById(id).innerHTML =
+                `<div class="loader"></div>${idLabel(id)}`;
         };
 
-        (async () => {
-            console.log("Running splash checks...");
+        const setTick = (id) => {
+            document.getElementById(id).innerHTML =
+                `<span class="tick">✔</span>${idLabel(id)}`;
+        };
 
-            const media = await checkMediaDevices();
-            update("camera", media.hasCamera);
-            update("microphone", media.hasMic);
+        const idLabel = (id) => ({
+            camera: "Camera",
+            microphone: "Microphone",
+            internet: "Internet",
+            display: "Single Display"
+        }[id]);
 
-            const system = await ipcRenderer.invoke("perform-system-checks");
-
-            update("internet", system.internet);
-            update("display", system.singleDisplay);
-
-            const results = {
-                camera: media.hasCamera,
-                microphone: media.hasMic,
-                internet: system.internet,
-                singleDisplay: system.singleDisplay
+        async function checkMedia() {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            return {
+                camera: devices.some(d => d.kind === "videoinput"),
+                microphone: devices.some(d => d.kind === "audioinput")
             };
+        }
 
-            const failed = Object.entries(results).filter(([_, v]) => !v);
+        (async () => {
+            try {
+                // 1️⃣ Camera
+                setLoader("camera");
+                await sleep(600);
+                const media = await checkMedia();
+                if (!media.camera) throw ["camera"];
+                setTick("camera");
 
-            if (failed.length > 0) {
-                ipcRenderer.send("system-check-failed", failed.map(f => f[0]));
-            } else {
+                // 2️⃣ Microphone
+                setLoader("microphone");
+                await sleep(600);
+                if (!media.microphone) throw ["microphone"];
+                setTick("microphone");
+
+                // 3️⃣ Internet + Display (main)
+                setLoader("internet");
+                setLoader("display");
+                await sleep(600);
+
+                const system = await ipcRenderer.invoke("perform-system-checks");
+
+                if (!system.internet) throw ["internet"];
+                if (!system.singleDisplay) throw ["singleDisplay"];
+
+                setTick("internet");
+                setTick("display");
+
+                // ✅ ALL PASSED
+                document.querySelector("p").textContent = "All system checks passed";
+                await sleep(1200); // 👈 UX delay so ticks are visible
+
                 ipcRenderer.send("system-checks-passed");
+
+            } catch (failedItems) {
+                // ❌ FAIL → close splash + show dialog
+                ipcRenderer.send("system-check-failed", failedItems);
             }
         })();
     </script>

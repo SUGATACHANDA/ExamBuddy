@@ -879,6 +879,11 @@ async function checkInternet() {
 }
 
 ipcMain.on("system-check-failed", (event, failedItems) => {
+    if (splashWindow && !splashWindow.isDestroyed()) {
+        splashWindow.close();   // 👈 CLOSE SPLASH IMMEDIATELY
+        splashWindow = null;
+    }
+
     const readable = {
         camera: "Camera not detected",
         microphone: "Microphone not detected",
@@ -891,27 +896,24 @@ ipcMain.on("system-check-failed", (event, failedItems) => {
     dialog.showMessageBox({
         type: "error",
         title: "System Requirements Not Met",
-        message: "Please fix the following issues before continuing:",
+        message: "Please fix the following issues:",
         detail: message,
         buttons: ["Retry", "Exit"],
         defaultId: 0,
         cancelId: 1
     }).then(result => {
         if (result.response === 0) {
-            // Retry → reload splash
-            if (splashWindow) splashWindow.reload();
+            createSplashWindow(); // 👈 fresh splash
         } else {
             app.quit();
         }
     });
 });
 ipcMain.on("system-checks-passed", () => {
-    console.log("System checks passed. Launching main window.");
-
-    checksPassed = true;
+    console.log("All checks passed. Showing login.");
 
     if (!mainWindow) {
-        createWindow();   // 🔒 main window ONLY after checks
+        createWindow();
     }
 
     if (splashWindow && !splashWindow.isDestroyed()) {
