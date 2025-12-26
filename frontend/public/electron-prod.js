@@ -726,9 +726,6 @@ ipcMain.on('force-expel-student', () => { if (mainWindow) mainWindow.webContents
 
 app.on('ready', createWindow);
 const { exec } = require('child_process');
-// --- THE FINAL, CORRECT IPC HANDLER ---
-// NOTE: We do not require or import 'ps-list' here at the top level.
-
 const normalize = (name) => (name || "").toLowerCase().trim();
 
 // --- WHITELIST: processes that should never be killed ---
@@ -817,7 +814,6 @@ ipcMain.on('kill-app-list', (event, appList) => {
         exec(`taskkill /IM "${appName}" /F`);
     });
 });
-
 ipcMain.on('close-app', () => {
     console.log('IPC: Received signal to quit the application.');
     app.quit();
@@ -827,15 +823,12 @@ ipcMain.on('exam-started', () => {
     isExamInProgress = true;
     violationStrikes = 0; // Reset for every new exam attempt
 });
-
 // The 'exam-finished' handler can also reset it as a failsafe.
 ipcMain.on('exam-finished', () => {
     console.log('IPC: Exam finished. Lockdowns disabled. Resetting strike count.');
     isExamInProgress = false;
     violationStrikes = 0;
 });
-
-
 // --- THE NEW, DEFINITIVE VIOLATION HANDLER with 3-STRIKES LOGIC ---
 ipcMain.on('ipc-violation', (event, violationType) => {
     if (!isExamInProgress) return; // Ignore violations if exam is not active
@@ -864,4 +857,64 @@ ipcMain.on('ipc-violation', (event, violationType) => {
             });
         }
     }
+});
+ipcMain.handle("perform-system-checks", async () => {
+    const results = {
+        camera: false,
+        microphone: false,
+        internet: false,
+        singleDisplay: false
+    };
+
+    try {
+        // 1️⃣ Camera & Microphone
+        const devices = await session.defaultSession.getMediaDevices();
+        results.camera = devices.some(d => d.kind === "videoinput");
+        results.microphone = devices.some(d => d.kind === "audioinput");
+
+        // 2️⃣ Internet check (simple + reliable)
+        try {
+            await require("dns").promises.resolve("google.com");
+            results.internet = true;
+        } catch {
+            results.internet = false;
+        }
+
+        // 3️⃣ Single display check
+        const displays = screen.getAllDisplays();
+        results.singleDisplay = displays.length === 1;
+
+        return results;
+
+    } catch (err) {
+        console.error("System check failed:", err);
+        return results;
+    }
+});
+ipcMain.on("system-check-failed", (event, failedItems) => {
+    const readable = {
+        camera: "Camera not detected",
+        microphone: "Microphone not detected",
+        internet: "No internet connection",
+        singleDisplay: "Multiple displays detected"
+    };
+
+    const message = failedItems.map(i => "• " + readable[i]).join("\n");
+
+    dialog.showMessageBox({
+        type: "error",
+        title: "System Requirements Not Met",
+        message: "Please fix the following issues before continuing:",
+        detail: message,
+        buttons: ["Retry", "Exit"],
+        defaultId: 0,
+        cancelId: 1
+    }).then(result => {
+        if (result.response === 0) {
+            // Retry → reload splash
+            if (splashWindow) splashWindow.reload();
+        } else {
+            app.quit();
+        }
+    });
 });

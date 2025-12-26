@@ -3,39 +3,55 @@
 
 <head>
     <meta charset="UTF-8" />
-    <title>Loading Exam Proctor</title>
+    <title>Exam Buddy – System Check</title>
     <style>
         body {
-            background-color: #2563EB;
-            /* A nice primary blue */
+            background: #2563EB;
+            color: white;
+            font-family: system-ui;
+            margin: 0;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            margin: 0;
-            color: white;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-            -webkit-app-region: drag;
-            /* Allows the user to drag the frameless window */
         }
 
-        .splash-container {
+        .container {
+            width: 320px;
             text-align: center;
         }
 
-        .loader {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top: 4px solid #fff;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px auto;
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
         }
 
-        h1 {
-            font-size: 24px;
-            letter-spacing: 1px;
+        .check {
+            display: flex;
+            align-items: center;
+            margin: 12px 0;
+        }
+
+        .loader {
+            width: 18px;
+            height: 18px;
+            border: 3px solid rgba(255, 255, 255, 0.4);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 12px;
+        }
+
+        .tick {
+            color: #22C55E;
+            font-size: 18px;
+            margin-right: 12px;
+        }
+
+        .cross {
+            color: #EF4444;
+            font-size: 18px;
+            margin-right: 12px;
         }
 
         @keyframes spin {
@@ -51,11 +67,49 @@
 </head>
 
 <body>
-    <div class="splash-container">
-        <div class="loader"></div>
+    <div class="container">
         <h1>Exam Buddy</h1>
-        <p>Initializing Secure Environment...</p>
+        <p>Initializing Secure Environment</p>
+
+        <div class="check" id="camera">
+            <div class="loader"></div>Camera
+        </div>
+        <div class="check" id="microphone">
+            <div class="loader"></div>Microphone
+        </div>
+        <div class="check" id="internet">
+            <div class="loader"></div>Internet
+        </div>
+        <div class="check" id="display">
+            <div class="loader"></div>Single Display
+        </div>
     </div>
+
+    <script>
+        const { ipcRenderer } = require("electron");
+
+        const update = (id, ok) => {
+            const el = document.getElementById(id);
+            el.innerHTML = ok
+                ? `<span class="tick">✔</span>${el.textContent}`
+                : `<span class="cross">✖</span>${el.textContent}`;
+        };
+
+        (async () => {
+            const results = await ipcRenderer.invoke("perform-system-checks");
+
+            update("camera", results.camera);
+            update("microphone", results.microphone);
+            update("internet", results.internet);
+            update("display", results.singleDisplay);
+
+            const failed = Object.entries(results).filter(([_, v]) => !v);
+
+            if (failed.length > 0) {
+                ipcRenderer.send("system-check-failed", failed.map(f => f[0]));
+            }
+        })();
+    </script>
 </body>
 
 </html>
