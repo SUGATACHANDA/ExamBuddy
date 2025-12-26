@@ -393,14 +393,10 @@ app.whenReady().then(() => {
 
     createSplashWindow();
     setTimeout(() => {
-        handlePostUpdateLaunch();
+        autoUpdater.checkForUpdates();
+    }, 3000);
 
-        // Perform update check after main window has initialized
-        setTimeout(() => {
-            autoUpdater.checkForUpdates();
-        }, 3000);
-    }, 1500);
-
+    // periodic checks stay
     setInterval(() => {
         log.info("Performing periodic update check...");
         autoUpdater.checkForUpdates();
@@ -670,14 +666,14 @@ ipcMain.on('enter-fullscreen', () => {
     }
 });
 
-ipcMain.on('react-app-ready', () => {
-    console.log("React app has signaled it is ready.");
-    if (splashWindow) {
-        splashWindow.close();
-    }
-    mainWindow.center();
-    mainWindow.show();
-});
+// ipcMain.on('react-app-ready', () => {
+//     console.log("React app has signaled it is ready.");
+//     if (splashWindow) {
+//         splashWindow.close();
+//     }
+//     mainWindow.center();
+//     mainWindow.show();
+// });
 
 ipcMain.handle('get-release-notes', () => {
     try {
@@ -880,7 +876,7 @@ async function checkInternet() {
 
 ipcMain.on("system-check-failed", (event, failedItems) => {
     if (splashWindow && !splashWindow.isDestroyed()) {
-        splashWindow.close();   // 👈 CLOSE SPLASH IMMEDIATELY
+        splashWindow.destroy();
         splashWindow = null;
     }
 
@@ -923,5 +919,10 @@ ipcMain.on("system-checks-passed", () => {
 
     mainWindow.show();
     isMainWindowVisible = true;
+    handlePostUpdateLaunch();
+    if (updateDialogQueue.length > 0) {
+        const showDialog = updateDialogQueue.shift();
+        showDialog();
+    }
 });
 ipcMain.handle("checks-passed", () => checksPassed);
