@@ -77,16 +77,20 @@ function createSplashWindow() {
         alwaysOnTop: true,
         resizable: false,
         center: true,
-        show: false
+        show: false,
+        webPreferences: {
+            nodeIntegration: true,
+            contextIsolation: false
+        }
     });
     // This assumes you have created the `splash.html` file in the `public` directory.
     splashWindow.loadFile(path.join(__dirname, 'splash.html'));
-    splashWindow.on('closed', () => (splashWindow = null));
-
     splashWindow.once('ready-to-show', () => {
         console.log("Splash screen is ready to show");
         splashWindow.show();
     });
+    splashWindow.on('closed', () => (splashWindow = null));
+
 }
 
 function createDownloadProgressWindow() {
