@@ -3,7 +3,7 @@
 // This is the MAIN entry file for the PACKAGED PRODUCTION application.
 
 // `session` is the key module we need to import for this fix
-const { app, BrowserWindow, ipcMain, screen, session, dialog, protocol } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, session, dialog, net } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const url = require('url');
@@ -91,6 +91,37 @@ function createSplashWindow() {
     });
     splashWindow.on('closed', () => (splashWindow = null));
 
+}
+
+function checkMaintenance() {
+    return new Promise((resolve) => {
+        const request = net.request(
+            "https://exam-buddy-backend.vercel.app/api/system/maintenance"
+        );
+
+        request.on("response", (response) => {
+            let body = "";
+
+            response.on("data", (chunk) => {
+                body += chunk;
+            });
+
+            response.on("end", () => {
+                try {
+                    const data = JSON.parse(body);
+                    resolve(data.maintenance === true);
+                } catch {
+                    resolve(false);
+                }
+            });
+        });
+
+        request.on("error", () => {
+            resolve(false); // fail-open (or true if you prefer fail-closed)
+        });
+
+        request.end();
+    });
 }
 
 function createDownloadProgressWindow() {
@@ -250,8 +281,10 @@ function generateFallbackHTML(releaseData) {
 </html>`;
 }
 
-function createWindow() {
+async function createWindow() {
     console.log("--- Production electron.js (electron-prod.js) is running ---");
+
+    const maintenance = await checkMaintenance();
 
     const { width, height } = screen.getPrimaryDisplay().workAreaSize;
 
@@ -271,14 +304,20 @@ function createWindow() {
         }
     });
 
-    const startUrl = url.format({
-        pathname: path.join(__dirname, 'index.html'),
-        protocol: 'file:',
-        slashes: true
-    });
+    if (maintenance) {
+        console.log("Maintenance mode ON — loading maintenance page");
+        mainWindow.loadFile(path.join(__dirname, 'maintenance.html'));
+    } else {
+        console.log("Maintenance OFF — loading app");
+        mainWindow.loadURL(
+            url.format({
+                pathname: path.join(__dirname, 'index.html'),
+                protocol: 'file:',
+                slashes: true
+            })
+        );
+    }
 
-    console.log("PRODUCTION MODE: Loading URL:", startUrl);
-    mainWindow.loadURL(startUrl);
 
     mainWindow.once('ready-to-show', () => {
         console.log("Electron reports: Main window is ready to show.");
@@ -724,7 +763,7 @@ app.on('activate', () => {
 
 ipcMain.on('force-expel-student', () => { if (mainWindow) mainWindow.webContents.send('exam-expelled-by-proctor'); });
 
-app.on('ready', createWindow);
+// app.on('ready', createWindow);
 const { exec } = require('child_process');
 const normalize = (name) => (name || "").toLowerCase().trim();
 

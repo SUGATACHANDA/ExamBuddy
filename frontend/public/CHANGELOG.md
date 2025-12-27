@@ -1,4 +1,4 @@
-## v1.6.11
+## v1.7.0
 
 ### 🛠 Improvements
-- refactor: Fixed the **Auto Update Feature** on App Launch.
+- refactor: Added new **Maintainance Mode** in the app.
