@@ -946,20 +946,30 @@ ipcMain.on("system-check-failed", (event, failedItems) => {
     });
 });
 ipcMain.on("system-checks-passed", () => {
-    if (isMaintenanceMode) {
-        console.log("System checks ignored — maintenance mode active");
-        return;
-    }
+    console.log("System checks passed");
 
-    console.log("All checks passed. Showing login.");
-
-    if (!mainWindow) {
-        createWindow();
-    }
-
+    // ALWAYS close splash
     if (splashWindow && !splashWindow.isDestroyed()) {
         splashWindow.close();
         splashWindow = null;
+    }
+
+    // 🔴 MAINTENANCE MODE FLOW
+    if (isMaintenanceMode) {
+        console.log("Maintenance mode active — showing maintenance page");
+
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.show();
+        }
+
+        return; // ⛔ stop normal app flow
+    }
+
+    // 🟢 NORMAL APP FLOW
+    console.log("Showing main application");
+
+    if (!mainWindow) {
+        createWindow();
     }
 
     if (mainWindow && !mainWindow.isDestroyed()) {
