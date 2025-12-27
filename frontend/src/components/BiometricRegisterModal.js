@@ -218,10 +218,10 @@ export default function BiometricRegisterModal({
                 title: "Success",
                 message: "Biometric captured successfully.",
                 confirmText: "Continue",
-                onConfirm: () => {
+                onConfirm: async () => {
                     closeAlert();
                     onCloseModal();
-                    onComplete(true);
+                    onComplete(await api.get("/auth/me").then(res => res.data));
                 }
             });
         } catch (err) {

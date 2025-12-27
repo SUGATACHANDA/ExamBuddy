@@ -38,6 +38,7 @@ const StudentDashboard = () => {
     const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
     const [targetExamId, setTargetExamId] = useState(null);
     const [isBiometricModalOpen, setBiometricModalOpen] = useState(false);
+    const [biometricVerified, setBiometricVerified] = useState(false);
 
     const [userLoaded, setUserLoaded] = useState(false);
 
@@ -70,6 +71,7 @@ const StudentDashboard = () => {
             typeof desc === "string";
 
         setBiometricModalOpen(!hasBiometric);
+        setBiometricVerified(hasBiometric);
     }, [userLoaded, userInfo]);
 
 
@@ -230,6 +232,23 @@ const StudentDashboard = () => {
 
     const initials = getInitials(userInfo?.name);
 
+    if (!biometricVerified && isBiometricModalOpen) {
+        return (
+            <>
+                <BiometricRegisterModal
+                    isOpen={true}
+                    onComplete={(freshUser) => {
+                        updateUser(freshUser);
+                        setBiometricVerified(true);
+                        setBiometricModalOpen(false);
+                        fetchData();
+                    }}
+                    allowClose={false}
+                />
+            </>
+        );
+    }
+
     return (
         <div className="professional-dashboard">
 
@@ -246,14 +265,6 @@ const StudentDashboard = () => {
                 }}
             />
 
-            <BiometricRegisterModal
-                isOpen={isBiometricModalOpen}
-                onComplete={(freshUser) => {
-                    updateUser(freshUser);          // update context
-                    setBiometricModalOpen(false);
-                }}
-                allowClose={false}
-            />
             {/* Header */}
             <header className="dashboard-header">
                 <div className="header-content">

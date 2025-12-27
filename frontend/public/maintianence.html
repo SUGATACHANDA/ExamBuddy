@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Maintenance</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont;
+            height: 100vh;
+            background: url("background.jpg") center/cover no-repeat;
+            color: #fff;
+            position: relative;
+        }
+
+        body::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, .55);
+        }
+
+        .container {
+            position: relative;
+            z-index: 2;
+            height: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            padding: 60px;
+        }
+
+        .left,
+        .right {
+            display: flex;
+            flex-direction: column;
+            justify-content: center
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 30px
+        }
+
+        .logo-icon {
+            width: 38px;
+            height: 38px;
+            border: 3px solid #fff;
+            transform: rotate(45deg)
+        }
+
+        h1 {
+            font-size: 46px;
+            letter-spacing: 3px;
+            margin-bottom: 15px
+        }
+
+        .subtitle {
+            max-width: 420px;
+            line-height: 1.7;
+            opacity: .85
+        }
+
+        .ends-text {
+            margin-bottom: 20px;
+            opacity: .85
+        }
+
+        .countdown {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px
+        }
+
+        .time-box {
+            background: rgba(255, 255, 255, .12);
+            padding: 14px 16px;
+            min-width: 78px;
+            text-align: center;
+            border-radius: 4px
+        }
+
+        .time {
+            font-size: 26px;
+            font-weight: 600
+        }
+
+        .label {
+            font-size: 11px;
+            opacity: .8
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            opacity: .6;
+            z-index: 2
+        }
+
+        @media(max-width:900px) {
+            .container {
+                grid-template-columns: 1fr;
+                gap: 50px
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="left">
+            <div class="logo">
+                <div class="logo-icon"></div>
+                <div>MEETANSHI</div>
+            </div>
+            <h1>COMING SOON!</h1>
+            <p class="subtitle">
+                Our website is under maintenance. We’ll be here soon
+                with our new awesome site.
+            </p>
+        </div>
+
+        <div class="right">
+            <div class="ends-text">The maintenance will end in</div>
+
+            <div class="countdown">
+                <div class="time-box">
+                    <div id="days" class="time">--</div>
+                    <div class="label">Days</div>
+                </div>
+                <div class="time-box">
+                    <div id="hours" class="time">--</div>
+                    <div class="label">Hours</div>
+                </div>
+                <div class="time-box">
+                    <div id="minutes" class="time">--</div>
+                    <div class="label">Minutes</div>
+                </div>
+                <div class="time-box">
+                    <div id="seconds" class="time">--</div>
+                    <div class="label">Seconds</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">This content managed by exam-buddy.com</div>
+
+    <script>
+        const API_URL = "https://exam-buddy-backend.vercel.app/api/system/maintenance";
+
+        let endTime = null;
+
+        async function fetchMaintenance() {
+            try {
+                const res = await fetch(API_URL);
+                const data = await res.json();
+
+                if (!data.maintenance || !data.endsAt) return;
+
+                endTime = new Date(data.endsAt).getTime();
+                startCountdown();
+            } catch (e) {
+                console.warn("Maintenance API unreachable");
+            }
+        }
+
+        function startCountdown() {
+            setInterval(() => {
+                const now = Date.now();
+                const diff = endTime - now;
+
+                if (diff <= 0) {
+                    location.reload(); // Maintenance ended
+                    return;
+                }
+
+                const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                const m = Math.floor((diff / (1000 * 60)) % 60);
+                const s = Math.floor((diff / 1000) % 60);
+
+                days.textContent = d;
+                hours.textContent = String(h).padStart(2, "0");
+                minutes.textContent = String(m).padStart(2, "0");
+                seconds.textContent = String(s).padStart(2, "0");
+            }, 1000);
+        }
+
+        fetchMaintenance();
+    </script>
+
+</body>
+
+</html>

@@ -34,6 +34,7 @@ const faceRoutes = require('../routes/faceRoutes.js');
 const subjectRoutes = require("../routes/subjectRoutes.js");
 const deepLinkRoutes = require("../routes/deepLinkRoutes.js");
 const studentRoutes = require("../routes/studentRoutes");
+const systemRoutes = require("../routes/systemRoutes.js")
 
 const startServer = async () => {
     await connectDB();
@@ -359,6 +360,8 @@ app.get("/api/health", (req, res) => {
         timestamp: new Date().toISOString(),
     });
 });
+
+app.use("/api/system", systemRoutes);
 
 app.get('/', (req, res) => {
     res.send('Exam App API is running...');
