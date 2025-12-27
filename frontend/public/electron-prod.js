@@ -306,8 +306,11 @@ async function createWindow() {
     });
 
     if (isMaintenanceMode) {
-        console.log("Maintenance mode ON — loading maintenance page");
-        mainWindow.loadFile(path.join(__dirname, 'maintenance.html'));
+        await mainWindow.loadFile(
+            path.join(__dirname, 'maintenance.html')
+        );
+        mainWindow.show();   // 👈 IMPORTANT
+        return;
     } else {
         console.log("Maintenance OFF — loading app");
         mainWindow.loadURL(
@@ -407,7 +410,15 @@ ipcMain.on('request-release-notes', () => {
 
 // --- THIS IS THE PRODUCTION SCREEN SHARE FIX ---
 // The `app.on('ready', ...)` block is replaced by the more modern `app.whenReady().then(...)`
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+
+    isMaintenanceMode = await checkMaintenance();
+
+    if (isMaintenanceMode) {
+        // 🔴 Maintenance → directly show maintenance page
+        createWindow();
+        return;
+    }
     // We get the default session for our application.
     const defaultSession = session.defaultSession;
 
@@ -946,42 +957,20 @@ ipcMain.on("system-check-failed", (event, failedItems) => {
     });
 });
 ipcMain.on("system-checks-passed", () => {
-    console.log("System checks passed");
 
-    // ALWAYS close splash
+    // Close splash always
     if (splashWindow && !splashWindow.isDestroyed()) {
         splashWindow.close();
         splashWindow = null;
     }
 
-    // 🔴 MAINTENANCE MODE FLOW
-    if (isMaintenanceMode) {
-        console.log("Maintenance mode active — showing maintenance page");
+    // 🔴 If maintenance → do nothing else
+    if (isMaintenanceMode) return;
 
-        if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.show();
-        }
-
-        return; // ⛔ stop normal app flow
-    }
-
-    // 🟢 NORMAL APP FLOW
-    console.log("Showing main application");
-
-    if (!mainWindow) {
-        createWindow();
-    }
-
+    // 🟢 Show main app
     if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.show();
-    }
-
-    isMainWindowVisible = true;
-    handlePostUpdateLaunch();
-
-    if (updateDialogQueue.length > 0) {
-        const showDialog = updateDialogQueue.shift();
-        showDialog();
+        mainWindow.focus();
     }
 });
 ipcMain.on('enter-fullscreen', () => {
