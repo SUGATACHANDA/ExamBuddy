@@ -24,6 +24,7 @@ let updateDialogQueue = [];
 let isMainWindowVisible = false;
 let violationStrikes = 0;
 let checksPassed = false;
+let isMaintenanceMode = false;
 const MAX_STRIKES = process.env.MAX_STRIKES;
 
 let splashWindow;
@@ -284,7 +285,7 @@ function generateFallbackHTML(releaseData) {
 async function createWindow() {
     console.log("--- Production electron.js (electron-prod.js) is running ---");
 
-    const maintenance = await checkMaintenance();
+    isMaintenanceMode = await checkMaintenance();
 
     const { width, height } = screen.getPrimaryDisplay().workAreaSize;
 
@@ -304,7 +305,7 @@ async function createWindow() {
         }
     });
 
-    if (maintenance) {
+    if (isMaintenanceMode) {
         console.log("Maintenance mode ON — loading maintenance page");
         mainWindow.loadFile(path.join(__dirname, 'maintenance.html'));
     } else {
@@ -945,6 +946,11 @@ ipcMain.on("system-check-failed", (event, failedItems) => {
     });
 });
 ipcMain.on("system-checks-passed", () => {
+    if (isMaintenanceMode) {
+        console.log("System checks ignored — maintenance mode active");
+        return;
+    }
+
     console.log("All checks passed. Showing login.");
 
     if (!mainWindow) {
@@ -956,12 +962,20 @@ ipcMain.on("system-checks-passed", () => {
         splashWindow = null;
     }
 
-    mainWindow.show();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.show();
+    }
+
     isMainWindowVisible = true;
     handlePostUpdateLaunch();
+
     if (updateDialogQueue.length > 0) {
         const showDialog = updateDialogQueue.shift();
         showDialog();
     }
+});
+ipcMain.on('enter-fullscreen', () => {
+    if (isMaintenanceMode) return;
+    if (mainWindow) mainWindow.setFullScreen(true);
 });
 ipcMain.handle("checks-passed", () => checksPassed);
