@@ -285,8 +285,6 @@ function generateFallbackHTML(releaseData) {
 async function createWindow() {
     console.log("--- Production electron.js (electron-prod.js) is running ---");
 
-    isMaintenanceMode = await checkMaintenance();
-
     const { width, height } = screen.getPrimaryDisplay().workAreaSize;
 
     mainWindow = new BrowserWindow({
@@ -304,24 +302,13 @@ async function createWindow() {
             preload: path.join(__dirname, 'preload.js')
         }
     });
-
-    if (isMaintenanceMode) {
-        await mainWindow.loadFile(
-            path.join(__dirname, 'maintenance.html')
-        );
-        mainWindow.show();   // 👈 IMPORTANT
-        return;
-    } else {
-        console.log("Maintenance OFF — loading app");
-        mainWindow.loadURL(
-            url.format({
-                pathname: path.join(__dirname, 'index.html'),
-                protocol: 'file:',
-                slashes: true
-            })
-        );
-    }
-
+    mainWindow.loadURL(
+        url.format({
+            pathname: path.join(__dirname, 'index.html'),
+            protocol: 'file:',
+            slashes: true
+        })
+    );
 
     mainWindow.once('ready-to-show', () => {
         console.log("Electron reports: Main window is ready to show.");
@@ -411,14 +398,6 @@ ipcMain.on('request-release-notes', () => {
 // --- THIS IS THE PRODUCTION SCREEN SHARE FIX ---
 // The `app.on('ready', ...)` block is replaced by the more modern `app.whenReady().then(...)`
 app.whenReady().then(async () => {
-
-    isMaintenanceMode = await checkMaintenance();
-
-    if (isMaintenanceMode) {
-        // 🔴 Maintenance → directly show maintenance page
-        createWindow();
-        return;
-    }
     // We get the default session for our application.
     const defaultSession = session.defaultSession;
 
@@ -977,4 +956,14 @@ ipcMain.on('enter-fullscreen', () => {
     if (isMaintenanceMode) return;
     if (mainWindow) mainWindow.setFullScreen(true);
 });
+ipcMain.handle("check-maintenance", async () => {
+    return await checkMaintenance();
+});
 ipcMain.handle("checks-passed", () => checksPassed);
+ipcMain.on("open-login", () => {
+    if (splashWindow && !splashWindow.isDestroyed()) {
+        splashWindow.close();
+        splashWindow = null;
+    }
+    createWindow();
+});
