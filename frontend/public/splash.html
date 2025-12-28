@@ -21,8 +21,7 @@
             text-align: center;
         }
 
-        h2 {
-            text-align: center;
+        h1 {
             margin-bottom: 20px;
         }
 
@@ -30,6 +29,7 @@
             display: flex;
             align-items: center;
             margin: 12px 0;
+            height: 24px;
         }
 
         .loader {
@@ -62,6 +62,11 @@
             100% {
                 transform: rotate(360deg);
             }
+        }
+
+        #status-text {
+            margin-bottom: 20px;
+            min-height: 24px;
         }
     </style>
 </head>
@@ -193,7 +198,9 @@
                 setLoader("service");
                 await sleep(800);
 
+                // Check maintenance
                 const isMaintenance = await ipcRenderer.invoke("check-maintenance");
+                console.log("Maintenance check result:", isMaintenance);
 
                 if (isMaintenance) {
                     // 🔴 MAINTENANCE MODE ACTIVE
@@ -209,15 +216,19 @@
                     document.getElementById("status-text").textContent = "All checks passed ✓";
                     await sleep(1200);
 
+                    // Send signal to show main window
                     ipcRenderer.send("system-checks-passed");
                 }
 
             } catch (failedItems) {
                 // ❌ SYSTEM CHECK FAILED
+                console.error("System check failed:", failedItems);
                 if (Array.isArray(failedItems)) {
                     ipcRenderer.send("system-check-failed", failedItems);
                 } else {
                     console.error("Unexpected error:", failedItems);
+                    // Fallback: try to show main window anyway
+                    ipcRenderer.send("system-checks-passed");
                 }
             }
         }

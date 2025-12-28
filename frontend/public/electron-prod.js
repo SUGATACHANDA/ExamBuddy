@@ -252,6 +252,60 @@ function generateFallbackHTML(releaseData) {
 </html>`;
 }
 
+async function checkMaintenance() {
+    return new Promise((resolve) => {
+        const request = net.request(
+            "https://exam-buddy-backend.vercel.app/api/system/maintenance"
+        );
+
+        request.on("response", (response) => {
+            let body = "";
+
+            response.on("data", (chunk) => {
+                body += chunk;
+            });
+
+            response.on("end", () => {
+                try {
+                    const data = JSON.parse(body);
+                    resolve(data.maintenance === true);
+                } catch {
+                    resolve(false);
+                }
+            });
+        });
+
+        request.on("error", () => {
+            resolve(false);
+        });
+
+        request.end();
+    });
+}
+
+ipcMain.handle("check-maintenance", async () => {
+    try {
+        return await checkMaintenance();
+    } catch (error) {
+        console.error("Error checking maintenance:", error);
+        return false;
+    }
+});
+
+// This handler shows maintenance window
+ipcMain.on("show-maintenance", () => {
+    console.log("Show maintenance requested from splash");
+
+    // Close splash
+    if (splashWindow && !splashWindow.isDestroyed()) {
+        splashWindow.close();
+        splashWindow = null;
+    }
+
+    // Show maintenance window
+    createMaintenanceWindow();
+});
+
 async function createWindow() {
     console.log("--- Production electron.js (electron-prod.js) is running ---");
 
@@ -290,6 +344,118 @@ async function createWindow() {
     mainWindow.on('close', (e) => { if (isExamInProgress) e.preventDefault(); });
     mainWindow.on('closed', () => (mainWindow = null));
 }
+
+function createMaintenanceWindow() {
+    // Don't create multiple maintenance windows
+    if (maintenanceWindow && !maintenanceWindow.isDestroyed()) {
+        maintenanceWindow.focus();
+        return maintenanceWindow;
+    }
+
+    maintenanceWindow = new BrowserWindow({
+        width: 900,
+        height: 500,
+        resizable: false,
+        minimizable: false,
+        maximizable: false,
+        closable: false, // Prevent closing
+        show: false,
+        frame: false,
+        alwaysOnTop: true,
+        webPreferences: {
+            nodeIntegration: true,
+            contextIsolation: false,
+            webSecurity: true
+        }
+    });
+
+    // Load your maintenance.html
+    const maintenancePath = path.join(__dirname, 'maintenance.html');
+
+    if (fs.existsSync(maintenancePath)) {
+        maintenanceWindow.loadFile(maintenancePath);
+    } else {
+        // Fallback
+        maintenanceWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`
+            <!DOCTYPE html>
+            <html><body style="background:#F59E0B;text-align:center;padding:50px">
+                <h1>⚠️ Maintenance Mode</h1>
+                <p>Exam Buddy is currently undergoing maintenance.</p>
+                <p>Please try again later.</p>
+            </body></html>
+        `)}`);
+    }
+
+    maintenanceWindow.once('ready-to-show', () => {
+        maintenanceWindow.show();
+        maintenanceWindow.focus();
+        maintenanceWindow.setAlwaysOnTop(true);
+    });
+
+    maintenanceWindow.on('closed', () => {
+        maintenanceWindow = null;
+    });
+
+    // Periodically check if maintenance ended
+    const checkInterval = setInterval(async () => {
+        if (!maintenanceWindow || maintenanceWindow.isDestroyed()) {
+            clearInterval(checkInterval);
+            return;
+        }
+
+        const stillInMaintenance = await checkMaintenance();
+        if (!stillInMaintenance) {
+            clearInterval(checkInterval);
+            maintenanceWindow.close();
+
+            // Show main window
+            if (!mainWindow || mainWindow.isDestroyed()) {
+                createWindow();
+                mainWindow.once('ready-to-show', () => {
+                    mainWindow.show();
+                    mainWindow.focus();
+                    isMainWindowVisible = true;
+                });
+            } else {
+                mainWindow.show();
+                mainWindow.focus();
+                isMainWindowVisible = true;
+            }
+        }
+    }, 30000); // Check every 30 seconds
+
+    return maintenanceWindow;
+}
+
+ipcMain.on("maintenance-ended", async () => {
+    console.log("Maintenance ended signal received");
+
+    // Check with backend
+    const isMaintenance = await checkMaintenance();
+
+    if (!isMaintenance) {
+        // Close maintenance window
+        if (maintenanceWindow && !maintenanceWindow.isDestroyed()) {
+            maintenanceWindow.close();
+            maintenanceWindow = null;
+        }
+
+        // Show main window
+        if (!mainWindow || mainWindow.isDestroyed()) {
+            createWindow();
+            mainWindow.once('ready-to-show', () => {
+                mainWindow.show();
+                mainWindow.focus();
+                isMainWindowVisible = true;
+            });
+        } else {
+            mainWindow.show();
+            mainWindow.focus();
+            isMainWindowVisible = true;
+        }
+    }
+});
+
 
 function handlePostUpdateLaunch() {
     try {
@@ -619,61 +785,12 @@ ipcMain.handle('show-other', () => {
     console.log('Other button clicked');
 });
 
-// ipcMain.on('login-screen-ready', () => {
-//     console.log("React reports: Login screen has mounted.");
-
-//     // Only proceed if BOTH sides of the handshake are complete.
-//     // This is the failsafe against race conditions.
-//     if (isMainWindowReady) {
-//         console.log("Handshake complete. Closing splash and showing main window.");
-//         if (splashWindow && !splashWindow.isDestroyed()) {
-//             splashWindow.close();
-//             splashWindow = null;
-//         }
-//         mainWindow.show();
-//         isMainWindowVisible = true;
-//         console.log("Gatekeeper: Main window is now visible. Dialogs are allowed.");
-//         handlePostUpdateLaunch(); // Check for release notes now
-
-//         if (updateDialogQueue.length > 0) {
-//             console.log("Processing queued update dialog...");
-//             const showDialog = updateDialogQueue.shift(); // Get the first dialog in the queue
-//             showDialog(); // Execute it now that the window is visible
-//         }
-
-//     } else {
-//         // This is an edge case, but good to have. If React is ready before Electron, we wait.
-//         console.log("React is ready, but waiting for Electron window...");
-//         mainWindow.once('ready-to-show', () => {
-//             console.log("...Electron window is now ready. Handshake complete.");
-//             if (splashWindow && !splashWindow.isDestroyed()) {
-//                 splashWindow.close();
-//                 splashWindow = null;
-//             }
-//             if (deeplinkUrl) {
-//                 mainWindow.webContents.send("deeplink", deeplinkUrl);
-//             }
-//             mainWindow.show();
-//             handlePostUpdateLaunch();
-//         });
-//     }
-// });
-
 ipcMain.on('enter-fullscreen', () => {
     if (mainWindow) {
         console.log("IPC: Received signal to enter fullscreen mode.");
         mainWindow.setFullScreen(true);
     }
 });
-
-// ipcMain.on('react-app-ready', () => {
-//     console.log("React app has signaled it is ready.");
-//     if (splashWindow) {
-//         splashWindow.close();
-//     }
-//     mainWindow.center();
-//     mainWindow.show();
-// });
 
 ipcMain.handle('get-release-notes', () => {
     try {
@@ -906,152 +1023,35 @@ ipcMain.on("system-check-failed", (event, failedItems) => {
     });
 });
 
-ipcMain.on("system-checks-passed", async () => {
-    // Close splash always
+ipcMain.on("system-checks-passed", () => {
+    console.log("All system checks passed, showing main window");
+
+    // Close splash
     if (splashWindow && !splashWindow.isDestroyed()) {
         splashWindow.close();
         splashWindow = null;
     }
 
-    // Check maintenance mode ONE MORE TIME before proceeding
-    const isMaintenance = await checkMaintenance();
-
-    if (isMaintenance) {
-        // Show maintenance window
-        createMaintenanceWindow();
-        return;
-    }
-
-    // 🟢 Show main app (normal flow)
-    if (mainWindow && !mainWindow.isDestroyed()) {
+    // Create and show main window if it doesn't exist
+    if (!mainWindow || mainWindow.isDestroyed()) {
+        createWindow();
+        mainWindow.once('ready-to-show', () => {
+            mainWindow.show();
+            mainWindow.focus();
+            isMainWindowVisible = true;
+            handlePostUpdateLaunch(); // Check for updates
+        });
+    } else {
+        // If window already exists, just show it
         mainWindow.show();
         mainWindow.focus();
+        isMainWindowVisible = true;
+        handlePostUpdateLaunch(); // Check for updates
     }
 });
 
 // Add this new IPC handler for showing maintenance from splash
-ipcMain.on("show-maintenance", async () => {
-    if (splashWindow && !splashWindow.isDestroyed()) {
-        splashWindow.close();
-        splashWindow = null;
-    }
-
-    const isMaintenance = await checkMaintenance();
-    if (isMaintenance) {
-        createMaintenanceWindow();
-    } else {
-        // If somehow maintenance ended between check and now, show main window
-        if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.show();
-            mainWindow.focus();
-        }
-    }
-});
-function createMaintenanceWindow() {
-    // Don't create multiple maintenance windows
-    if (maintenanceWindow && !maintenanceWindow.isDestroyed()) {
-        maintenanceWindow.focus();
-        return;
-    }
-
-    maintenanceWindow = new BrowserWindow({
-        width: 900,
-        height: 500,
-        resizable: false,
-        minimizable: false,
-        maximizable: false,
-        closable: false, // Prevent closing during maintenance
-        show: false,
-        frame: false,
-        alwaysOnTop: true,
-        webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false,
-            webSecurity: true
-        }
-    });
-
-    // Load your maintenance.html
-    const maintenancePath = path.join(__dirname, 'maintenance.html');
-    console.log("Loading maintenance from:", maintenancePath);
-
-    if (fs.existsSync(maintenancePath)) {
-        maintenanceWindow.loadFile(maintenancePath);
-    } else {
-        // Fallback: create a simple maintenance message
-        maintenanceWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`
-            <!DOCTYPE html>
-            <html>
-            <body style="background:#F59E0B;color:#78350F;text-align:center;padding:50px;font-family:sans-serif">
-                <h1>⚠️ System Maintenance</h1>
-                <p>Exam Buddy is currently undergoing maintenance.</p>
-                <p>Please try again later.</p>
-            </body>
-            </html>
-        `)}`);
-    }
-
-    maintenanceWindow.once('ready-to-show', () => {
-        maintenanceWindow.show();
-        maintenanceWindow.setAlwaysOnTop(true);
-    });
-
-    maintenanceWindow.on('closed', () => {
-        maintenanceWindow = null;
-    });
-
-    // Optional: Add retry logic to check if maintenance ended
-    const maintenanceCheckInterval = setInterval(async () => {
-        if (!maintenanceWindow || maintenanceWindow.isDestroyed()) {
-            clearInterval(maintenanceCheckInterval);
-            return;
-        }
-
-        const stillInMaintenance = await checkMaintenance();
-        if (!stillInMaintenance) {
-            clearInterval(maintenanceCheckInterval);
-            maintenanceWindow.close();
-
-            if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.show();
-                mainWindow.focus();
-            }
-        }
-    }, 30000); // Check every 30 seconds
-}
-
 // Also update the checkMaintenance function to get end time if needed
-async function checkMaintenance() {
-    return new Promise((resolve) => {
-        const request = net.request(
-            "https://exam-buddy-backend.vercel.app/api/system/maintenance"
-        );
-
-        request.on("response", (response) => {
-            let body = "";
-
-            response.on("data", (chunk) => {
-                body += chunk;
-            });
-
-            response.on("end", () => {
-                try {
-                    const data = JSON.parse(body);
-                    // Return either the full data or just the boolean
-                    resolve(data.maintenance === true ? data : false);
-                } catch {
-                    resolve(false);
-                }
-            });
-        });
-
-        request.on("error", () => {
-            resolve(false); // fail-open
-        });
-
-        request.end();
-    });
-}
 
 // Add this handler for when user manually closes maintenance (if you make it closable)
 ipcMain.on("close-maintenance", () => {
@@ -1062,48 +1062,8 @@ ipcMain.on("close-maintenance", () => {
     app.quit(); // Or show main window if you prefer
 });
 
-ipcMain.on("maintenance-ended", async () => {
-    console.log("Maintenance ended signal received from renderer");
-
-    // Double-check with backend
-    const isMaintenance = await checkMaintenance();
-
-    if (!isMaintenance) {
-        // Close maintenance window
-        if (maintenanceWindow && !maintenanceWindow.isDestroyed()) {
-            maintenanceWindow.close();
-            maintenanceWindow = null;
-        }
-
-        // Show main window
-        if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.show();
-            mainWindow.focus();
-        }
-    } else {
-        console.log("Maintenance still active according to backend");
-        // You could show a notification in the maintenance window
-        if (maintenanceWindow && !maintenanceWindow.isDestroyed()) {
-            maintenanceWindow.webContents.send('maintenance-status-update', {
-                active: true,
-                endsAt: isMaintenance.endsAt
-            });
-        }
-    }
-});
-
 // Optional: Send maintenance updates to renderer
 ipcMain.on("request-maintenance-status", async (event) => {
     const isMaintenance = await checkMaintenance();
     event.reply('maintenance-status', isMaintenance);
-});
-
-ipcMain.handle("check-maintenance", async () => {
-    try {
-        const isMaintenance = await checkMaintenance();
-        return isMaintenance;
-    } catch (error) {
-        console.error("Error checking maintenance:", error);
-        return false; // Default to not in maintenance if error
-    }
 });
