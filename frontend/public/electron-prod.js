@@ -369,8 +369,9 @@ function createMaintenanceWindow() {
         resizable: false,
         minimizable: false,
         maximizable: false,
-        closable: false, // Prevent closing
+        closable: true, // Prevent closing
         show: false,
+        fullscreen: true,
         frame: false,
         alwaysOnTop: true,
         webPreferences: {

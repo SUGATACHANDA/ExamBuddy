@@ -1,4 +1,4 @@
-## v1.7.9
+## v1.7.10
 
 ### 🛠 Improvements
-- refactor: Added new **Maintainance Mode** in the app.
+- refactor: **Fixed** the styliying of **Maintainance Mode** in the app.
