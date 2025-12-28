@@ -3,7 +3,7 @@ const router = express.Router();
 
 router.get("/maintenance", (req, res) => {
     res.json({
-        maintenance: true,
+        maintenance: process.env.MAINTENANCE_MODE,
         endsAt: process.env.MAINTENANCE_END_TIME // ISO string
     });
 });

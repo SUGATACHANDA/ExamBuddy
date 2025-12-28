@@ -69,7 +69,7 @@
 <body>
     <div class="container">
         <h1>Exam Buddy</h1>
-        <p>Initializing Secure Environment</p>
+        <p id="status-text">Initializing Secure Environment</p>
 
         <div class="check" id="camera">
             <div class="loader"></div>Camera
@@ -83,6 +83,9 @@
         <div class="check" id="display">
             <div class="loader"></div>Single Display
         </div>
+        <div class="check" id="service" style="display: none;">
+            <div class="loader"></div>Service Status
+        </div>
     </div>
 
     <script>
@@ -91,71 +94,137 @@
         const sleep = (ms) => new Promise(res => setTimeout(res, ms));
 
         const setLoader = (id) => {
-            document.getElementById(id).innerHTML =
-                `<div class="loader"></div>${idLabel(id)}`;
+            const element = document.getElementById(id);
+            if (element) {
+                element.innerHTML = `<div class="loader"></div>${idLabel(id)}`;
+                element.style.display = 'flex';
+            }
         };
 
         const setTick = (id) => {
-            document.getElementById(id).innerHTML =
-                `<span class="tick">✔</span>${idLabel(id)}`;
+            const element = document.getElementById(id);
+            if (element) {
+                element.innerHTML = `<span class="tick">✔</span>${idLabel(id)}`;
+                element.style.display = 'flex';
+            }
+        };
+
+        const setCross = (id) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.innerHTML = `<span class="cross">✗</span>${idLabel(id)}`;
+                element.style.display = 'flex';
+            }
         };
 
         const idLabel = (id) => ({
             camera: "Camera",
             microphone: "Microphone",
             internet: "Internet",
-            display: "Single Display"
-        }[id]);
+            display: "Single Display",
+            service: "Service Status"
+        }[id] || id);
 
         async function checkMedia() {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            return {
-                camera: devices.some(d => d.kind === "videoinput"),
-                microphone: devices.some(d => d.kind === "audioinput")
-            };
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                return {
+                    camera: devices.some(d => d.kind === "videoinput"),
+                    microphone: devices.some(d => d.kind === "audioinput")
+                };
+            } catch (error) {
+                console.error("Media check failed:", error);
+                return { camera: false, microphone: false };
+            }
         }
 
-        (async () => {
+        async function runAllChecks() {
             try {
+                // Step 1: Run system checks
+                document.getElementById("status-text").textContent = "Running system checks...";
+
                 // 1️⃣ Camera
                 setLoader("camera");
                 await sleep(600);
                 const media = await checkMedia();
-                if (!media.camera) throw ["camera"];
+                if (!media.camera) {
+                    setCross("camera");
+                    throw ["camera"];
+                }
                 setTick("camera");
 
                 // 2️⃣ Microphone
                 setLoader("microphone");
                 await sleep(600);
-                if (!media.microphone) throw ["microphone"];
+                if (!media.microphone) {
+                    setCross("microphone");
+                    throw ["microphone"];
+                }
                 setTick("microphone");
 
-                // 3️⃣ Internet + Display (main)
+                // 3️⃣ Internet + Display
                 setLoader("internet");
                 setLoader("display");
                 await sleep(600);
 
                 const system = await ipcRenderer.invoke("perform-system-checks");
 
-                if (!system.internet) throw ["internet"];
-                if (!system.singleDisplay) throw ["singleDisplay"];
-
+                if (!system.internet) {
+                    setCross("internet");
+                    throw ["internet"];
+                }
                 setTick("internet");
+
+                if (!system.singleDisplay) {
+                    setCross("display");
+                    throw ["singleDisplay"];
+                }
                 setTick("display");
 
-                // ✅ ALL PASSED
-                document.querySelector("p").textContent = "All system checks passed";
-                await sleep(1200); // 👈 UX delay so ticks are visible
+                // ✅ ALL SYSTEM CHECKS PASSED
+                document.getElementById("status-text").textContent = "System checks passed ✓";
+                await sleep(800);
 
-                ipcRenderer.send("system-checks-passed");
+                // Step 2: Check maintenance mode
+                document.getElementById("status-text").textContent = "Checking service status...";
+
+                // Show service check
+                document.getElementById("service").style.display = "flex";
+                setLoader("service");
+                await sleep(800);
+
+                const isMaintenance = await ipcRenderer.invoke("check-maintenance");
+
+                if (isMaintenance) {
+                    // 🔴 MAINTENANCE MODE ACTIVE
+                    setCross("service");
+                    document.getElementById("status-text").textContent = "Service Under Maintenance";
+
+                    // Show maintenance screen
+                    await sleep(1500);
+                    ipcRenderer.send("show-maintenance");
+                } else {
+                    // 🟢 ALL GOOD - PROCEED TO MAIN APP
+                    setTick("service");
+                    document.getElementById("status-text").textContent = "All checks passed ✓";
+                    await sleep(1200);
+
+                    ipcRenderer.send("system-checks-passed");
+                }
 
             } catch (failedItems) {
-                // ❌ FAIL → close splash + show dialog
-                ipcRenderer.send("system-check-failed", failedItems);
+                // ❌ SYSTEM CHECK FAILED
+                if (Array.isArray(failedItems)) {
+                    ipcRenderer.send("system-check-failed", failedItems);
+                } else {
+                    console.error("Unexpected error:", failedItems);
+                }
             }
-        })();
+        }
+
+        // Start checks when page loads
+        window.onload = runAllChecks;
     </script>
-    <script src="splash.js"></script>
 </body>
 
 </html>

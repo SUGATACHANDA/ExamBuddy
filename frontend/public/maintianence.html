@@ -163,37 +163,73 @@
                     <div class="label">Seconds</div>
                 </div>
             </div>
+            <button id="refresh-btn" style="
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-top: 10px;
+        transition: all 0.3s ease;
+    ">
+                Check Status
+            </button>
         </div>
     </div>
 
     <div class="footer">This content managed by exam-buddy.com</div>
 
     <script>
+        const { ipcRenderer } = require('electron');
         const API_URL = "https://exam-buddy-backend.vercel.app/api/system/maintenance";
 
         let endTime = null;
+        let countdownInterval = null;
+        let maintenanceCheckInterval = null;
 
         async function fetchMaintenance() {
             try {
                 const res = await fetch(API_URL);
                 const data = await res.json();
 
-                if (!data.maintenance || !data.endsAt) return;
+                if (!data.maintenance || !data.endsAt) {
+                    // Maintenance ended - notify Electron
+                    ipcRenderer.send('maintenance-ended');
+                    return false;
+                }
 
                 endTime = new Date(data.endsAt).getTime();
                 startCountdown();
+                return true;
             } catch (e) {
                 console.warn("Maintenance API unreachable");
+                // If we can't reach API, assume maintenance is still active
+                return true;
             }
         }
 
         function startCountdown() {
-            setInterval(() => {
+            // Clear any existing interval
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+
+            countdownInterval = setInterval(() => {
                 const now = Date.now();
                 const diff = endTime - now;
 
                 if (diff <= 0) {
-                    location.reload(); // Maintenance ended
+                    // Countdown finished
+                    clearInterval(countdownInterval);
+                    days.textContent = "0";
+                    hours.textContent = "00";
+                    minutes.textContent = "00";
+                    seconds.textContent = "00";
+
+                    // Notify Electron that maintenance should be over
+                    ipcRenderer.send('maintenance-ended');
                     return;
                 }
 
@@ -209,7 +245,61 @@
             }, 1000);
         }
 
-        fetchMaintenance();
+        function startMaintenanceMonitoring() {
+            // Check maintenance status periodically in case API changes
+            if (maintenanceCheckInterval) {
+                clearInterval(maintenanceCheckInterval);
+            }
+
+            maintenanceCheckInterval = setInterval(async () => {
+                const stillInMaintenance = await fetchMaintenance();
+                if (!stillInMaintenance) {
+                    clearInterval(maintenanceCheckInterval);
+                }
+            }, 30000); // Check every 30 seconds
+        }
+
+        // Initialize
+        async function init() {
+            const isMaintenance = await fetchMaintenance();
+            if (isMaintenance) {
+                startMaintenanceMonitoring();
+            }
+        }
+
+        // Add manual refresh button event listener if you want one
+        document.addEventListener('DOMContentLoaded', () => {
+            // You could add a refresh button in your HTML:
+            // <button id="refresh-btn" style="margin-top: 20px; padding: 10px 20px;">Check Status</button>
+            const refreshBtn = document.getElementById('refresh-btn');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', async () => {
+                    refreshBtn.disabled = true;
+                    refreshBtn.textContent = 'Checking...';
+
+                    const stillInMaintenance = await fetchMaintenance();
+
+                    if (stillInMaintenance) {
+                        setTimeout(() => {
+                            refreshBtn.disabled = false;
+                            refreshBtn.textContent = 'Check Status';
+                        }, 1000);
+                    }
+                });
+            }
+
+            init();
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+            if (maintenanceCheckInterval) {
+                clearInterval(maintenanceCheckInterval);
+            }
+        });
     </script>
 
 </body>
