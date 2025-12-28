@@ -268,15 +268,26 @@ async function checkMaintenance() {
             response.on("end", () => {
                 try {
                     const data = JSON.parse(body);
-                    resolve(data.maintenance === true);
-                } catch {
-                    resolve(false);
+                    console.log("Maintenance API response:", data);
+
+                    // Handle both boolean and string "true"/"false"
+                    const isMaintenance = data.maintenance === true ||
+                        data.maintenance === "true" ||
+                        data.maintenance === 1 ||
+                        data.maintenance === "1";
+
+                    console.log("Parsed maintenance status:", isMaintenance);
+                    resolve(isMaintenance);
+                } catch (error) {
+                    console.error("Error parsing maintenance response:", error);
+                    resolve(false); // Default to not in maintenance
                 }
             });
         });
 
-        request.on("error", () => {
-            resolve(false);
+        request.on("error", (error) => {
+            console.error("Network error checking maintenance:", error);
+            resolve(false); // Fail open - assume no maintenance
         });
 
         request.end();
