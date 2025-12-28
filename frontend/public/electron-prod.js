@@ -1097,3 +1097,13 @@ ipcMain.on("request-maintenance-status", async (event) => {
     const isMaintenance = await checkMaintenance();
     event.reply('maintenance-status', isMaintenance);
 });
+
+ipcMain.handle("check-maintenance", async () => {
+    try {
+        const isMaintenance = await checkMaintenance();
+        return isMaintenance;
+    } catch (error) {
+        console.error("Error checking maintenance:", error);
+        return false; // Default to not in maintenance if error
+    }
+});
