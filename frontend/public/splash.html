@@ -30,6 +30,22 @@
             align-items: center;
             margin: 12px 0;
             height: 24px;
+            opacity: 1;
+            /* Start with full opacity */
+            transition: opacity 0.3s ease;
+
+        }
+
+        #service {
+            opacity: 0;
+            visibility: hidden;
+            height: 24px;
+            /* Same fixed height */
+        }
+
+        #service.visible {
+            opacity: 1;
+            visibility: visible;
         }
 
         .loader {
@@ -88,7 +104,7 @@
         <div class="check" id="display">
             <div class="loader"></div>Single Display
         </div>
-        <div class="check" id="service" style="display: none;">
+        <div class="check" id="service">
             <div class="loader"></div>Service Status
         </div>
     </div>
@@ -103,6 +119,9 @@
             if (element) {
                 element.innerHTML = `<div class="loader"></div>${idLabel(id)}`;
                 element.style.display = 'flex';
+                if (id === 'service') {
+                    element.classList.add('visible');
+                }
             }
         };
 
@@ -111,6 +130,9 @@
             if (element) {
                 element.innerHTML = `<span class="tick">✔</span>${idLabel(id)}`;
                 element.style.display = 'flex';
+                if (id === 'service') {
+                    element.classList.add('visible');
+                }
             }
         };
 
@@ -119,6 +141,9 @@
             if (element) {
                 element.innerHTML = `<span class="cross">✗</span>${idLabel(id)}`;
                 element.style.display = 'flex';
+                if (id === 'service') {
+                    element.classList.add('visible');
+                }
             }
         };
 
@@ -194,7 +219,8 @@
                 document.getElementById("status-text").textContent = "Checking service status...";
 
                 // Show service check
-                document.getElementById("service").style.display = "flex";
+                const serviceElement = document.getElementById("service");
+                serviceElement.classList.add('visible');
                 setLoader("service");
                 await sleep(800);
 

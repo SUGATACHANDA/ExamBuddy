@@ -176,6 +176,19 @@
     ">
                 Check Status
             </button>
+            <button id="close-btn" style="
+     background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-top: 10px;
+        transition: all 0.3s ease;
+">
+                Close App
+            </button>
         </div>
     </div>
 
@@ -284,6 +297,14 @@
                             refreshBtn.disabled = false;
                             refreshBtn.textContent = 'Check Status';
                         }, 1000);
+                    }
+                });
+            }
+            const closeBtn = document.getElementById('close-btn');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    if (confirm('Are you sure you want to close Exam Buddy? You can restart it later when maintenance ends.')) {
+                        ipcRenderer.send('close-app');
                     }
                 });
             }
