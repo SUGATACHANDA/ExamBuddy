@@ -1,4 +1,4 @@
-## v1.7.11
+## v1.7.12
 
 ### 🛠 Improvements
-- refactor: **Fixed** **Auto Update Feature** in the app.
+- refactor: update version to 1.7.12; enhance maintenance page and improve auto update checks

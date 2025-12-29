@@ -113,6 +113,12 @@
             opacity: .8
         }
 
+        .timezone {
+            margin-bottom: 12px;
+            opacity: .85;
+            font-size: 13px;
+        }
+
         .footer {
             position: absolute;
             bottom: 20px;
@@ -144,8 +150,7 @@
             </div>
             <h1>COMING SOON!</h1>
             <p class="subtitle">
-                Our website is under maintenance. We’ll be here soon
-                with our new awesome site.
+                Our App is under maintenance. Sorry for the inconvinience regretted.
             </p>
         </div>
 
@@ -154,22 +159,23 @@
 
             <div class="countdown">
                 <div class="time-box">
-                    <div id="days" class="time">--</div>
-                    <div class="label">Days</div>
+                    <div id="days" class="time">0</div>
+                    <div class="label">DAYS</div>
                 </div>
                 <div class="time-box">
-                    <div id="hours" class="time">--</div>
-                    <div class="label">Hours</div>
+                    <div id="hours" class="time">00</div>
+                    <div class="label">HOURS</div>
                 </div>
                 <div class="time-box">
-                    <div id="minutes" class="time">--</div>
-                    <div class="label">Minutes</div>
+                    <div id="minutes" class="time">00</div>
+                    <div class="label">MINUTES</div>
                 </div>
                 <div class="time-box">
-                    <div id="seconds" class="time">--</div>
-                    <div class="label">Seconds</div>
+                    <div id="seconds" class="time">00</div>
+                    <div class="label">SECONDS</div>
                 </div>
             </div>
+            <div class="timezone">Timezone: <strong>Indian Standard Time (UTC+5:30)</strong></div>
             <button id="refresh-btn" style="
         background: rgba(255, 255, 255, 0.2);
         color: white;
@@ -199,7 +205,7 @@
         </div>
     </div>
 
-    <div class="footer">This content managed by exam-buddy.com</div>
+    <div class="footer">This content managed by Exam Buddy Systems</div>
 
     <script>
         const { ipcRenderer } = require('electron');

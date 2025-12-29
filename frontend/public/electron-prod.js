@@ -459,11 +459,37 @@ ipcMain.on("maintenance-ended", async () => {
                 mainWindow.show();
                 mainWindow.focus();
                 isMainWindowVisible = true;
+                setTimeout(() => {
+                    console.log("Checking for updates after maintenance...");
+                    try {
+                        autoUpdater.checkForUpdates().catch(err => {
+                            console.error("Update check failed after maintenance:", err);
+                        });
+                    } catch (error) {
+                        console.error("Error checking updates after maintenance:", error);
+                    }
+                }, 2000);
+
+                // Check for release notes
+                handlePostUpdateLaunch();
             });
         } else {
             mainWindow.show();
             mainWindow.focus();
             isMainWindowVisible = true;
+            setTimeout(() => {
+                console.log("Checking for updates after maintenance...");
+                try {
+                    autoUpdater.checkForUpdates().catch(err => {
+                        console.error("Update check failed after maintenance:", err);
+                    });
+                } catch (error) {
+                    console.error("Error checking updates after maintenance:", error);
+                }
+            }, 2000);
+
+            // Check for release notes
+            handlePostUpdateLaunch();
         }
     }
 });
@@ -471,25 +497,36 @@ ipcMain.on("maintenance-ended", async () => {
 
 function handlePostUpdateLaunch() {
     try {
+        console.log("Checking for post-update release notes...");
+
         if (fs.existsSync(updateInfoPath)) {
             const data = JSON.parse(fs.readFileSync(updateInfoPath, 'utf8'));
+            console.log("Update info found:", data);
+
             if (!data.showOnNextLaunch) {
                 console.log("Release notes already shown. Skipping.");
                 return;
             }
+
             if (data && data.showOnNextLaunch) {
-                if (isMainWindowVisible && mainWindow) {
+                if (isMainWindowVisible && mainWindow && !mainWindow.isDestroyed()) {
                     console.log(`First launch after update. Showing release notes for version ${data.version}.`);
                     showReleaseNotes(data);
                 } else {
                     console.log("Release notes pending until main window is visible.");
+                    // Queue it for when window becomes visible
                     updateDialogQueue.push(() => {
+                        console.log("Showing queued release notes...");
                         showReleaseNotes(data);
                     });
                 }
             }
+        } else {
+            console.log("No update info file found at:", updateInfoPath);
         }
-    } catch (err) { console.error("Error in handlePostUpdateLaunch:", err); }
+    } catch (err) {
+        console.error("Error in handlePostUpdateLaunch:", err);
+    }
 }
 
 function showReleaseNotes(releaseData) {
@@ -500,6 +537,23 @@ function showReleaseNotes(releaseData) {
         const enhancedData = enhanceReleaseData(releaseData);
         console.log('Enhanced data:', enhancedData);
         releaseNotesWindow = createReleaseNotesWindow(enhancedData);
+
+        // Add listener to reset the flag when window closes
+        if (releaseNotesWindow) {
+            releaseNotesWindow.on('closed', () => {
+                try {
+                    if (fs.existsSync(updateInfoPath)) {
+                        const data = JSON.parse(fs.readFileSync(updateInfoPath, "utf8"));
+                        data.showOnNextLaunch = false;
+                        fs.writeFileSync(updateInfoPath, JSON.stringify(data, null, 2));
+                        console.log("Release notes shown flag reset.");
+                    }
+                } catch (err) {
+                    console.error("Could not update release notes flag:", err);
+                }
+                releaseNotesWindow = null;
+            });
+        }
     } else {
         // If window already exists, just show it and update content
         console.log('Window exists, updating content...');
@@ -573,8 +627,15 @@ app.whenReady().then(async () => {
 
     // periodic checks stay
     setInterval(() => {
-        log.info("Performing periodic update check...");
-        autoUpdater.checkForUpdates();
+        if (isMainWindowVisible) {
+            console.log("Performing periodic update check...");
+            log.info("Performing periodic update check...");
+            autoUpdater.checkForUpdates().catch(err => {
+                console.error("Periodic update check failed:", err);
+            });
+        } else {
+            console.log("Skipping periodic update check - window not visible");
+        }
     }, 1000 * 60 * 60 * 4);
 });
 
