@@ -1,4 +1,4 @@
-## v1.7.10
+## v1.7.11
 
 ### 🛠 Improvements
-- refactor: **Fixed** the styliying of **Maintainance Mode** in the app.
+- refactor: **Fixed** **Auto Update Feature** in the app.

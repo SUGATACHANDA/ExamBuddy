@@ -73,7 +73,7 @@ function getLocalChangelogNotes() {
 function createSplashWindow() {
     splashWindow = new BrowserWindow({
         width: 400,
-        height: 300,
+        height: 350,
         transparent: true,
         frame: false,
         alwaysOnTop: true,
@@ -570,9 +570,6 @@ app.whenReady().then(async () => {
     // Now that the protocol is configured, we can create our main window.
 
     createSplashWindow();
-    setTimeout(() => {
-        autoUpdater.checkForUpdates();
-    }, 3000);
 
     // periodic checks stay
     setInterval(() => {
@@ -1051,14 +1048,23 @@ ipcMain.on("system-checks-passed", () => {
             mainWindow.show();
             mainWindow.focus();
             isMainWindowVisible = true;
-            handlePostUpdateLaunch(); // Check for updates
+            setTimeout(() => {
+                console.log("Checking for updates on app launch...");
+                autoUpdater.checkForUpdates();
+            }, 2000);
+
+            handlePostUpdateLaunch();  // Check for updates
         });
     } else {
         // If window already exists, just show it
         mainWindow.show();
         mainWindow.focus();
         isMainWindowVisible = true;
-        handlePostUpdateLaunch(); // Check for updates
+        setTimeout(() => {
+            console.log("Checking for updates on app launch...");
+            autoUpdater.checkForUpdates();
+        }, 2000); // Check for updates
+        handlePostUpdateLaunch();
     }
 });
 
