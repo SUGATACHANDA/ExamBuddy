@@ -26,6 +26,7 @@ let violationStrikes = 0;
 let checksPassed = false;
 let isMaintenanceMode = false;
 let maintenanceWindow = null;
+let maintenanceCheckInterval = null;
 const MAX_STRIKES = process.env.MAX_STRIKES;
 
 let splashWindow;
@@ -294,6 +295,83 @@ async function checkMaintenance() {
     });
 }
 
+async function checkAndSwitchToMaintenance() {
+    const isMaintenance = await checkMaintenance();
+
+    if (isMaintenance) {
+        console.log("Maintenance mode detected during runtime. Switching to maintenance window.");
+
+        // Clear any existing maintenance check interval
+        if (maintenanceCheckInterval) {
+            clearInterval(maintenanceCheckInterval);
+            maintenanceCheckInterval = null;
+        }
+
+        // Switch to maintenance window
+        switchToMaintenance();
+        return true;
+    }
+    return false;
+}
+
+// Function to switch to maintenance window
+function switchToMaintenance() {
+    // Close any open windows except maintenance
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.hide(); // Hide instead of close to preserve state
+    }
+
+    if (splashWindow && !splashWindow.isDestroyed()) {
+        splashWindow.close();
+        splashWindow = null;
+    }
+
+    if (downloadProgressWindow && !downloadProgressWindow.isDestroyed()) {
+        downloadProgressWindow.close();
+        downloadProgressWindow = null;
+    }
+
+    if (releaseNotesWindow && !releaseNotesWindow.isDestroyed()) {
+        releaseNotesWindow.close();
+        releaseNotesWindow = null;
+    }
+
+    // Create or show maintenance window
+    createMaintenanceWindow();
+}
+
+// Function to start maintenance monitoring
+function startMaintenanceMonitoring() {
+    // Clear any existing interval
+    if (maintenanceCheckInterval) {
+        clearInterval(maintenanceCheckInterval);
+    }
+
+    // Check every 30 seconds (adjust as needed)
+    maintenanceCheckInterval = setInterval(async () => {
+        console.log("Performing periodic maintenance check...");
+
+        try {
+            const switched = await checkAndSwitchToMaintenance();
+            if (switched) {
+                console.log("Successfully switched to maintenance mode.");
+            }
+        } catch (error) {
+            console.error("Error during maintenance check:", error);
+        }
+    }, 30000); // Check every 30 seconds
+}
+
+// Function to stop maintenance monitoring
+function stopMaintenanceMonitoring() {
+    if (maintenanceCheckInterval) {
+        clearInterval(maintenanceCheckInterval);
+        maintenanceCheckInterval = null;
+        console.log("Maintenance monitoring stopped.");
+    }
+}
+
+
 ipcMain.handle("check-maintenance", async () => {
     try {
         return await checkMaintenance();
@@ -348,6 +426,32 @@ async function createWindow() {
     mainWindow.once('ready-to-show', () => {
         console.log("Electron reports: Main window is ready to show.");
         isMainWindowReady = true; // Mark our side of the handshake as complete
+
+        mainWindow.on('show', () => {
+            console.log("Main window shown, starting maintenance monitoring.");
+
+            // Start maintenance monitoring
+            startMaintenanceMonitoring();
+
+            // Do an immediate check in case maintenance was just turned on
+            checkAndSwitchToMaintenance().then(switched => {
+                if (!switched) {
+                    console.log("System is not in maintenance mode. Proceeding normally.");
+                }
+            });
+        });
+
+        // Add listener for when window is hidden
+        mainWindow.on('hide', () => {
+            console.log("Main window hidden, pausing maintenance monitoring.");
+            stopMaintenanceMonitoring();
+        });
+
+        // Add listener for window close
+        mainWindow.on('close', () => {
+            console.log("Main window closing, stopping maintenance monitoring.");
+            stopMaintenanceMonitoring();
+        });
     });
 
     // Security Listeners
@@ -362,6 +466,8 @@ function createMaintenanceWindow() {
         maintenanceWindow.focus();
         return maintenanceWindow;
     }
+
+    stopMaintenanceMonitoring();
 
     maintenanceWindow = new BrowserWindow({
         width: 900,
@@ -406,6 +512,9 @@ function createMaintenanceWindow() {
 
     maintenanceWindow.on('closed', () => {
         maintenanceWindow = null;
+        if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) {
+            startMaintenanceMonitoring();
+        }
     });
 
     // Periodically check if maintenance ended
@@ -459,6 +568,7 @@ ipcMain.on("maintenance-ended", async () => {
                 mainWindow.show();
                 mainWindow.focus();
                 isMainWindowVisible = true;
+                startMaintenanceMonitoring();
                 setTimeout(() => {
                     console.log("Checking for updates after maintenance...");
                     try {
@@ -477,6 +587,7 @@ ipcMain.on("maintenance-ended", async () => {
             mainWindow.show();
             mainWindow.focus();
             isMainWindowVisible = true;
+            startMaintenanceMonitoring();
             setTimeout(() => {
                 console.log("Checking for updates after maintenance...");
                 try {
@@ -1109,6 +1220,8 @@ ipcMain.on("system-checks-passed", () => {
             mainWindow.show();
             mainWindow.focus();
             isMainWindowVisible = true;
+            startMaintenanceMonitoring();
+
             setTimeout(() => {
                 console.log("Checking for updates on app launch...");
                 autoUpdater.checkForUpdates();
@@ -1121,6 +1234,7 @@ ipcMain.on("system-checks-passed", () => {
         mainWindow.show();
         mainWindow.focus();
         isMainWindowVisible = true;
+        startMaintenanceMonitoring();
         setTimeout(() => {
             console.log("Checking for updates on app launch...");
             autoUpdater.checkForUpdates();

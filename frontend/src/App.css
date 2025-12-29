@@ -44,9 +44,9 @@ body {
   -moz-osx-font-smoothing: grayscale;
   /* overflow: hidden; */
 }
-/* * {
+* {
   user-select: none;
-} */
+}
 
 .App {
   text-align: center;
