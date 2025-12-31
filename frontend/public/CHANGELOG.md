@@ -1,4 +1,4 @@
-## v1.7.14
+## v1.7.15
 
-### 🛠 Improvements
-- refactor: update version to 1.7.12; enhance maintenance page and improve auto update checks
+### 🛠 Features
+- refactor: update version to 1.7.15; add publisher info and certificate settings, enhance maintenance and splash screens

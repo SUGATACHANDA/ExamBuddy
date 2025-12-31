@@ -126,7 +126,10 @@
     },
     "win": {
       "target": "nsis",
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "publisherName": "Exam Buddy Certificate",
+      "certificateFile": "${CSC_LINK}",
+      "certificatePassword": "${CSC_KEY_PASSWORD}"
     },
     "nsis": {
       "artifactName": "${productName} v${version}.${ext}",
