@@ -1,6 +1,6 @@
 {
   "name": "exambuddy",
-  "version": "1.7.14",
+  "version": "1.7.15",
   "productName": "Exam Buddy",
   "author": {
     "name": "SUGATA CHANDA",
@@ -127,9 +127,7 @@
     "win": {
       "target": "nsis",
       "icon": "assets/icon.ico",
-      "publisherName": "Exam Buddy Certificate",
-      "certificateFile": "${CSC_LINK}",
-      "certificatePassword": "${CSC_KEY_PASSWORD}"
+      "verifyUpdateCodeSignature": false
     },
     "nsis": {
       "artifactName": "${productName} v${version}.${ext}",
