@@ -129,7 +129,7 @@
       "icon": "assets/icon.ico",
       "verifyUpdateCodeSignature": false,
       "signtoolOptions": {
-        "timestampServer": "http://timestamp.sectigo.com"
+        "rfc3161TimeStampServer": "http://timestamp.sectigo.com"
       }
     },
     "nsis": {
