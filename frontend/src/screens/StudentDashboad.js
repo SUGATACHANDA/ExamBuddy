@@ -44,7 +44,7 @@ const StudentDashboard = () => {
 
     const [alertConfig, setAlertConfig, openAlert, closeAlert] = useAlert();
 
-    const { userInfo, logout, updateUser } = useAuth();
+    const { userInfo, updateUser } = useAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -75,27 +75,30 @@ const StudentDashboard = () => {
     }, [userLoaded, userInfo]);
 
 
-    React.useEffect(() => {
-        const checkDisplays = async () => {
-            try {
-                const result = await window.electronAPI.getDisplayCount();
-                if (result > 1) {
-                    openAlert({
-                        type: "warning",
-                        title: "Multiple Displays Detected",
-                        message: "Please disconnect external displays to start the exam.",
-                        confirmText: "Understood",
-                        showCancel: false,
-                        onConfirm: () => console.log("acknowledged")
-                    });
-                }
-            } catch (err) {
-                console.error("Display check failed:", err);
+    const handleStartExam = async (examId) => {
+        try {
+            if (!window.electronAPI?.getDisplayCount) {
+                throw new Error("Electron API not available");
             }
-        };
 
-        checkDisplays();
-    }, [openAlert]);
+            const count = await window.electronAPI.getDisplayCount();
+
+            if (count > 1) {
+                openAlert({
+                    type: "warning",
+                    title: "Multiple Displays Detected",
+                    message: "Please disconnect external displays to start the exam.",
+                    confirmText: "Understood",
+                    showCancel: false,
+                });
+                return;
+            }
+
+            handleStartExamClick(examId);
+        } catch (err) {
+            console.error("Display check failed:", err);
+        }
+    };
 
 
     const fetchData = useCallback(async () => {
@@ -358,15 +361,7 @@ const StudentDashboard = () => {
                                                             />
                                                         </div>
                                                         <button
-                                                            onClick={() => {
-                                                                window.electronAPI.getDisplayCount().then(count => {
-                                                                    if (count > 1) {
-                                                                        alert("❌ Cannot start exam.\nMultiple displays detected.\nDisconnect external screens.");
-                                                                        return;
-                                                                    }
-                                                                    handleStartExamClick(exam._id);
-                                                                });
-                                                            }}
+                                                            onClick={() => handleStartExam(exam._id)}
                                                             className="btn-primary"
                                                         >
                                                             Start Exam

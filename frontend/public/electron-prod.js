@@ -1260,3 +1260,7 @@ ipcMain.on("request-maintenance-status", async (event) => {
     const isMaintenance = await checkMaintenance();
     event.reply('maintenance-status', isMaintenance);
 });
+
+ipcMain.handle('get-display-count', () => {
+    return screen.getAllDisplays().length;
+});

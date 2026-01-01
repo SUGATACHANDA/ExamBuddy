@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import api from "../../api/axiosConfig";
 import LoadingScreen from "components/LoadingScreen";
 import EditQuestionModal from "./EditQuestionModal";
+import { useAlert } from "hooks/useAlert";
+import AlertModal from "components/ui/AlertModal";
 
 export const Pagination = ({ currentPage, totalPages, onPageChange }) => {
     // Don't render pagination controls if there's only one page.
@@ -63,6 +65,7 @@ const ManageQuestions = () => {
     const [questions, setQuestions] = useState([]);
 
     const [filterSubject, setFilterSubject] = useState("");
+    const [alertConfig, setAlertConfig, openAlert, closeAlert] = useAlert();
 
 
     // const [marks, setMarks] = useState("");
@@ -196,8 +199,13 @@ const ManageQuestions = () => {
                 subjectId: selectedSubject,
                 questions
             });
-
-            alert("Questions added successfully!");
+            openAlert({
+                type: "success",
+                title: "Success",
+                message: "Questions added successfully!",
+                confirmText: "Understood",
+                showCancel: false,
+            });
             setQuestions([]);
             setSelectedSubject("");
             fetchQuestions();
@@ -235,6 +243,18 @@ const ManageQuestions = () => {
             {loading && <LoadingScreen />}
 
             <div className="container">
+                <AlertModal
+                    {...alertConfig}
+                    isOpen={alertConfig.isOpen}
+                    onConfirm={() => {
+                        alertConfig.onConfirm?.();
+                        closeAlert();
+                    }}
+                    onCancel={() => {
+                        alertConfig.onCancel?.();
+                        closeAlert();
+                    }}
+                />
                 <Link to="/teacher/dashboard" className="btn-link">
                     &larr; Back to Dashboard
                 </Link>

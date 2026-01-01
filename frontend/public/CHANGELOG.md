@@ -1,4 +1,4 @@
-## v1.7.15
+## v1.7.16
 
 ### 🛠 Features
-- refactor: update version to 1.7.15; add publisher info and certificate settings, enhance maintenance and splash screens
+- refactor: update version to 1.7.16; implement alert system for user notifications and enhance display count checks

@@ -21,6 +21,8 @@ export interface IElectronAPI {
     killAppList: (appList: string[]) => void;
     closeApp: () => void;
 
+    getDisplayCount: () => Promise<number>;
+
     isDev: () => Promise<boolean>;
 
     sendAppReady: () => void;

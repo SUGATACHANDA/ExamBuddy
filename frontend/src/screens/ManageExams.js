@@ -5,6 +5,8 @@ import EditExamModal from '../components/teacher/EditExamModal';
 import { Pagination } from '../components/teacher/ManageQuestion'; // Re-using the Pagination component from ManageQuestions
 import { useAuth } from '../context/AuthContext';
 import LoadingScreen from 'components/LoadingScreen';
+import AlertModal from 'components/ui/AlertModal';
+import { useAlert } from 'hooks/useAlert';
 
 const ManageExams = () => {
     const navigate = useNavigate();
@@ -45,6 +47,7 @@ const ManageExams = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     const [isSemesterLoading, setIsSemesterLoading] = useState(false);
+    const [alertConfig, setAlertConfig, openAlert, closeAlert] = useAlert();
 
     const addSection = () => {
         setSections(prevSections => [
@@ -55,7 +58,14 @@ const ManageExams = () => {
 
     const removeSection = (index) => {
         if (sections.length <= 1) {
-            alert("An exam must have at least one section.");
+            openAlert({
+                type: "warning",
+                title: "Missing Section",
+                message: "An exam must have at least one section.",
+                confirmText: "Understood",
+                showCancel: false,
+            });
+
             return;
         }
         setSections(prevSections => prevSections.filter((_, i) => i !== index));
@@ -65,7 +75,13 @@ const ManageExams = () => {
         // First, check if this question is already in ANY section to prevent duplicates
         const isAlreadyAdded = sections.some(sec => sec.questions.includes(questionId));
         if (isAlreadyAdded) {
-            alert("This question has already been added to a section.");
+            openAlert({
+                type: "warning",
+                title: "Multiple Question in a Section",
+                message: "This question has already been added to a section.",
+                confirmText: "Understood",
+                showCancel: false,
+            });
             return;
         }
 
@@ -250,6 +266,18 @@ const ManageExams = () => {
             {loading && <LoadingScreen />}
             {isSemesterLoading && <LoadingScreen />}
             <div className="container">
+                <AlertModal
+                    {...alertConfig}
+                    isOpen={alertConfig.isOpen}
+                    onConfirm={() => {
+                        alertConfig.onConfirm?.();
+                        closeAlert();
+                    }}
+                    onCancel={() => {
+                        alertConfig.onCancel?.();
+                        closeAlert();
+                    }}
+                />
                 <Link to="/teacher/dashboard" className="btn-link"> &larr; Back to Dashboard</Link>
                 <h1>Exam Management</h1>
                 {error && <p className="error">{error}</p>}

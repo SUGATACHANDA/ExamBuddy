@@ -2,6 +2,8 @@
 import { useAuth } from '../context/AuthContext';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
+import { useAlert } from "hooks/useAlert";
+import AlertModal from "components/ui/AlertModal";
 
 // This is a new, reusable sub-component for the confirmation modal
 const SubmitConfirmModal = ({ isOpen, onClose, onConfirm, submitting }) => {
@@ -35,6 +37,7 @@ const ReviewScreen = () => {
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [backUrl, setBackUrl] = useState('');
+    const [alertConfig, setAlertConfig, openAlert, closeAlert] = useAlert();
 
     useEffect(() => {
         // When the component loads, read the last location from sessionStorage.
@@ -92,8 +95,15 @@ const ReviewScreen = () => {
             clearContextSubmitHandler();
         } else {
             alert("Submission function not found. Please return to the exam.");
+            openAlert({
+                type: "success",
+                title: "Success",
+                message: "Questions added successfully!",
+                confirmText: "Understood",
+                showCancel: false,
+            });
         }
-    }, [submitExamHandler, clearContextSubmitHandler]);
+    }, [submitExamHandler, clearContextSubmitHandler, openAlert]);
 
     // The back-to-exam URL logic is the same...
 
@@ -117,6 +127,18 @@ const ReviewScreen = () => {
                 onClose={() => setIsConfirmModalOpen(false)}
                 onConfirm={handleFinalSubmit}
                 submitting={isSubmitting}
+            />
+            <AlertModal
+                {...alertConfig}
+                isOpen={alertConfig.isOpen}
+                onConfirm={() => {
+                    alertConfig.onConfirm?.();
+                    closeAlert();
+                }}
+                onCancel={() => {
+                    alertConfig.onCancel?.();
+                    closeAlert();
+                }}
             />
 
             <h1>Exam Summary: {exam.title}</h1>
