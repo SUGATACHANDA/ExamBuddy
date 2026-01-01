@@ -1,6 +1,6 @@
 {
   "name": "exambuddy",
-  "version": "1.7.16",
+  "version": "1.7.17",
   "productName": "Exam Buddy",
   "author": {
     "name": "SUGATA CHANDA",
@@ -127,7 +127,10 @@
     "win": {
       "target": "nsis",
       "icon": "assets/icon.ico",
-      "verifyUpdateCodeSignature": false
+      "verifyUpdateCodeSignature": false,
+      "signtoolOptions": {
+        "timestampServer": "http://timestamp.sectigo.com"
+      }
     },
     "nsis": {
       "artifactName": "${productName} v${version}.${ext}",

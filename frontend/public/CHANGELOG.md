@@ -1,4 +1,4 @@
-## v1.7.16
+## v1.7.17
 
 ### 🛠 Features
-- refactor: update version to 1.7.16; implement alert system for user notifications and enhance display count checks
+- refactor: update version to 1.7.17; add timestamp server option for code signature verification in Windows build
