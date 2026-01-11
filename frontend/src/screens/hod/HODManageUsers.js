@@ -59,8 +59,17 @@ const HODManageUsers = () => {
                 api.get("/hod/my-courses"),
                 api.get(`/data/semesters?department=${userInfo.department?._id}`),
             ]);
-            setStudents(studentsRes.data || []);
-            setTeachers(teachersRes.data || []);
+            setStudents(
+                Array.isArray(studentsRes.data)
+                    ? studentsRes.data
+                    : studentsRes.data?.data || []
+            );
+
+            setTeachers(
+                Array.isArray(teachersRes.data)
+                    ? teachersRes.data
+                    : teachersRes.data?.data || []
+            );
             setCourses(coursesRes.data || []);
             setSemestersInDept(semestersRes.data || []);
         } catch (e) {
@@ -77,6 +86,8 @@ const HODManageUsers = () => {
 
     // Filtered students
     const filteredStudents = useMemo(() => {
+        if (!Array.isArray(students)) return [];
+
         return students.filter((student) => {
             const matchesSemester =
                 selectedSemesterFilter === "all" ||
@@ -94,6 +105,8 @@ const HODManageUsers = () => {
 
     // Filtered teachers
     const filteredTeachers = useMemo(() => {
+        if (!Array.isArray(teachers)) return [];
+
         return teachers.filter((teacher) => {
             return (
                 teacherSearchQuery.trim() === "" ||
@@ -169,7 +182,6 @@ const HODManageUsers = () => {
         setLoading(true);
 
         try {
-            // determine endpoint based on role
             const endpoint =
                 formRole === "student"
                     ? "/hod/users/register-student"

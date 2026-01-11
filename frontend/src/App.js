@@ -1,5 +1,5 @@
 // src/App.js
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Routes, Route, useNavigate, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -43,9 +43,29 @@ import OpenDeepLink from "screens/OpenDeepLink";
 import StudentProfilePage from "components/StudentProfilePage";
 import TeacherProfilePage from "screens/TeacherProfilePage";
 
+import { ipcRenderer } from "electron";
+
+import AlertModal from "./components/ui/AlertModal";
+
 function App() {
   const location = useLocation();
   const navigate = useNavigate()
+  const [updateInfo, setUpdateInfo] = useState(null);
+  const [showRestart, setShowRestart] = useState(false);
+  useEffect(() => {
+    ipcRenderer.on("show-update-available", (_, data) => {
+      setUpdateInfo(data);
+    });
+
+    ipcRenderer.on("show-restart-update", () => {
+      setShowRestart(true);
+    });
+
+    return () => {
+      ipcRenderer.removeAllListeners("show-update-available");
+      ipcRenderer.removeAllListeners("show-restart-update");
+    };
+  }, []);
   useEffect(() => {
     if (window.electronAPI?.onDeepLink) {
       window.electronAPI.onDeepLink((url) => {
@@ -78,14 +98,39 @@ function App() {
   return (
     <AuthProvider>
       <div className="App">
-        {/* --- RENDER THE MODAL IF NEEDED ---
-          {releaseNotes && (
-            <WhatsNewModal
-              version={releaseNotes.version}
-              notes={releaseNotes.notes}
-              onClose={handleCloseModal}
-            />
-          )} */}
+        <AlertModal
+          isOpen={!!updateInfo}
+          type="info"
+          title="Update Available"
+          message={`A new version (${updateInfo?.version}) is available.`}
+          confirmText="Download Update"
+          cancelText="Remind Me Later"
+          showCancel
+          onConfirm={() => {
+            ipcRenderer.send("update-user-response", "download");
+            setUpdateInfo(null);
+          }}
+          onCancel={() => {
+            ipcRenderer.send("update-user-response", "later");
+            setUpdateInfo(null);
+          }}
+        />
+
+        <AlertModal
+          isOpen={showRestart}
+          type="success"
+          title="Update Ready"
+          message="The update has been downloaded. Restart now to apply it."
+          confirmText="Restart Now"
+          cancelText="Later"
+          showCancel
+          onConfirm={() => {
+            ipcRenderer.send("restart-user-response", "restart");
+            setShowRestart(false);
+          }}
+          onCancel={() => setShowRestart(false)}
+          nonCloseable
+        />
         <Routes>
 
           <Route path="/forgot-password" element={

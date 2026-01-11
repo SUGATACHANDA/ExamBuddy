@@ -788,26 +788,10 @@ autoUpdater.on('update-available', (info) => {
     newVersion = info.version;
 
     const showDownloadPrompt = () => {
-        dialog.showMessageBox({
-            type: 'info',
-            title: 'Update Available',
-            message: `A new version (${info.version}) of Exam Buddy is available.`,
-            detail: `Would you like to download it now? It will be installed the next time you restart the application.`,
-            buttons: ['Download Update', 'Remind Me Later'],
-            defaultId: 0,
-            cancelId: 1
-        }).then(result => {
-            if (result.response === 0) {
-                log.info('User approved download. Starting download...');
-                // CREATE DOWNLOAD PROGRESS WINDOW
-                downloadProgressWindow = createDownloadProgressWindow();
-                downloadProgressWindow.show();
-                autoUpdater.downloadUpdate();
-            } else {
-                log.info('User deferred the update.');
-            }
+        mainWindow.webContents.send("show-update-available", {
+            version: info.version
         });
-    }
+    };
     if (isMainWindowVisible) {
         showDownloadPrompt();
     } else {
@@ -816,6 +800,16 @@ autoUpdater.on('update-available', (info) => {
     }
 });
 
+ipcMain.on("update-user-response", (event, action) => {
+    if (action === "download") {
+        log.info("User approved download. Starting download...");
+        downloadProgressWindow = createDownloadProgressWindow();
+        downloadProgressWindow.show();
+        autoUpdater.downloadUpdate();
+    } else {
+        log.info("User deferred the update.");
+    }
+});
 autoUpdater.on('download-progress', (progressObj) => {
     const percent = Math.floor(progressObj.percent);
     const log_message = `Downloading update... ${percent}%`;
@@ -913,21 +907,10 @@ autoUpdater.on('update-downloaded', (info) => {
     }
 
     const showRestartPrompt = () => {
-        dialog.showMessageBox({
-            type: 'info',
-            title: 'Update Ready to Install',
-            message: 'The new version of Exam Buddy has been downloaded.',
-            detail: 'Restart the application now to apply the updates.',
-            buttons: ['Restart Now', 'Later'],
-            defaultId: 0,
-            cancelId: 1
-        }).then(result => {
-            if (result.response === 0) {
-                log.info('User approved restart. Quitting and installing...');
-                autoUpdater.quitAndInstall();
-            }
+        mainWindow.webContents.send("show-restart-update", {
+            version: info.version
         });
-    }
+    };
     if (isMainWindowVisible) {
         showRestartPrompt();
     } else {
@@ -935,6 +918,13 @@ autoUpdater.on('update-downloaded', (info) => {
         updateDialogQueue.push(showRestartPrompt);
     }
     newVersion = '';
+});
+
+ipcMain.on("restart-user-response", (event, action) => {
+    if (action === "restart") {
+        log.info("User approved restart. Quitting and installing...");
+        autoUpdater.quitAndInstall();
+    }
 });
 
 autoUpdater.on('error', (err) => {
