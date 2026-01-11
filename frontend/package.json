@@ -127,7 +127,10 @@
     "win": {
       "target": "nsis",
       "icon": "assets/icon.ico",
-      "verifyUpdateCodeSignature": false
+      "verifyUpdateCodeSignature": false,
+      "signtoolOptions": {
+        "rfc3161TimeStampServer": "http://timestamp.sectigo.com"
+      }
     },
     "nsis": {
       "artifactName": "${productName} v${version}.${ext}",
