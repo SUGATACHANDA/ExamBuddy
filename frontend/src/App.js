@@ -42,9 +42,6 @@ import ResultDetailsPage from "screens/ResultDetailsPage";
 import OpenDeepLink from "screens/OpenDeepLink";
 import StudentProfilePage from "components/StudentProfilePage";
 import TeacherProfilePage from "screens/TeacherProfilePage";
-
-import { ipcRenderer } from "electron";
-
 import AlertModal from "./components/ui/AlertModal";
 
 function App() {
@@ -53,18 +50,13 @@ function App() {
   const [updateInfo, setUpdateInfo] = useState(null);
   const [showRestart, setShowRestart] = useState(false);
   useEffect(() => {
-    ipcRenderer.on("show-update-available", (_, data) => {
+    window.electronAPI?.onUpdateAvailable((_, data) => {
       setUpdateInfo(data);
     });
 
-    ipcRenderer.on("show-restart-update", () => {
+    window.electronAPI?.onRestartUpdate(() => {
       setShowRestart(true);
     });
-
-    return () => {
-      ipcRenderer.removeAllListeners("show-update-available");
-      ipcRenderer.removeAllListeners("show-restart-update");
-    };
   }, []);
   useEffect(() => {
     if (window.electronAPI?.onDeepLink) {
@@ -107,11 +99,11 @@ function App() {
           cancelText="Remind Me Later"
           showCancel
           onConfirm={() => {
-            ipcRenderer.send("update-user-response", "download");
+            window.electronAPI?.sendUpdateResponse("download");
             setUpdateInfo(null);
           }}
           onCancel={() => {
-            ipcRenderer.send("update-user-response", "later");
+            window.electronAPI?.sendUpdateResponse("later");
             setUpdateInfo(null);
           }}
         />
@@ -125,7 +117,7 @@ function App() {
           cancelText="Later"
           showCancel
           onConfirm={() => {
-            ipcRenderer.send("restart-user-response", "restart");
+            window.electronAPI?.sendRestartResponse("restart");
             setShowRestart(false);
           }}
           onCancel={() => setShowRestart(false)}

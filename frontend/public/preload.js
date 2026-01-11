@@ -141,4 +141,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
         }
     },
     onShowWarningDialog: (callback) => ipcRenderer.on('show-warning-dialog', (event, data) => callback(data)),
+
+    onUpdateAvailable: (callback) =>
+        ipcRenderer.on("show-update-available", callback),
+
+    onRestartUpdate: (callback) =>
+        ipcRenderer.on("show-restart-update", callback),
+
+    sendUpdateResponse: (action) =>
+        ipcRenderer.send("update-user-response", action),
+
+    sendRestartResponse: (action) =>
+        ipcRenderer.send("restart-user-response", action),
 });

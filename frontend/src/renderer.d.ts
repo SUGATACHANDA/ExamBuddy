@@ -55,6 +55,22 @@ export interface IElectronAPI {
     onDisplayViolation: (
         callback: (data: { reason: string }) => void
     ) => void;
+
+    onUpdateAvailable: (
+        callback: (event: any, data: { version: string }) => void
+    ) => void;
+
+    onRestartUpdate: (
+        callback: (event: any) => void
+    ) => void;
+
+    sendUpdateResponse: (
+        action: "download" | "later"
+    ) => void;
+
+    sendRestartResponse: (
+        action: "restart"
+    ) => void;
 }
 
 // Now, we augment the global Window interface to include our `electronAPI` property

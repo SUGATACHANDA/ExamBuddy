@@ -1,4 +1,4 @@
-## v1.7.18
+## v1.7.19
 
 ### 🛠 Features
 - refactor: update version to 1.7.18; fixed the API route for HOD Dashboard
