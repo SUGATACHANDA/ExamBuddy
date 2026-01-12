@@ -1,5 +1,3 @@
-## v1.7.19
-
+## v1.7.20
 ### 🛠 Features
-- refactor: update version to 1.7.18; fixed the API route for HOD Dashboard
-- added: new dialog box for app update
+- refactor: Fixed the **Upload Status Report** for CSV Upload for **HOD Users** for creation of **Teachers** and **Students**

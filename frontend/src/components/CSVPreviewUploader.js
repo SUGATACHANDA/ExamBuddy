@@ -160,9 +160,38 @@ export default function CSVPreviewUploader() {
 
             {/* Upload Status */}
             {uploadStatus && (
-                <div className="csv-upload-report">
-                    <h4>Upload Report</h4>
-                    <pre>{JSON.stringify(uploadStatus, null, 2)}</pre>
+                <div className="upload-report-card">
+                    <h4>📊 Upload Summary</h4>
+
+                    <div className="report-stats">
+                        <div className="stat total">
+                            <span className="label">Total</span>
+                            <span className="value">{uploadStatus.total}</span>
+                        </div>
+
+                        <div className="stat success">
+                            <span className="label">Successful</span>
+                            <span className="value">{uploadStatus.success}</span>
+                        </div>
+
+                        <div className="stat failed">
+                            <span className="label">Failed</span>
+                            <span className="value">{uploadStatus.failed}</span>
+                        </div>
+                    </div>
+
+                    {uploadStatus.errors?.length > 0 && (
+                        <div className="report-errors">
+                            <h5>⚠️ Failed Records</h5>
+                            <ul>
+                                {uploadStatus.errors.map((err, idx) => (
+                                    <li key={idx}>
+                                        <strong>Row {err.row}:</strong> {err.message}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

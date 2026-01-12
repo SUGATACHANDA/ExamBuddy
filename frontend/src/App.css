@@ -6159,12 +6159,78 @@ body.keyboard-open .question-footer-final {
   padding: 6px;
   font-size: 14px;
 }
-.csv-upload-report {
-  margin-top: 20px;
-  background: #e8ffe8;
-  padding: 12px;
+.upload-report-card {
+  margin-top: 24px;
+  padding: 20px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.upload-report-card h4 {
+  margin-bottom: 16px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.report-stats {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.stat {
+  flex: 1;
+  padding: 14px;
   border-radius: 8px;
-  white-space: pre-wrap;
+  text-align: center;
+}
+
+.stat .label {
+  display: block;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.stat .value {
+  font-size: 22px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.stat.total {
+  background: #f3f4f6;
+}
+
+.stat.success {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.stat.failed {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.report-errors {
+  margin-top: 12px;
+}
+
+.report-errors h5 {
+  margin-bottom: 8px;
+  font-size: 15px;
+}
+
+.report-errors ul {
+  max-height: 150px;
+  overflow-y: auto;
+  padding-left: 18px;
+}
+
+.report-errors li {
+  font-size: 14px;
+  margin-bottom: 6px;
 }
 .video-container {
   position: relative;

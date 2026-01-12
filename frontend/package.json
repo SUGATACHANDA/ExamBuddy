@@ -1,6 +1,6 @@
 {
   "name": "exambuddy",
-  "version": "1.7.19",
+  "version": "1.7.20",
   "productName": "Exam Buddy",
   "author": {
     "name": "SUGATA CHANDA",
@@ -84,7 +84,7 @@
   "build": {
     "appId": "com.exambuddy.app",
     "productName": "Exam Buddy",
-    "copyright": "Copyright © 2025 SUGATA CHANDA",
+    "copyright": "Copyright © 2026 SUGATA CHANDA",
     "publish": {
       "provider": "github",
       "owner": "SUGATACHANDA",
