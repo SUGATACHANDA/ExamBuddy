@@ -65,11 +65,11 @@ const HODManageUsers = () => {
                     : studentsRes.data?.data || []
             );
 
-            setTeachers(
-                Array.isArray(teachersRes.data)
-                    ? teachersRes.data
-                    : teachersRes.data?.data || []
-            );
+            const teachersData = Array.isArray(teachersRes?.data)
+                ? teachersRes.data
+                : [];
+
+            setTeachers(teachersData);
             setCourses(coursesRes.data || []);
             setSemestersInDept(semestersRes.data || []);
         } catch (e) {

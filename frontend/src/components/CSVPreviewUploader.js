@@ -186,7 +186,9 @@ export default function CSVPreviewUploader() {
                             <ul>
                                 {uploadStatus.errors.map((err, idx) => (
                                     <li key={idx}>
-                                        <strong>Row {err.row}:</strong> {err.message}
+                                        <strong>Row Data:</strong>{" "}
+                                        {err.row?.email || err.row?.collegeId || "Unknown"} <br />
+                                        <span style={{ color: "red" }}>{err.error}</span>
                                     </li>
                                 ))}
                             </ul>
