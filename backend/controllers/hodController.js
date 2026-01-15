@@ -355,7 +355,17 @@ exports.getStudentsInDepartment = asyncHandler(async (req, res) => {
 /** @desc    Get all teachers in the HOD's department */
 /** @route   GET /api/hod/teachers */
 exports.getTeachersInDepartment = asyncHandler(async (req, res) => {
-    res.json(await User.find({ role: 'teacher', department: req.user.department }).select('-password'));
+    const teachers = await User.find({
+        role: 'teacher',
+        department: req.user.department
+    })
+        .select('-password')
+        .lean();
+
+    res.json({
+        success: true,
+        data: teachers
+    });
 });
 
 

@@ -65,11 +65,7 @@ const HODManageUsers = () => {
                     : studentsRes.data?.data || []
             );
 
-            const teachersData = Array.isArray(teachersRes?.data)
-                ? teachersRes.data
-                : [];
-
-            setTeachers(teachersData);
+            setTeachers(teachersRes.data?.data || []);
             setCourses(coursesRes.data || []);
             setSemestersInDept(semestersRes.data || []);
         } catch (e) {
@@ -83,6 +79,10 @@ const HODManageUsers = () => {
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+
+    useEffect(() => {
+        console.log("Teachers loaded:", teachers);
+    }, [teachers]);
 
     // Filtered students
     const filteredStudents = useMemo(() => {
