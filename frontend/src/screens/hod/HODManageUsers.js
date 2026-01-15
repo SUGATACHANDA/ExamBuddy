@@ -59,11 +59,7 @@ const HODManageUsers = () => {
                 api.get("/hod/my-courses"),
                 api.get(`/data/semesters?department=${userInfo.department?._id}`),
             ]);
-            setStudents(
-                Array.isArray(studentsRes.data)
-                    ? studentsRes.data
-                    : studentsRes.data?.data || []
-            );
+            setStudents(studentsRes.data?.data || []);
 
             setTeachers(teachersRes.data?.data || []);
             setCourses(coursesRes.data || []);
@@ -79,10 +75,6 @@ const HODManageUsers = () => {
     useEffect(() => {
         fetchData();
     }, [fetchData]);
-
-    useEffect(() => {
-        console.log("Teachers loaded:", teachers);
-    }, [teachers]);
 
     // Filtered students
     const filteredStudents = useMemo(() => {

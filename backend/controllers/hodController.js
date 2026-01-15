@@ -332,24 +332,38 @@ async function createStudentFromCSV(row, hodUser) {
 /** @route   GET /api/hod/students */
 exports.getStudentsInDepartment = asyncHandler(async (req, res) => {
     const { semester } = req.query;
-    const query = { role: 'student', department: req.user.department };
+
+    const query = {
+        role: 'student',
+        department: req.user.department
+    };
 
     if (semester && semester !== 'all') {
         query.semester = semester;
     }
 
     const students = await User.find(query)
-        .populate('semester', 'number')
-        .populate('course', 'name')
-        .select('-password');
+        .populate({
+            path: 'semester',
+            select: '_id number'
+        })
+        .populate({
+            path: 'course',
+            select: '_id name'
+        })
+        .select('-password')
+        .lean();
 
-    // Optional: sort by semester number ascending
+    // ✅ Safe sort by semester number
     students.sort((a, b) => {
         if (!a.semester || !b.semester) return 0;
-        return a.semester.number - b.semester.number;
+        return (a.semester.number || 0) - (b.semester.number || 0);
     });
 
-    res.json(students);
+    res.json({
+        success: true,
+        data: students
+    });
 });
 
 /** @desc    Get all teachers in the HOD's department */
