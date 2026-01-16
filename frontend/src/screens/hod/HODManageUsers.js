@@ -35,7 +35,6 @@ const HODManageUsers = () => {
     // separate search states
     const [studentSearchQuery, setStudentSearchQuery] = useState("");
     const [teacherSearchQuery, setTeacherSearchQuery] = useState("");
-
     const usersPerPage = 6;
 
     const resetForm = useCallback((role) => {
@@ -458,7 +457,14 @@ const HODManageUsers = () => {
 
                             {paginatedStudents.length > 0 ? (
                                 <>
-                                    <div className="user-grid">
+                                    <div className="user-grid" style={{
+                                        display: "grid",
+                                        gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+                                        gap: "20px",
+                                        marginTop: "20px",
+                                        marginBottom: "20px",
+                                        alignItems: "stretch"
+                                    }}>
                                         {paginatedStudents.map((user) => (
                                             <UserCard
                                                 key={user._id}
@@ -498,7 +504,14 @@ const HODManageUsers = () => {
 
                             {paginatedTeachers.length > 0 ? (
                                 <>
-                                    <div className="user-grid">
+                                    <div className="user-grid" style={{
+                                        display: "grid",
+                                        gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+                                        gap: "20px",
+                                        marginTop: "20px",
+                                        marginBottom: "20px",
+                                        alignItems: "stretch"
+                                    }}>
                                         {paginatedTeachers.map((user) => (
                                             <UserCard
                                                 key={user._id}

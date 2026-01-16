@@ -14,13 +14,13 @@ export default function CSVPreviewUploader() {
     const [file, setFile] = useState(null);
     const [errors, setErrors] = useState([]);
     const [uploadStatus, setUploadStatus] = useState(null);
-
+    const [loading, setLoading] = useState(false)
     // CSV handling
     const handleCSV = (file) => {
         setFile(file);
         setRows([]);
         setErrors([]);
-
+        setUploadStatus(null)
         Papa.parse(file, {
             header: true,
             skipEmptyLines: true,
@@ -78,11 +78,13 @@ export default function CSVPreviewUploader() {
     // Upload to server
     const uploadCSV = async () => {
         if (!file || rows.length === 0) return;
+        setUploadStatus(null);
+        setErrors([]);
 
         const fd = new FormData();
         fd.append("file", file);
         fd.append("role", role);
-
+        setLoading(true)
         try {
             const res = await api.post("/hod/users/bulk-upload", fd, {
                 headers: {
@@ -93,6 +95,8 @@ export default function CSVPreviewUploader() {
             setUploadStatus(res.data);
         } catch (err) {
             setErrors([err.response?.data?.message || "Upload failed"]);
+        } finally {
+            setLoading(false)
         }
     };
 
@@ -131,7 +135,7 @@ export default function CSVPreviewUploader() {
                 <div>
                     <h4>Preview ({rows.length} rows)</h4>
 
-                    <div className="csv-preview-wrapper">
+                    <div className="csv-preview-wrapper"> {/* This is the scrollable container */}
                         <table className="csv-preview-table">
                             <thead>
                                 <tr>
@@ -152,13 +156,13 @@ export default function CSVPreviewUploader() {
                         </table>
                     </div>
 
-                    <button className="btn-primary" onClick={uploadCSV} style={{ marginTop: "16px" }}>
-                        Confirm & Upload CSV
+                    <button className="btn-primary" disabled={loading || !file} onClick={uploadCSV} style={{ marginTop: "16px" }}>
+                        {loading ? "Uploading..." : "Confirm & Upload CSV"}
                     </button>
                 </div>
             )}
 
-            {/* Upload Status */}
+            {/* Upload Status - FIXED SECTION */}
             {uploadStatus && (
                 <div className="upload-report-card">
                     <h4>📊 Upload Summary</h4>
@@ -176,17 +180,18 @@ export default function CSVPreviewUploader() {
 
                         <div className="stat failed">
                             <span className="label">Failed</span>
-                            <span className="value">{uploadStatus.failed}</span>
+                            <span className="value">{uploadStatus.failed?.length || 0}</span>
                         </div>
                     </div>
 
-                    {uploadStatus.errors?.length > 0 && (
+                    {/* FIXED: Use failed array from backend response */}
+                    {uploadStatus.failed?.length > 0 && (
                         <div className="report-errors">
                             <h5>⚠️ Failed Records</h5>
                             <ul>
-                                {uploadStatus.errors.map((err, idx) => (
+                                {uploadStatus.failed.map((err, idx) => (
                                     <li key={idx}>
-                                        <strong>Row Data:</strong>{" "}
+                                        <strong>Row {idx + 1}:</strong>{" "}
                                         {err.row?.email || err.row?.collegeId || "Unknown"} <br />
                                         <span style={{ color: "red" }}>{err.error}</span>
                                     </li>

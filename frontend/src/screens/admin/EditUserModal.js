@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../api/axiosConfig';
 
 // Generic reusable modal for editing a user
-const EditUserModal = ({ user, onClose, onSave, updateUrl, semesters = [] }) => {
+const EditUserModal = ({ user, onClose, onSave, updateUrl, semesters = [], colleges = [] }) => {
     const [formData, setFormData] = useState({ name: '', email: '', collegeId: '', semester: '' });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -13,7 +13,8 @@ const EditUserModal = ({ user, onClose, onSave, updateUrl, semesters = [] }) => 
                 name: user.name || '',
                 email: user.email || '',
                 collegeId: user.collegeId || '',
-                semester: user.semester?._id || '' // prefill semester if student
+                semester: user.semester?._id || '',
+                college: user.college?._id || ''
             });
         }
     }, [user]);
@@ -100,6 +101,25 @@ const EditUserModal = ({ user, onClose, onSave, updateUrl, semesters = [] }) => 
                                             Semester {s.number}
                                         </option>
                                     ))}
+                            </select>
+                        </div>
+                    )}
+
+                    {user.role === 'university_affairs' && (
+                        <div className="form-group">
+                            <label>Assigned College</label>
+                            <select
+                                name="college"
+                                value={formData.college}
+                                onChange={handleChange}
+                                required
+                            >
+                                <option value="">-- Select College --</option>
+                                {colleges.map(c => (
+                                    <option key={c._id} value={c._id}>
+                                        {c.name}
+                                    </option>
+                                ))}
                             </select>
                         </div>
                     )}

@@ -32,7 +32,7 @@
 }
 
 *::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
 }
 
 body {
@@ -6144,6 +6144,7 @@ body.keyboard-open .question-footer-final {
   min-width: 1200px; /* ensures horizontal scrolling */
   background: white;
   overflow-x: auto;
+  scrollbar-width: 100px !important;
 }
 
 .csv-preview-table th {
@@ -6159,6 +6160,68 @@ body.keyboard-open .question-footer-final {
   padding: 6px;
   font-size: 14px;
 }
+
+.csv-preview-wrapper {
+  max-height: 400px; /* Adjust this value as needed */
+  overflow-y: auto; /* Vertical scrollbar */
+  overflow-x: auto; /* Horizontal scrollbar */
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  scrollbar-width: thin; /* For Firefox */
+}
+
+/* Custom scrollbar styling for WebKit browsers (Chrome, Safari, Edge) */
+.csv-preview-wrapper::-webkit-scrollbar {
+  width: 8px; /* Vertical scrollbar width */
+  height: 8px; /* Horizontal scrollbar height */
+}
+
+.csv-preview-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.csv-preview-wrapper::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.csv-preview-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.csv-preview-table {
+  border-collapse: collapse;
+  min-width: 1200px; /* ensures horizontal scrolling */
+  background: white;
+  width: 100%; /* Make table take full width of container */
+}
+
+.csv-preview-table th,
+.csv-preview-table td {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  text-align: left;
+  white-space: nowrap; /* Prevent text wrapping */
+}
+
+.csv-preview-table th {
+  background-color: #f5f5f5;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.csv-preview-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.csv-preview-table tr:hover {
+  background-color: #f0f0f0;
+}
+
 .upload-report-card {
   margin-top: 24px;
   padding: 20px;

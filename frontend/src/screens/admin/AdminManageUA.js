@@ -216,7 +216,13 @@ const AdminManageUA = () => {
             }
 
             {isEditModalOpen &&
-                <EditUserModal user={editingUser} onClose={() => setIsEditModalOpen(false)} onSave={fetchData} />
+                <EditUserModal
+                    user={editingUser}
+                    onClose={() => setIsEditModalOpen(false)}
+                    onSave={fetchData}
+                    updateUrl={`/admin/users/${editingUser._id}`}
+                    colleges={colleges}
+                />
             }
         </div>
     );

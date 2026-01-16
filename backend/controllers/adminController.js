@@ -145,6 +145,9 @@ exports.updateUser = asyncHandler(async (req, res) => {
     user.name = req.body.name || user.name;
     user.email = req.body.email || user.email;
     user.collegeId = req.body.collegeId || user.collegeId;
+    if (req.body.college) {
+        user.college = req.body.college;
+    }
 
     // Additional logic to prevent creating duplicates when editing
     const duplicate = await User.findOne({
