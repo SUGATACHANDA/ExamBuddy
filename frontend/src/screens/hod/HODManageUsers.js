@@ -504,14 +504,8 @@ const HODManageUsers = () => {
 
                             {paginatedTeachers.length > 0 ? (
                                 <>
-                                    <div className="user-grid" style={{
-                                        display: "grid",
-                                        gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-                                        gap: "20px",
-                                        marginTop: "20px",
-                                        marginBottom: "20px",
-                                        alignItems: "stretch"
-                                    }}>
+                                    <div className="user-grid"
+                                    >
                                         {paginatedTeachers.map((user) => (
                                             <UserCard
                                                 key={user._id}

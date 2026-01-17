@@ -75,8 +75,6 @@ const UserCard = ({ user, onEdit, onDelete }) => {
     if (!user) {
         return null;
     }
-
-    const roleText = getUserRoleText(user);
     const userRole = user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User';
 
     return (
@@ -92,15 +90,23 @@ const UserCard = ({ user, onEdit, onDelete }) => {
             <div className="card-divider"></div>
 
             <div className="card-content">
+                {(user?.role === 'teacher' || user?.role === 'hod') &&
+                    (<div className="info-item">
+                        <div className="info-label-professional">Department</div>
+                        <div className="info-value-professional">{user?.department.name || 'Not Provided'}</div>
+                    </div>)
+                }
                 <div className="info-item">
                     <div className="info-label-professional">Email Address</div>
                     <div className="info-value-professional">{user.email || 'Not Provided'}</div>
                 </div>
 
-                <div className="info-item">
-                    <div className="info-label-professional">Affiliation</div>
+                {/* <div className="info-item">
+                    <div className="info-label-professional">
+                        {(user?.role === "student" || user?.role === "teacher" || user?.role === "HOD") ? "Designation" : "Affiliation"}
+                    </div>
                     <div className="info-value-professional">{roleText}</div>
-                </div>
+                </div> */}
 
                 {user.course?.name && (
                     <div className="info-item">

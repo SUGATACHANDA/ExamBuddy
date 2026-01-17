@@ -6,6 +6,7 @@ import Pagination from '../../components/teacher/Pagination';
 import EditUserModal from './EditUserModal';
 import { togglePasswordVisibility } from 'utils/passwordToggle';
 import { Eye, EyeOff } from 'lucide-react';
+import CollegeAsyncSelect from '../../components/ui/CollegeAsyncSelect';
 
 // A dedicated modal sub-component for CREATING a new University Affairs user.
 const CreateUAModal = ({ colleges, onClose, onSave }) => {
@@ -63,7 +64,7 @@ const CreateUAModal = ({ colleges, onClose, onSave }) => {
                                 style={{
                                     position: 'absolute',
                                     right: '10px',
-                                    top: '65%',
+                                    top: '70%',
                                     transform: 'translateY(-50%)',
                                     cursor: 'pointer',
                                 }}
@@ -87,11 +88,17 @@ const CreateUAModal = ({ colleges, onClose, onSave }) => {
                             />
                         )}
                     </div>
-                    <div className="form-group"><label>Assign to College</label>
-                        <select name="college" value={formData.college} onChange={handleChange} required>
-                            <option value="" disabled>-- Select a College --</option>
-                            {colleges.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-                        </select>
+                    <div className="form-group">
+                        <label>Assign to College</label>
+
+                        <CollegeAsyncSelect
+                            colleges={colleges}
+                            value={formData.college}
+                            onChange={(collegeId) =>
+                                setFormData(prev => ({ ...prev, college: collegeId }))
+                            }
+                            placeholder="Search & select college..."
+                        />
                     </div>
                     <div className="modal-actions">
                         <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>

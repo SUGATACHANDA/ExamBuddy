@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/axiosConfig';
 import EditModal from './EditModal'; // Reusing the modal for editing name/location
+import Pagination from '../../components/teacher/Pagination';
 
 const AdminManageColleges = () => {
     const [colleges, setColleges] = useState([]);
@@ -11,6 +12,9 @@ const AdminManageColleges = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+
+    const itemsPerPage = 6;
 
     // --- Data Fetching ---
     const fetchColleges = useCallback(async () => {
@@ -18,6 +22,7 @@ const AdminManageColleges = () => {
             setLoading(true);
             const { data } = await api.get('/admin/colleges');
             setColleges(data);
+            setCurrentPage(1);
             setError('');
         } catch (err) { setError('Failed to fetch colleges.'); }
         finally { setLoading(false); }
@@ -26,6 +31,13 @@ const AdminManageColleges = () => {
     useEffect(() => {
         fetchColleges();
     }, [fetchColleges]);
+
+    const paginatedColleges = React.useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return colleges.slice(startIndex, startIndex + itemsPerPage);
+    }, [colleges, currentPage]);
+
+    const totalPages = Math.ceil(colleges.length / itemsPerPage);
 
     // --- CRUD Handlers ---
     const handleDelete = async (id, name) => {
@@ -54,7 +66,7 @@ const AdminManageColleges = () => {
             {error && <p className="error">{error}</p>}
 
             <div className="item-grid">
-                {loading ? <p>Loading...</p> : colleges.map(college => (
+                {loading ? <p>Loading...</p> : paginatedColleges.map(college => (
                     <div key={college._id} className="item-card">
                         <div className="item-card-info">
                             <h4>{college.name}</h4>
@@ -67,6 +79,12 @@ const AdminManageColleges = () => {
                     </div>
                 ))}
             </div>
+
+            <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+            />
 
             {isCreateModalOpen && <CreateCollegeModal onClose={() => setIsCreateModalOpen(false)} onSave={fetchColleges} />}
             {isEditModalOpen && <EditModal item={editingItem} itemType="colleges" onClose={() => setIsEditModalOpen(false)} onSave={fetchColleges} />}

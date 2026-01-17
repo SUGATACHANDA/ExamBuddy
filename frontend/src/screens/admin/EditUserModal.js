@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/axiosConfig';
+import CollegeAsyncSelect from '../../components/ui/CollegeAsyncSelect';
 
 // Generic reusable modal for editing a user
 const EditUserModal = ({ user, onClose, onSave, updateUrl, semesters = [], colleges = [] }) => {
-    const [formData, setFormData] = useState({ name: '', email: '', collegeId: '', semester: '' });
+    const [formData, setFormData] = useState({ name: '', email: '', collegeId: '', semester: '', college: '' });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -18,6 +19,25 @@ const EditUserModal = ({ user, onClose, onSave, updateUrl, semesters = [], colle
             });
         }
     }, [user]);
+
+    const selectedCollege = colleges
+        .filter(c => c._id === formData.college)
+        .map(c => ({ value: c._id, label: c.name }))[0] || null;
+
+    const loadCollegeOptions = (inputValue, callback) => {
+        setTimeout(() => {
+            const filtered = colleges
+                .filter(c =>
+                    c.name.toLowerCase().includes(inputValue.toLowerCase())
+                )
+                .map(c => ({
+                    value: c._id,
+                    label: c.name
+                }));
+
+            callback(filtered);
+        }, 300); // debounce-like behavior
+    };
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -108,19 +128,14 @@ const EditUserModal = ({ user, onClose, onSave, updateUrl, semesters = [], colle
                     {user.role === 'university_affairs' && (
                         <div className="form-group">
                             <label>Assigned College</label>
-                            <select
-                                name="college"
+
+                            <CollegeAsyncSelect
+                                colleges={colleges}
                                 value={formData.college}
-                                onChange={handleChange}
-                                required
-                            >
-                                <option value="">-- Select College --</option>
-                                {colleges.map(c => (
-                                    <option key={c._id} value={c._id}>
-                                        {c.name}
-                                    </option>
-                                ))}
-                            </select>
+                                onChange={(collegeId) =>
+                                    setFormData(prev => ({ ...prev, college: collegeId }))
+                                }
+                            />
                         </div>
                     )}
 

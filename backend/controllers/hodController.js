@@ -372,6 +372,9 @@ exports.getTeachersInDepartment = asyncHandler(async (req, res) => {
     const teachers = await User.find({
         role: 'teacher',
         department: req.user.department
+    }).populate({
+        path: 'department',
+        select: '_id name'
     })
         .select('-password')
         .lean();

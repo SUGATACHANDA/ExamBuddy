@@ -38,6 +38,7 @@
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.8.2",
     "react-scripts": "5.0.1",
+    "react-select": "^5.10.2",
     "react-simple-keyboard": "^3.8.132",
     "socket.io-client": "^4.8.1",
     "use-immer": "^0.11.0",
