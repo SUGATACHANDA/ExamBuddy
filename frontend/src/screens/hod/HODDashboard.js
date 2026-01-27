@@ -4,11 +4,16 @@ import { useAuth } from '../../context/AuthContext';
 import ChangePasswordModal from 'components/ui/ChangePasswordModal';
 import { Clock, getInitials } from 'screens/StudentDashboad';
 import { ClockIcon } from 'lucide-react';
+import { useAlert } from 'hooks/useAlert';
+import AlertModal, { ALERT_TYPES } from 'components/ui/AlertModal';
 
 const HODDashboard = () => {
-    const { userInfo, logout } = useAuth();
+    const { userInfo } = useAuth();
+    const { logout } = useAuth();
     const [isChangePassModalOpen, setIsChangePassModalOpen] = useState(false);
     const initials = getInitials(userInfo?.name);
+
+    const [alertConfig, , openAlert, closeAlert] = useAlert();
 
     return (
         <div className="student-dashboard-container">
@@ -35,7 +40,20 @@ const HODDashboard = () => {
                     >
                         Change Password
                     </button>
-                    <button onClick={logout} className="oval-btn danger">
+                    <button
+                        onClick={() => {
+                            openAlert({
+                                type: ALERT_TYPES.WARNING,
+                                title: "Logout Confirmation",
+                                message: "Are you sure you want to logout?",
+                                confirmText: "Logout",
+                                cancelText: "Cancel",
+                                onConfirm: () => {
+                                    logout();
+                                },
+                            })
+                        }}
+                        className="oval-btn danger">
                         Logout
                     </button>
                 </div>
@@ -55,6 +73,19 @@ const HODDashboard = () => {
                     <p>Monitor all exams scheduled for your department and view aggregated results.</p>
                 </Link>
             </div>
+
+            <AlertModal
+                {...alertConfig}
+                isOpen={alertConfig.isOpen}
+                onConfirm={() => {
+                    alertConfig.onConfirm?.();
+                    closeAlert();
+                }}
+                onCancel={() => {
+                    alertConfig.onCancel?.();
+                    closeAlert();
+                }}
+            />
         </div>
     );
 };

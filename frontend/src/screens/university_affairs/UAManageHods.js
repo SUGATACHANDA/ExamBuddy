@@ -9,6 +9,7 @@ import Pagination from '../../components/teacher/Pagination';
 import LoadingScreen from 'components/LoadingScreen';
 import { Eye, EyeOff } from 'lucide-react';
 import { togglePasswordVisibility } from 'utils/passwordToggle';
+import CollegeAsyncSelect from 'components/ui/CollegeAsyncSelect';
 
 // A dedicated modal for CREATING a new HOD
 const CreateHODModal = ({ onClose, onSave }) => {
@@ -111,10 +112,18 @@ const CreateHODModal = ({ onClose, onSave }) => {
                     </div>
                     <div className="form-group">
                         <label>Assign to Department</label>
-                        <select name="department" value={formData.department || ''} onChange={handleChange} required disabled={departments.length === 0}>
+                        {/* <select name="department" value={formData.department || ''} onChange={handleChange} required disabled={departments.length === 0}>
                             <option value="" disabled>-- Select a Department --</option>
                             {departments.map(dept => <option key={dept._id} value={dept._1d}>{dept.name}</option>)}
-                        </select>
+                        </select> */}
+                        <CollegeAsyncSelect
+                            colleges={departments}
+                            value={formData.department}
+                            onChange={(departmentId) =>
+                                setFormData(prev => ({ ...prev, department: departmentId }))
+                            }
+                            placeholder='Search Department...'
+                        />
                     </div>
                     <div className="modal-actions">
                         <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
@@ -140,10 +149,18 @@ const UAManageHods = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
+    const [departments, setDepartments] = useState([]);
 
     // State for Pagination
     const [currentPage, setCurrentPage] = useState(1);
     const usersPerPage = 6;
+
+    useEffect(() => {
+        api.get('/university-affairs/departments')
+            .then(res => setDepartments(res.data))
+            .catch(err => console.error('Failed to load departments', err));
+    }, []);
+
 
     // --- Data Fetching ---
     const fetchHODs = useCallback(async () => {
@@ -253,6 +270,7 @@ const UAManageHods = () => {
                         // --- THIS IS THE CRITICAL FIX ---
                         // A UA staff member must use their own authorized endpoint to update an HOD.
                         updateUrl={`/university-affairs/users/hods/${editingUser._id}`}
+                        department={departments}
                     />
                 )}
             </div>

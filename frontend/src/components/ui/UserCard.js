@@ -57,32 +57,25 @@
 import React from 'react';
 import './UserCard.css';
 
-const getUserRoleText = (user) => {
-    if (user?.department?.name) {
-        return `${user.department.name}`;
-    }
-    else if (user?.college?.name) {
-        return `${user.college.name}`;
-    }
-    else if (user?.role) {
+export const getUserRoleText = (user) => {
+    if (user?.role) {
         const formattedRole = user.role.replace('_', ' ').replace(/\b\w/g, char => char.toUpperCase());
         return formattedRole;
     }
-    return 'N/A';
+    return 'Guest';
 };
-
 const UserCard = ({ user, onEdit, onDelete }) => {
+
     if (!user) {
         return null;
     }
-    const userRole = user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User';
 
     return (
         <div className="user-card-professional">
             <div className="card-header">
                 <div className="user-info-header">
                     <h4 className="user-name-professional">{user.name || 'Unnamed User'}</h4>
-                    <div className="user-role-professional">{userRole}</div>
+                    <div className="user-role-professional">{getUserRoleText(user)}</div>
                 </div>
                 <div className="user-id-professional">{user.collegeId || 'No ID'}</div>
             </div>
@@ -93,9 +86,13 @@ const UserCard = ({ user, onEdit, onDelete }) => {
                 {(user?.role === 'teacher' || user?.role === 'hod') &&
                     (<div className="info-item">
                         <div className="info-label-professional">Department</div>
-                        <div className="info-value-professional">{user?.department.name || 'Not Provided'}</div>
+                        <div className="info-value-professional">{user?.department?.name || 'Not Provided'}</div>
                     </div>)
                 }
+                {user?.role === 'university_affairs' && (<div className="info-item">
+                    <div className="info-label-professional">Assigned College</div>
+                    <div className="info-value-professional">{user?.college?.name || 'Not Provided'}</div>
+                </div>)}
                 <div className="info-item">
                     <div className="info-label-professional">Email Address</div>
                     <div className="info-value-professional">{user.email || 'Not Provided'}</div>
@@ -121,6 +118,10 @@ const UserCard = ({ user, onEdit, onDelete }) => {
                         <div className="info-value-professional">Semester {user.semester.number}</div>
                     </div>
                 )}
+                <div className="info-item">
+                    <div className="info-label-professional">Account Created On</div>
+                    <div className="info-value-professional">{new Date(user.createdAt).toLocaleDateString("en-UK") || 'Not Provided'}</div>
+                </div>
             </div>
 
             {(onEdit && onDelete) && (

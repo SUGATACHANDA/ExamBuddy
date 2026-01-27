@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
@@ -9,6 +10,9 @@ import Pagination from "../../components/teacher/Pagination";
 import LoadingScreen from "components/LoadingScreen";
 import { getDescriptorFromFile } from '../../utils/faceUtils';
 import CSVPreviewUploader from "components/CSVPreviewUploader";
+import AlertModal, { ALERT_TYPES } from "../../components/ui/AlertModal";
+import { Eye, EyeOff } from "lucide-react";
+import { useAlert } from "hooks/useAlert";
 
 const HODManageUsers = () => {
     const { userInfo } = useAuth();
@@ -31,6 +35,11 @@ const HODManageUsers = () => {
     const [selectedSemesterFilter, setSelectedSemesterFilter] = useState("all");
     const [photoFile, setPhotoFile] = useState(null);
 
+    const [alertConfig, , openAlert, closeAlert] = useAlert();
+    const [deleteTarget, setDeleteTarget] = useState(null);
+
+    const [showPassword, setShowPassword] = useState(false);
+
 
     // separate search states
     const [studentSearchQuery, setStudentSearchQuery] = useState("");
@@ -42,7 +51,7 @@ const HODManageUsers = () => {
             name: "",
             collegeId: "",
             email: "",
-            password: "",
+            password: "password123",
             role,
             course: "",
             semester: "",
@@ -216,32 +225,80 @@ const HODManageUsers = () => {
                 headers: { "Content-Type": "multipart/form-data" },
             });
 
-            setSuccess(`Successfully registered ${formRole}: ${formState.name}!`);
+            openAlert({
+                type: ALERT_TYPES.SUCCESS,
+                title: "Registration Successful",
+                message: `${formRole === "student" ? "Student" : "Teacher"} ${formState.name
+                    } has been registered successfully.`,
+                onConfirm: () => {
+                    setActiveTab('viewTeachers')
+                }
+            });
             await fetchData();
             resetForm(formRole);
             setPhotoFile(null);
         } catch (err) {
             console.error("Registration error:", err);
-            setError(err.response?.data?.message || "Registration failed.");
+            openAlert({
+                type: ALERT_TYPES.ERROR,
+                title: 'Registration Failed',
+                message: `Unable to delete user. Please try again. 
+                \n Error: ${err.response?.data?.message}`,
+            });
         } finally {
             setLoading(false);
         }
     };
 
-    const handleDeleteUser = async (id) => {
-        if (window.confirm("Are you sure you want to delete this user? This is permanent.")) {
-            setLoading(true);
-            try {
-                await api.delete(`/hod/users/${id}`);
-                await fetchData();
-            } catch {
-                setError("Failed to delete user.");
-            } finally {
-                setLoading(false);
-            }
-        }
+    const handleDeleteUser = (id) => {
+        setDeleteTarget(id);
+
+        openAlert({
+            type: ALERT_TYPES.WARNING,
+            title: "Delete User",
+            message:
+                "Are you sure you want to permanently delete this user? This action cannot be undone.",
+            confirmText: "Delete",
+            cancelText: "Cancel",
+            onConfirm: async () => {
+                setLoading(true);
+                try {
+                    await api.delete(`/hod/users/${id}`);
+                    await fetchData();
+
+                    // ✅ Show success after delete
+                    openAlert({
+                        type: ALERT_TYPES.SUCCESS,
+                        title: "Deleted",
+                        message: "User has been deleted successfully.",
+                    });
+                } catch {
+                    openAlert({
+                        type: ALERT_TYPES.ERROR,
+                        title: "Delete Failed",
+                        message: "Unable to delete user. Please try again.",
+                    });
+                } finally {
+                    setLoading(false);
+                    setDeleteTarget(null);
+                }
+            },
+        });
     };
 
+    // const confirmDeleteUser = async () => {
+    //     setLoading(true);
+    //     try {
+    //         await api.delete(`/hod/users/${deleteTarget}`);
+    //         await fetchData();
+    //     } catch {
+    //         setError("Failed to delete user.");
+    //     } finally {
+    //         setLoading(false);
+    //         setAlertOpen(false);
+    //         setDeleteTarget(null);
+    //     }
+    // };
     const openEditModal = (user) => setEditingUser(user);
     const handleFormRoleChange = (role) => {
         setFormRole(role);
@@ -291,7 +348,7 @@ const HODManageUsers = () => {
                         + Register New User
                     </button>
                     <button
-                        className={`tab-button ${activeTab === "create" ? "active" : ""}`}
+                        className={`tab-button ${activeTab === "createBulk" ? "active" : ""}`}
                         onClick={() => handleTabChange("createBulk")}
                     >
                         + Register New User via Excel File(CSV)
@@ -355,16 +412,35 @@ const HODManageUsers = () => {
                                     required
                                     disabled={loading}
                                 />
-                                <input
-                                    name="password"
-                                    type="password"
-                                    value={formState.password || ""}
-                                    onChange={handleChange}
-                                    placeholder="Create Password"
-                                    required
-                                    autoComplete="new-password"
-                                    disabled={loading}
-                                />
+                                <div style={{ position: "relative", width: "100%" }}>
+                                    <input
+                                        name="password"
+                                        type={showPassword ? "text" : "password"}
+                                        value={formState.password || "password123"}
+                                        placeholder="Create Password"
+                                        readOnly
+                                        style={{
+                                            width: "100%",
+                                            paddingRight: "42px"
+                                        }}
+                                    />
+
+                                    <span
+                                        onClick={() => setShowPassword(prev => !prev)}
+                                        style={{
+                                            position: "absolute",
+                                            right: "12px",
+                                            top: "50%",
+                                            transform: "translateY(-50%)",
+                                            cursor: "pointer",
+                                            display: "flex",
+                                            alignItems: "center",
+
+                                        }}
+                                    >
+                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </span>
+                                </div>
                                 {formRole === "student" && (
                                     <>
                                         <input
@@ -537,6 +613,18 @@ const HODManageUsers = () => {
                         updateUrl={`/hod/users/${editingUser._id}`}
                     />
                 )}
+                <AlertModal
+                    {...alertConfig}
+                    isOpen={alertConfig.isOpen}
+                    onConfirm={() => {
+                        alertConfig.onConfirm?.();
+                        closeAlert();
+                    }}
+                    onCancel={() => {
+                        alertConfig.onCancel?.();
+                        closeAlert();
+                    }}
+                />
             </div>
         </>
     );

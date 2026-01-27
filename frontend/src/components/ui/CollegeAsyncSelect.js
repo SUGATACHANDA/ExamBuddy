@@ -5,7 +5,8 @@ const CollegeAsyncSelect = ({
     value,
     onChange,
     placeholder = 'Search & select college...',
-    isClearable = true
+    isClearable = true,
+    disabled = false
 }) => {
 
     const loadOptions = (inputValue, callback) => {
@@ -40,6 +41,7 @@ const CollegeAsyncSelect = ({
             onChange={(selected) => onChange(selected?.value || '')}
             placeholder={placeholder}
             isClearable={isClearable}
+            isDisabled={disabled}
         />
     );
 };

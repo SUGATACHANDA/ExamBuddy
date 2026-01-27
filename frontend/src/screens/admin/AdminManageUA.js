@@ -7,6 +7,7 @@ import EditUserModal from './EditUserModal';
 import { togglePasswordVisibility } from 'utils/passwordToggle';
 import { Eye, EyeOff } from 'lucide-react';
 import CollegeAsyncSelect from '../../components/ui/CollegeAsyncSelect';
+import AlertModal from "../../components/ui/AlertModal";
 
 // A dedicated modal sub-component for CREATING a new University Affairs user.
 const CreateUAModal = ({ colleges, onClose, onSave }) => {
@@ -124,6 +125,10 @@ const AdminManageUA = () => {
     const [editingUser, setEditingUser] = useState(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+    const [alertOpen, setAlertOpen] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState(null);
+
+
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const usersPerPage = 6;
@@ -168,16 +173,37 @@ const AdminManageUA = () => {
         setIsEditModalOpen(true);
     };
 
-    const handleDeleteUser = async (id) => {
-        if (window.confirm('Are you sure you want to permanently delete this University Affairs user?')) {
-            try {
-                await api.delete(`/admin/users/${id}`);
-                await fetchData(); // Refresh list after deleting
-            } catch (err) {
-                setError(err.response?.data?.message || "Failed to delete user.");
-            }
+    const handleDeleteUser = (id) => {
+        setDeleteTarget(id);
+        setAlertOpen(true);
+    };
+
+    const confirmDeleteUser = async () => {
+        const targetId = deleteTarget;
+        setAlertOpen(false);
+        setDeleteTarget(null);
+
+        setLoading(true);
+        try {
+            await api.delete(`/admin/users/${targetId}`);
+            await fetchData();
+        } catch {
+            setError("Failed to delete user.");
+        } finally {
+            setLoading(false);
         }
     };
+
+    // const handleDeleteUse= async (id) => {
+    //     if (window.confirm('Are you sure you want to permanently delete this University Affairs user?')) {
+    //         try {
+    //             await api.delete(`/admin/users/${id}`);
+    //             await fetchData(); // Refresh list after deleting
+    //         } catch (err) {
+    //             setError(err.response?.data?.message || "Failed to delete user.");
+    //         }
+    //     }
+    // };
 
     return (
         <div className="container">
@@ -231,6 +257,20 @@ const AdminManageUA = () => {
                     colleges={colleges}
                 />
             }
+            <AlertModal
+                isOpen={alertOpen}
+                type="warning"
+                title="Delete User"
+                message="Are you sure you want to permanently delete this user? This action cannot be undone."
+                confirmText="Delete"
+                cancelText="Cancel"
+                showCancel
+                onConfirm={confirmDeleteUser}
+                onCancel={() => {
+                    setAlertOpen(false);
+                    setDeleteTarget(null);
+                }}
+            />
         </div>
     );
 };

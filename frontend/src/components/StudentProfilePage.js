@@ -6,9 +6,11 @@ import ChangePasswordModal from "../components/ui/ChangePasswordModal";
 import UserDetailsCard from "./UserDetailsCard";
 import { Fingerprint, KeyRound, LogOut, User2 } from "lucide-react";
 import api from "api/axiosConfig";
+import AlertModal, { ALERT_TYPES } from "./ui/AlertModal";
+import { useAlert } from "hooks/useAlert";
 
 const StudentProfilePage = () => {
-    const { userInfo, logout } = useAuth();
+    const { logout } = useAuth();
     const navigate = useNavigate();
 
     const [profileData, setProfileData] = useState(null);
@@ -19,7 +21,7 @@ const StudentProfilePage = () => {
     const [isBiometricModalOpen, setBiometricModalOpen] = useState(false);
     const [activePage, setActivePage] = useState("details");
     const [isChangePassModalOpen, setIsChangePassModalOpen] = useState(false);
-    const [loadingUser, setLoadingUser] = useState(false);
+    const [alertConfig, , openAlert, closeAlert] = useAlert();
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -82,7 +84,18 @@ const StudentProfilePage = () => {
 
                 <button
                     className="sidebar-btn logout"
-                    onClick={logout}
+                    onClick={() => {
+                        openAlert({
+                            type: ALERT_TYPES.WARNING,
+                            title: "Logout Confirmation",
+                            message: "Are you sure you want to logout?",
+                            confirmText: "Logout",
+                            cancelText: "Cancel",
+                            onConfirm: () => {
+                                logout();
+                            },
+                        })
+                    }}
                 >
                     <span className="sidebar-btn-content">
                         <LogOut size={18} />
@@ -125,6 +138,19 @@ const StudentProfilePage = () => {
                     }}
                 />
             )}
+
+            <AlertModal
+                {...alertConfig}
+                isOpen={alertConfig.isOpen}
+                onConfirm={() => {
+                    alertConfig.onConfirm?.();
+                    closeAlert();
+                }}
+                onCancel={() => {
+                    alertConfig.onCancel?.();
+                    closeAlert();
+                }}
+            />
         </div>
     );
 };

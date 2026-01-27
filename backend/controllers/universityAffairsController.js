@@ -346,6 +346,15 @@ exports.updateHOD = asyncHandler(async (req, res) => {
     hodToUpdate.name = req.body.name || hodToUpdate.name;
     hodToUpdate.email = req.body.email || hodToUpdate.email;
     hodToUpdate.collegeId = req.body.collegeId || hodToUpdate.collegeId;
+    if (req.body.department && req.body.department !== hodToUpdate.department.toString()) {
+        // If the HOD is being moved to a different department, verify it's in the same college.
+        const newDept = await Department.findById(req.body.department).populate({ path: 'course', populate: { path: 'degree' } });
+        if (!newDept || newDept.course.degree.college.toString() !== req.user.college.toString()) {
+            res.status(400);
+            throw new Error("Cannot move HOD: The new department is not in your college.");
+        }
+        hodToUpdate.department = req.body.department;
+    }
 
     // 4. Check for duplicates before saving.
     const duplicateUser = await User.findOne({
@@ -363,6 +372,8 @@ exports.updateHOD = asyncHandler(async (req, res) => {
         _id: updatedUser._id,
         name: updatedUser.name,
         email: updatedUser.email,
-        collegeId: updatedUser.collegeId
+        collegeId: updatedUser.collegeId,
+        department: updatedUser.department
+
     });
 });

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import "./AlertModal.css";
 
 /**
  * Props:
@@ -13,12 +14,19 @@ import React, { useEffect, useRef } from "react";
  * - onCancel (fn) optional — called for cancel or when modal dismissed
  * - nonCloseable (bool) if true prevents closing via ESC or backdrop
  */
+export const ALERT_TYPES = Object.freeze({
+    INFO: "info",
+    SUCCESS: "success",
+    WARNING: "warning",
+    ERROR: "error",
+});
+
 export default function AlertModal({
     isOpen,
-    type = "info",
+    type = ALERT_TYPES,
     title,
     message,
-    confirmText = "OK",
+    confirmText = "Confirm",
     cancelText = "Cancel",
     showCancel = false,
     onConfirm,
@@ -31,14 +39,14 @@ export default function AlertModal({
     useEffect(() => {
         if (!isOpen) return;
 
-        // focus confirm button on open
+        document.body.style.overflow = "hidden";
+
         const t = setTimeout(() => {
             confirmRef.current?.focus();
         }, 50);
 
         const onKey = (e) => {
             if (nonCloseable) {
-                // only allow Enter to confirm
                 if (e.key === "Enter") {
                     e.preventDefault();
                     onConfirm?.();
@@ -48,7 +56,7 @@ export default function AlertModal({
             if (e.key === "Escape") {
                 e.preventDefault();
                 onCancel?.();
-            } else if (e.key === "Enter") {
+            } else if (e.key === "Enter" && !showCancel) {
                 e.preventDefault();
                 onConfirm?.();
             }
@@ -58,8 +66,9 @@ export default function AlertModal({
         return () => {
             clearTimeout(t);
             document.removeEventListener("keydown", onKey);
+            document.body.style.overflow = "unset";
         };
-    }, [isOpen, nonCloseable, onConfirm, onCancel]);
+    }, [isOpen, nonCloseable, onConfirm, onCancel, showCancel]);
 
     if (!isOpen) return null;
 
@@ -70,46 +79,84 @@ export default function AlertModal({
         }
     };
 
+    const getIcon = () => {
+        switch (type) {
+            case ALERT_TYPES.SUCCESS:
+                return "✔";
+            case ALERT_TYPES.ERROR:
+                return "✖";
+            case ALERT_TYPES.WARNING:
+                return "!";
+            case ALERT_TYPES.INFO:
+            default:
+                return "i";
+        }
+    };
+
     return (
         <div
-            className="alert-backdrop"
+            className="alert-modal-backdrop"
             role="dialog"
             aria-modal="true"
             aria-labelledby="alert-title"
             onMouseDown={handleBackdropClick}
             ref={backdropRef}
         >
-            <div className={`alert-box alert-${type}`} onMouseDown={(e) => e.stopPropagation()}>
-                <header className="alert-header">
-                    <div className="alert-icon" aria-hidden>
-                        {type === "success" ? "✔" : type === "error" ? "✖" : type === "warning" ? "⚠" : "ℹ"}
+            <div
+                className="alert-modal-wrapper"
+                onMouseDown={(e) => e.stopPropagation()}
+            >
+                <div className={`alert-modal-card alert-modal-${type}`}>
+                    {/* Header with icon */}
+                    <div className="alert-modal-header">
+                        <div className="alert-modal-icon-wrapper">
+                            <div className="alert-modal-icon-circle">
+                                <span className="alert-modal-icon">{getIcon()}</span>
+                            </div>
+                        </div>
+                        <div className="alert-modal-header-content">
+                            <h2 id="alert-title" className="alert-modal-title">{title}</h2>
+                            {/* {type === "info" && <span className="alert-modal-type-badge">Information</span>}
+                            {type === "success" && <span className="alert-modal-type-badge alert-modal-type-success">Success</span>}
+                            {type === "error" && <span className="alert-modal-type-badge alert-modal-type-error">Error</span>}
+                            {type === "warning" && <span className="alert-modal-type-badge alert-modal-type-warning">Warning</span>} */}
+                        </div>
                     </div>
-                    <h3 id="alert-title" className="alert-title">{title}</h3>
-                </header>
 
-                <div className="alert-body">
-                    {typeof message === "string" ? <p>{message}</p> : message}
-                </div>
+                    {/* Message body */}
+                    <div className="alert-modal-body">
+                        <div className="alert-modal-message">
+                            {typeof message === "string" ? <p>{message}</p> : message}
+                        </div>
+                    </div>
 
-                <footer className="alert-footer">
-                    {showCancel && (
+                    {/* Action buttons - Cancel comes first in professional dialogs */}
+                    <div className="alert-modal-actions">
+                        {(
+                            showCancel
+                            ||
+                            // ||
+                            // type === ALERT_TYPES.ERROR
+                            type === ALERT_TYPES.WARNING
+                        ) && (
+                                <button
+                                    className="alert-btn alert-btn-cancel"
+                                    onClick={onCancel}
+                                >
+                                    {cancelText}
+                                </button>
+                            )}
+
                         <button
-                            className="alert-btn alert-cancel"
-                            onClick={() => onCancel?.()}
-                            aria-label="Cancel"
+                            className={`alert-btn alert-btn-confirm alert-btn-${type}`}
+                            onClick={onConfirm}
+                            ref={confirmRef}
                         >
-                            {cancelText}
+                            {confirmText}
                         </button>
-                    )}
-                    <button
-                        className="alert-btn alert-confirm"
-                        onClick={() => onConfirm?.()}
-                        ref={confirmRef}
-                        aria-label="Confirm"
-                    >
-                        {confirmText}
-                    </button>
-                </footer>
+                    </div>
+
+                </div>
             </div>
         </div>
     );

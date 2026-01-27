@@ -1,12 +1,19 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/axiosConfig';
 import EditModal from '../admin/EditModal';
 import LoadingScreen from 'components/LoadingScreen';
 
-// =======================================================
-// Reusable Sub-Component for each column in the UI
-// =======================================================
+/* =======================================================
+   Reusable Sub-Component for each column in the UI
+======================================================= */
+
+const VALID_DELETE_TYPES = [
+    'degrees',
+    'courses',
+    'departments',
+    'semesters'
+];
 const HierarchyColumn = ({
     title,
     items,
@@ -21,6 +28,8 @@ const HierarchyColumn = ({
     createDisabled = false,
     loading
 }) => {
+    const safeItems = Array.isArray(items) ? items : [];
+
     const [newItemValue, setNewItemValue] = useState('');
     const [isCreating, setIsCreating] = useState(false);
 
@@ -40,34 +49,51 @@ const HierarchyColumn = ({
 
     return (
         <div className="hierarchy-column">
-            <h3>{title} ({items.length})</h3>
+            <h3>{title} ({safeItems.length})</h3>
 
             {loading ? (
                 <LoadingScreen />
             ) : (
                 <div className="item-list">
-                    {items.length > 0 ? (
-                        items.map(item => (
-                            <div
-                                key={item._id}
-                                className={`item-container ${item._id === selectedId ? 'selected' : ''}`}
-                            >
-                                <button
-                                    className="item-button"
-                                    onClick={() => onSelect(item._id)}
+                    {safeItems.length > 0 ? (
+                        safeItems.map(item => {
+                            const displayValue =
+                                typeof item.name === 'string'
+                                    ? item.name
+                                    : typeof item.number === 'number'
+                                        ? item.number
+                                        : String(item.number ?? '');
+
+                            return (
+                                <div
+                                    key={item._id}
+                                    className={`item-container ${item._id === selectedId ? 'selected' : ''
+                                        }`}
                                 >
-                                    {item.name || item.number}
-                                </button>
-                                <div className="item-actions">
-                                    <button className="action-btn edit-btn" onClick={() => onEdit(item, itemType)}>
-                                        Edit
+                                    <button
+                                        className="item-button"
+                                        onClick={() => onSelect(item._id)}
+                                    >
+                                        {displayValue}
                                     </button>
-                                    <button className="action-btn delete-btn" onClick={() => onDelete(item._id, itemType)}>
-                                        Del
-                                    </button>
+
+                                    <div className="item-actions">
+                                        <button
+                                            className="action-btn edit-btn"
+                                            onClick={() => onEdit(item, itemType)}
+                                        >
+                                            Edit
+                                        </button>
+                                        <button
+                                            className="action-btn delete-btn"
+                                            onClick={() => onDelete(item._id, itemType)}
+                                        >
+                                            Del
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        ))
+                            );
+                        })
                     ) : (
                         <p className="empty-column-message">
                             Select a parent item to view or create new entries.
@@ -99,10 +125,72 @@ const HierarchyColumn = ({
     );
 };
 
-// =======================================================
-// The Main Page Component for UA Hierarchy Management
-// =======================================================
+/* =======================================================
+   Main Page Component
+======================================================= */
 const UAManageHierarchy = () => {
+    const hierarchyRef = useRef(null);
+    const currentColumnIndexRef = useRef(0);
+    const isInitialLoadRef = useRef(true);
+
+    const getCurrentColumnIndex = () => {
+        const container = hierarchyRef.current;
+        if (!container) return 0;
+
+        const columns = Array.from(
+            container.querySelectorAll('.hierarchy-column')
+        );
+
+        const containerLeft = container.getBoundingClientRect().left;
+
+        let closestIndex = 0;
+        let closestDistance = Infinity;
+
+        columns.forEach((col, index) => {
+            const colLeft = col.getBoundingClientRect().left;
+            const distance = Math.abs(colLeft - containerLeft);
+
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestIndex = index;
+            }
+        });
+
+        return closestIndex;
+    };
+
+    const scrollToColumnIndex = (index) => {
+        const container = hierarchyRef.current;
+        if (!container) return;
+
+        const columns = container.querySelectorAll('.hierarchy-column');
+        if (!columns[index]) return;
+
+        columns[index].scrollIntoView({
+            behavior: 'smooth',
+            inline: 'start',
+            block: 'nearest',
+        });
+    };
+
+    const scrollHierarchy = (direction) => {
+        const container = hierarchyRef.current;
+        if (!container) return;
+
+        const columns = container.querySelectorAll('.hierarchy-column');
+        if (!columns.length) return;
+
+        const currentIndex = getCurrentColumnIndex();
+        const nextIndex = Math.max(
+            0,
+            Math.min(currentIndex + direction, columns.length - 1)
+        );
+
+        scrollToColumnIndex(nextIndex);
+    };
+
+
+
     const [degrees, setDegrees] = useState([]);
     const [courses, setCourses] = useState([]);
     const [departments, setDepartments] = useState([]);
@@ -122,16 +210,30 @@ const UAManageHierarchy = () => {
     const [editingItem, setEditingItem] = useState(null);
     const [editingItemType, setEditingItemType] = useState('');
 
-    // --- Fetch Degrees ---
+    useEffect(() => {
+        if (!isInitialLoadRef.current) return;
+
+        const container = hierarchyRef.current;
+        const firstColumn = container?.querySelector('.hierarchy-column');
+
+        if (firstColumn) {
+            firstColumn.scrollIntoView({ behavior: 'auto' });
+        }
+
+        currentColumnIndexRef.current = 0;
+        isInitialLoadRef.current = false;
+    }, []);
+
+    /* ---------- Fetch Degrees ---------- */
     const fetchAllDegrees = useCallback(async () => {
         setLoading(true);
         setLoadingDegrees(true);
         try {
             const { data } = await api.get('/university-affairs/degrees');
-            setDegrees(data);
+            setDegrees(Array.isArray(data) ? data : []);
             setError('');
-        } catch (e) {
-            setError('Failed to load degrees. Please try again.');
+        } catch {
+            setError('Failed to load degrees.');
         } finally {
             setLoading(false);
             setLoadingDegrees(false);
@@ -142,7 +244,7 @@ const UAManageHierarchy = () => {
         fetchAllDegrees();
     }, [fetchAllDegrees]);
 
-    // --- Fetch Courses ---
+    /* ---------- Fetch Courses ---------- */
     useEffect(() => {
         setCourses([]);
         setDepartments([]);
@@ -153,13 +255,12 @@ const UAManageHierarchy = () => {
         if (selectedDegree) {
             setLoadingCourses(true);
             api.get(`/university-affairs/courses?degree=${selectedDegree}`)
-                .then(res => setCourses(res.data))
-                .catch(() => setError('Failed to load courses.'))
+                .then(res => setCourses(Array.isArray(res.data) ? res.data : []))
                 .finally(() => setLoadingCourses(false));
         }
     }, [selectedDegree]);
 
-    // --- Fetch Departments ---
+    /* ---------- Fetch Departments ---------- */
     useEffect(() => {
         setDepartments([]);
         setSemesters([]);
@@ -168,134 +269,191 @@ const UAManageHierarchy = () => {
         if (selectedCourse) {
             setLoadingDepartments(true);
             api.get(`/university-affairs/departments?course=${selectedCourse}`)
-                .then(res => setDepartments(res.data))
-                .catch(() => setError('Failed to load departments.'))
+                .then(res => setDepartments(Array.isArray(res.data) ? res.data : []))
                 .finally(() => setLoadingDepartments(false));
         }
     }, [selectedCourse]);
 
-    // --- Fetch Semesters ---
+    /* ---------- Fetch Semesters ---------- */
     useEffect(() => {
         setSemesters([]);
 
         if (selectedDepartment) {
             setLoadingSemesters(true);
             api.get(`/university-affairs/semesters?department=${selectedDepartment}`)
-                .then(res => setSemesters(res.data))
-                .catch(() => setError('Failed to load semesters.'))
+                .then(res => setSemesters(Array.isArray(res.data) ? res.data : []))
                 .finally(() => setLoadingSemesters(false));
         }
     }, [selectedDepartment]);
 
-    // --- Universal CRUD Handlers ---
-    const handleCreate = useCallback(async (value, type, parentData) => {
-        try {
-            setError('');
-            const payload =
-                type === 'semesters'
-                    ? { number: parseInt(value), ...parentData }
-                    : { name: value, ...parentData };
-            await api.post(`/university-affairs/${type}`, payload);
-
-            if (type === 'degrees') await fetchAllDegrees();
-            if (type === 'courses')
-                api.get(`/university-affairs/courses?degree=${selectedDegree}`).then(res => setCourses(res.data));
-            if (type === 'departments')
-                api.get(`/university-affairs/departments?course=${selectedCourse}`).then(res => setDepartments(res.data));
-            if (type === 'semesters')
-                api.get(`/university-affairs/semesters?department=${selectedDepartment}`).then(res => setSemesters(res.data));
-        } catch {
-            setError(`Failed to create new ${type.slice(0, -1)}.`);
-        }
-    }, [fetchAllDegrees, selectedDegree, selectedCourse, selectedDepartment]);
-
-    const handleDelete = useCallback(async (id, type) => {
-        if (window.confirm(`Are you sure you want to delete this ${type.slice(0, -1)}?`)) {
+    /* ---------- Create ---------- */
+    const handleCreate = useCallback(
+        async (value, type, parentData) => {
             try {
-                setError('');
-                await api.delete(`/university-affairs/${type}/${id}`);
-                await fetchAllDegrees();
-                setSelectedDegree(null);
+                const payload =
+                    type === 'semesters'
+                        ? { number: Number(value), ...parentData }
+                        : { name: value, ...parentData };
+
+                await api.post(`/university-affairs/${type}`, payload);
+
+                if (type === 'degrees') await fetchAllDegrees();
+                if (type === 'courses')
+                    api.get(`/university-affairs/courses?degree=${selectedDegree}`)
+                        .then(res => setCourses(Array.isArray(res.data) ? res.data : []));
+                if (type === 'departments')
+                    api.get(`/university-affairs/departments?course=${selectedCourse}`)
+                        .then(res => setDepartments(Array.isArray(res.data) ? res.data : []));
+                if (type === 'semesters')
+                    api.get(`/university-affairs/semesters?department=${selectedDepartment}`)
+                        .then(res => setSemesters(Array.isArray(res.data) ? res.data : []));
             } catch {
-                setError(`Failed to delete item. It may still be in use.`);
+                setError(`Failed to create ${type.slice(0, -1)}.`);
             }
-        }
-    }, [fetchAllDegrees]);
+        },
+        [fetchAllDegrees, selectedDegree, selectedCourse, selectedDepartment]
+    );
 
-    const openEditModal = (item, type) => {
-        setEditingItem(item);
-        setEditingItemType(type);
+    const handleDelete = useCallback(
+        async (id, type) => {
+            if (!id || typeof type !== 'string') return;
+
+            const label = type.slice(0, -1);
+            if (!window.confirm(`Delete this ${label}?`)) return;
+
+            try {
+                await api.delete(`/university-affairs/${type}/${id}`);
+
+                // 🔥 Refresh ONLY the relevant level
+                if (type === 'degrees') {
+                    fetchAllDegrees();
+                    setSelectedDegree(null);
+                }
+
+                if (type === 'courses') {
+                    setCourses(prev => prev.filter(i => i._id !== id));
+                    setSelectedCourse(null);
+                }
+
+                if (type === 'departments') {
+                    setDepartments(prev => prev.filter(i => i._id !== id));
+                    setSelectedDepartment(null);
+                }
+
+                if (type === 'semesters') {
+                    setSemesters(prev => prev.filter(i => i._id !== id));
+                }
+            } catch {
+                setError(`Failed to delete ${label}.`);
+            }
+        },
+        [fetchAllDegrees]
+    );
+
+    const handleEditSave = (updatedItem, type) => {
+        if (!updatedItem || !type) return;
+
+        const replace = (setter) => {
+            setter(prev =>
+                Array.isArray(prev)
+                    ? prev.map(item =>
+                        item._id === updatedItem._id ? updatedItem : item
+                    )
+                    : prev
+            );
+        };
+
+        if (type === 'degrees') replace(setDegrees);
+        if (type === 'courses') replace(setCourses);
+        if (type === 'departments') replace(setDepartments);
+        if (type === 'semesters') replace(setSemesters);
+
+        setEditingItem(null);
     };
 
-    const handleSaveFromModal = async () => {
-        await fetchAllDegrees();
-        setSelectedDegree(null);
-    };
 
     return (
         <>
             {loading && <LoadingScreen />}
+
             <div className="container">
-                <Link to="/ua/dashboard" className="btn-link">&larr; Back to UA Dashboard</Link>
+                <Link to="/ua/dashboard" className="btn-link">
+                    &larr; Back to UA Dashboard
+                </Link>
+
                 <h1>Manage Academic Structure</h1>
-                <p>Select an item to manage its children. Use the '+' form to add new entries.</p>
+                <p>Select an item to manage its children.</p>
                 {error && <p className="error">{error}</p>}
 
-                <div className="hierarchy-container">
+                {/* SCROLL BUTTONS */}
+                <div className="hierarchy-scroll-controls">
+                    <button className="hierarchy-scroll-btn" onClick={() => scrollHierarchy(-1)} title='Go to Previous Section'>◀</button>
+                    <button className="hierarchy-scroll-btn" onClick={() => scrollHierarchy(1)} title='Go to Next Section'>▶</button>
+                </div>
+
+                <div className="hierarchy-container" ref={hierarchyRef}>
                     <HierarchyColumn
                         title="Degrees"
                         items={degrees}
                         selectedId={selectedDegree}
-                        onSelect={setSelectedDegree}
+                        onSelect={(id) => {
+                            setSelectedDegree(id);
+                            scrollToColumnIndex(1);
+                        }}
                         onCreate={(name) => handleCreate(name, 'degrees')}
-                        onEdit={openEditModal}
+                        onEdit={(i) => { setEditingItem(i); setEditingItemType('degrees'); }}
                         onDelete={handleDelete}
-                        itemType="degrees"
                         placeholder="+ New Degree"
                         loading={loadingDegrees}
+                        itemType="degrees"
                     />
 
                     <HierarchyColumn
                         title="Courses"
                         items={courses}
                         selectedId={selectedCourse}
-                        onSelect={setSelectedCourse}
+                        onSelect={(id) => {
+                            setSelectedCourse(id);
+                            scrollToColumnIndex(2);
+                        }}
                         onCreate={(name) => handleCreate(name, 'courses', { degree: selectedDegree })}
-                        onEdit={openEditModal}
+                        onEdit={(i) => { setEditingItem(i); setEditingItemType('courses'); }}
                         onDelete={handleDelete}
-                        itemType="courses"
                         placeholder="+ New Course"
                         createDisabled={!selectedDegree}
                         loading={loadingCourses}
+                        itemType=""
                     />
 
                     <HierarchyColumn
                         title="Departments"
                         items={departments}
                         selectedId={selectedDepartment}
-                        onSelect={setSelectedDepartment}
+                        onSelect={(id) => {
+                            setSelectedDepartment(id);
+                            scrollToColumnIndex(3);
+                        }}
                         onCreate={(name) => handleCreate(name, 'departments', { course: selectedCourse })}
-                        onEdit={openEditModal}
+                        onEdit={(i) => { setEditingItem(i); setEditingItemType('departments'); }}
                         onDelete={handleDelete}
-                        itemType="departments"
                         placeholder="+ New Department"
                         createDisabled={!selectedCourse}
                         loading={loadingDepartments}
+                        itemType="departments"
                     />
 
                     <HierarchyColumn
                         title="Semesters"
                         items={semesters}
-                        selectedId={null}
                         onSelect={() => { }}
                         onCreate={(num) => handleCreate(num, 'semesters', { department: selectedDepartment })}
-                        onEdit={openEditModal}
+                        onEdit={(i) => { setEditingItem(i); setEditingItemType('semesters'); }}
                         onDelete={handleDelete}
-                        itemType="semesters"
                         inputType="number"
-                        placeholder="+ New Semester (e.g., 5)"
+                        placeholder="+ New Semester"
                         createDisabled={!selectedDepartment}
                         loading={loadingSemesters}
+                        itemType="semesters"
                     />
                 </div>
 
@@ -304,7 +462,7 @@ const UAManageHierarchy = () => {
                         item={editingItem}
                         itemType={editingItemType}
                         onClose={() => setEditingItem(null)}
-                        onSave={handleSaveFromModal}
+                        onSave={handleEditSave}
                     />
                 )}
             </div>

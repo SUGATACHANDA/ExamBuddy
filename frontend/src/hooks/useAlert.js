@@ -1,30 +1,25 @@
-import { useState, useCallback } from "react";
+import { ALERT_TYPES } from "components/ui/AlertModal";
+import { useState } from "react";
 
-/**
- * Usage:
- * const [alertState, Alert] = useAlert();
- * // To show:
- * setAlert({ isOpen: true, type: 'error', title: 'Oops', message: 'Something' });
- */
 export function useAlert() {
-    const [config, setConfig] = useState({
+    const [alertConfig, setAlertConfig] = useState({
         isOpen: false,
-        type: "info",
+        type: ALERT_TYPES.INFO,
         title: "",
         message: "",
-        confirmText: "OK",
-        cancelText: "Cancel",
-        showCancel: false,
-        onConfirm: null,
-        onCancel: null,
-        nonCloseable: false,
     });
 
-    const open = useCallback((cfg) => {
-        setConfig({ ...config, ...cfg, isOpen: true });
-    }, [config]);
+    const openAlert = (config) => {
+        setAlertConfig({
+            isOpen: true,
+            type: ALERT_TYPES.INFO,
+            ...config,
+        });
+    };
 
-    const close = useCallback(() => setConfig((c) => ({ ...c, isOpen: false })), []);
+    const closeAlert = () => {
+        setAlertConfig((prev) => ({ ...prev, isOpen: false }));
+    };
 
-    return [config, setConfig, open, close];
+    return [alertConfig, setAlertConfig, openAlert, closeAlert];
 }

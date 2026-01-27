@@ -7,7 +7,9 @@ import LoadingScreen from "components/LoadingScreen";
 import { getInitials } from "./StudentDashboad";
 import ChangePasswordModal from "components/ui/ChangePasswordModal";
 import { useAlert } from "hooks/useAlert";
-import AlertModal from "components/ui/AlertModal";
+import AlertModal, { ALERT_TYPES } from "components/ui/AlertModal";
+
+
 
 export default function TeacherProfilePage() {
     const { id } = useParams();
@@ -18,7 +20,7 @@ export default function TeacherProfilePage() {
     const [loading, setLoading] = useState(true);
     const [bioModalOpen, setBioModalOpen] = useState(false);
     const [isChangePassOpen, setIsChangePassOpen] = useState(false);
-    const [alertConfig, setAlertConfig, openAlert, closeAlert] = useAlert();
+    const [alertConfig, , openAlert, closeAlert] = useAlert();
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -129,16 +131,14 @@ export default function TeacherProfilePage() {
                                 className="btn btn-outline"
                                 onClick={() => {
                                     openAlert({
-                                        type: "warning",
-                                        title: "Logout?",
+                                        type: ALERT_TYPES.WARNING,
+                                        title: "Logout Confirmation",
                                         message: "Are you sure you want to logout?",
                                         confirmText: "Logout",
                                         cancelText: "Cancel",
                                         onConfirm: () => {
                                             logout();
-                                            closeAlert();
                                         },
-                                        onCancel: () => closeAlert()
                                     });
                                 }}
                             >

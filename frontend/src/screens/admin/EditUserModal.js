@@ -3,10 +3,30 @@ import api from '../../api/axiosConfig';
 import CollegeAsyncSelect from '../../components/ui/CollegeAsyncSelect';
 
 // Generic reusable modal for editing a user
-const EditUserModal = ({ user, onClose, onSave, updateUrl, semesters = [], colleges = [] }) => {
-    const [formData, setFormData] = useState({ name: '', email: '', collegeId: '', semester: '', college: '' });
+const EditUserModal = ({ user, onClose, onSave, updateUrl, semesters = [], colleges = [], department = [] }) => {
+    const [formData, setFormData] = useState({ name: '', email: '', collegeId: '', semester: '', college: '', department: '' });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [selectedDepartmentOption, setSelectedDepartmentOption] = useState(null);
+
+    useEffect(() => {
+        if (
+            user?.department &&
+            Array.isArray(department) &&
+            department.length > 0
+        ) {
+            const dept = department.find(d => d._id === user.department);
+
+            if (dept) {
+                setSelectedDepartmentOption({
+                    value: dept._id,
+                    label: dept.name
+                });
+            }
+        }
+    }, [user, department]);
+
+    console.log(selectedDepartmentOption);
 
     useEffect(() => {
         if (user) {
@@ -15,29 +35,11 @@ const EditUserModal = ({ user, onClose, onSave, updateUrl, semesters = [], colle
                 email: user.email || '',
                 collegeId: user.collegeId || '',
                 semester: user.semester?._id || '',
-                college: user.college?._id || ''
+                college: user.college?._id || '',
+                department: user.department || ''
             });
         }
     }, [user]);
-
-    const selectedCollege = colleges
-        .filter(c => c._id === formData.college)
-        .map(c => ({ value: c._id, label: c.name }))[0] || null;
-
-    const loadCollegeOptions = (inputValue, callback) => {
-        setTimeout(() => {
-            const filtered = colleges
-                .filter(c =>
-                    c.name.toLowerCase().includes(inputValue.toLowerCase())
-                )
-                .map(c => ({
-                    value: c._id,
-                    label: c.name
-                }));
-
-            callback(filtered);
-        }, 300); // debounce-like behavior
-    };
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -63,6 +65,18 @@ const EditUserModal = ({ user, onClose, onSave, updateUrl, semesters = [], colle
         } finally {
             setLoading(false);
         }
+    };
+
+    const getDepartmentOption = () => {
+        if (!formData.department || !department.length) return null;
+
+        const dept = department.find(d => d._id === formData.department);
+        if (!dept) return null;
+
+        return {
+            value: dept._id,
+            label: dept.name
+        };
     };
 
     if (!user) return null;
@@ -135,6 +149,25 @@ const EditUserModal = ({ user, onClose, onSave, updateUrl, semesters = [], colle
                                 onChange={(collegeId) =>
                                     setFormData(prev => ({ ...prev, college: collegeId }))
                                 }
+                            />
+                        </div>
+                    )}
+
+                    {user.role === 'HOD' && (
+                        <div className="form-group">
+                            <label>Assigned Department</label>
+
+                            <CollegeAsyncSelect
+                                colleges={department}
+                                value={selectedDepartmentOption}
+                                onChange={(option) => {
+                                    setSelectedDepartmentOption(option);
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        department: option?.value || ''
+                                    }));
+                                }}
+                                placeholder="Search Department..."
                             />
                         </div>
                     )}

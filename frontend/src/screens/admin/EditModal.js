@@ -26,11 +26,14 @@ const EditModal = ({ item, itemType, onClose, onSave }) => {
             const payload = item.number !== undefined ? { number: inputValue } : { name: inputValue };
 
             // Call the API to update the document.
-            await api.put(`admin/${itemType}/${item._id}`, payload);
+            const { data: updatedItem } = await api.put(
+                `/university-affairs/${itemType}/${item._id}`,
+                payload
+            );
 
             // On success, call the onSave function passed from the parent.
             // THIS is what tells the parent to refresh its data.
-            onSave();
+            onSave(updatedItem, itemType);
             onClose(); // Then close the modal.
         } catch (error) {
             console.error(`Failed to update ${itemType}`, error);

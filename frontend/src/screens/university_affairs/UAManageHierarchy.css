@@ -1,0 +1,127 @@
+.ua-root {
+  padding: 24px;
+  background: #f9fafb;
+  min-height: 100vh;
+}
+
+.ua-top h1 {
+  margin: 4px 0;
+  font-size: 22px;
+}
+
+.ua-top p {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* ===============================
+   HORIZONTAL RAIL
+================================ */
+.ua-rail {
+  display: flex;
+  gap: 16px;
+  margin-top: 24px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+}
+
+/* ===============================
+   COLUMN
+================================ */
+.ua-col {
+  width: 260px;
+  min-width: 260px;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+}
+
+.ua-col-header {
+  padding: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+}
+
+.ua-count {
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+/* ===============================
+   ITEMS
+================================ */
+.ua-col-body {
+  padding: 8px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.ua-item {
+  padding: 8px;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.ua-item:hover {
+  background: #f1f5f9;
+}
+
+.ua-item.active {
+  background: #dbeafe;
+}
+
+.ua-actions button {
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: #475569;
+  cursor: pointer;
+}
+
+/* ===============================
+   CREATE
+================================ */
+.ua-create {
+  display: flex;
+  gap: 6px;
+  padding: 10px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.ua-create input {
+  flex: 1;
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+}
+
+.ua-create button {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+.ua-create button:disabled {
+  opacity: 0.5;
+}
+
+/* ===============================
+   EMPTY
+================================ */
+.ua-empty {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
+  margin-top: 16px;
+}

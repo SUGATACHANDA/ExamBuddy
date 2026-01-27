@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../../api/axiosConfig';
 import EditModal from './EditModal'; // Reusing the modal for editing name/location
 import Pagination from '../../components/teacher/Pagination';
+import AlertModal from "../../components/ui/AlertModal";
 
 const AdminManageColleges = () => {
     const [colleges, setColleges] = useState([]);
@@ -13,6 +14,9 @@ const AdminManageColleges = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
+
+    const [alertOpen, setAlertOpen] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState(null);
 
     const itemsPerPage = 6;
 
@@ -39,15 +43,36 @@ const AdminManageColleges = () => {
 
     const totalPages = Math.ceil(colleges.length / itemsPerPage);
 
-    // --- CRUD Handlers ---
-    const handleDelete = async (id, name) => {
-        if (window.confirm(`Are you sure you want to PERMANENTLY delete the college "${name}"? This will affect all associated degrees, courses, and users.`)) {
-            try {
-                await api.delete(`/admin/colleges/${id}`);
-                await fetchColleges();
-            } catch (e) { setError('Failed to delete college. It may be in use.'); }
+    const handleDeleteCollege = async (id, name) => {
+        setDeleteTarget(id);
+        setAlertOpen(true);
+    };
+
+    const confirmDeleteCollege = async () => {
+        const targetId = deleteTarget;
+        setAlertOpen(false);
+        setDeleteTarget(null);
+
+        setLoading(true);
+        try {
+            await api.delete(`/admin/colleges/${targetId}`);
+            await fetchColleges();
+        } catch {
+            setError('Failed to delete college. It may be in use.');
+        } finally {
+            setLoading(false);
         }
     };
+
+    // --- CRUD Handlers ---
+    // const handleDelete = async (id, name) => {
+    //     if (window.confirm(`Are you sure you want to PERMANENTLY delete the college "${name}"? This will affect all associated degrees, courses, and users.`)) {
+    //         try {
+    //             await api.delete(`/admin/colleges/${id}`);
+    //             await fetchColleges();
+    //         } catch (e) { setError('Failed to delete college. It may be in use.'); }
+    //     }
+    // };
     const openEditModal = (college) => {
         setEditingItem(college);
         setIsEditModalOpen(true);
@@ -74,7 +99,7 @@ const AdminManageColleges = () => {
                         </div>
                         <div className="item-card-actions">
                             <button onClick={() => openEditModal(college)} className="action-btn edit-btn">Edit</button>
-                            <button onClick={() => handleDelete(college._id, college.name)} className="action-btn delete-btn">Delete</button>
+                            <button onClick={() => handleDeleteCollege(college._id, college.name)} className="action-btn delete-btn">Delete</button>
                         </div>
                     </div>
                 ))}
@@ -88,6 +113,20 @@ const AdminManageColleges = () => {
 
             {isCreateModalOpen && <CreateCollegeModal onClose={() => setIsCreateModalOpen(false)} onSave={fetchColleges} />}
             {isEditModalOpen && <EditModal item={editingItem} itemType="colleges" onClose={() => setIsEditModalOpen(false)} onSave={fetchColleges} />}
+            <AlertModal
+                isOpen={alertOpen}
+                type="warning"
+                title="Delete User"
+                message="Are you sure you want to permanently delete this COLLEGE? This action cannot be undone."
+                confirmText="Delete"
+                cancelText="Cancel"
+                showCancel
+                onConfirm={confirmDeleteCollege}
+                onCancel={() => {
+                    setAlertOpen(false);
+                    setDeleteTarget(null);
+                }}
+            />
         </div>
     );
 };

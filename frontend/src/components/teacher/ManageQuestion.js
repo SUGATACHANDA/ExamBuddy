@@ -4,7 +4,7 @@ import api from "../../api/axiosConfig";
 import LoadingScreen from "components/LoadingScreen";
 import EditQuestionModal from "./EditQuestionModal";
 import { useAlert } from "hooks/useAlert";
-import AlertModal from "components/ui/AlertModal";
+import AlertModal, { ALERT_TYPES } from "components/ui/AlertModal";
 
 export const Pagination = ({ currentPage, totalPages, onPageChange }) => {
     // Don't render pagination controls if there's only one page.
@@ -72,11 +72,21 @@ const ManageQuestions = () => {
 
     // ====================== FETCH DATA ======================
     const fetchSubjects = async () => {
+        setLoading(true)
         try {
-            const { data } = await api.get("/subjects");
-            setSubjects(data);
-        } catch {
-            setError("Failed to load subjects");
+            const res = await api.get("/subjects");
+
+            if (Array.isArray(res.data)) {
+                setSubjects(res.data);
+            } else {
+                console.error("Subjects API did not return array:", res.data);
+                setSubjects([]);
+            }
+        } catch (err) {
+            console.error(err);
+            setSubjects([]); // ✅ prevent crash
+        } finally {
+            setLoading(false)
         }
     };
 
@@ -112,25 +122,61 @@ const ManageQuestions = () => {
 
     // ====================== SUBJECT ACTIONS ======================
     const handleAddSubject = async () => {
-        if (!newSubject.trim()) return setError("Enter subject name");
-
+        if (!newSubject.trim()) return (
+            openAlert({
+                type: ALERT_TYPES.ERROR,
+                title: "Subject Creation Error",
+                message: "Enter Subject Name",
+                confirmText: "OK"
+            }))
+        setLoading(true)
         try {
             const res = await api.post("/subjects", { name: newSubject });
             setSubjects((prev) => [...prev, res.data]);
             setNewSubject("");
+            openAlert({
+                type: ALERT_TYPES.SUCCESS,
+                title: "Subject Added",
+                message: "Subject Added successfully.",
+                onConfirm: () => {
+                    setActiveTab('subjects')
+                }
+            });
         } catch {
             setError("Subject already exists");
+        } finally {
+            setLoading(false)
         }
     };
 
-    const handleDeleteSubject = async (id) => {
-        if (!window.confirm("Delete this subject?")) return;
-        try {
-            await api.delete(`/subjects/${id}`);
-            setSubjects(subjects.filter((s) => s._id !== id));
-        } catch {
-            setError("Cannot delete subject");
-        }
+    const handleDeleteSubject = (id) => {
+        openAlert({
+            type: ALERT_TYPES.WARNING,
+            title: "Delete Subject",
+            message:
+                "Deleting this subject may affect existing questions. Are you sure you want to continue?",
+            confirmText: "Delete",
+            cancelText: "Cancel",
+            onConfirm: async () => {
+                try {
+
+                    await api.delete(`/subjects/${id}`);
+                    setSubjects((prev) => prev.filter((s) => s._id !== id));
+
+                    openAlert({
+                        type: ALERT_TYPES.SUCCESS,
+                        title: "Deleted",
+                        message: "Subject deleted successfully.",
+                    });
+                } catch {
+                    openAlert({
+                        type: ALERT_TYPES.ERROR,
+                        title: "Delete Failed",
+                        message: "Cannot delete subject. It may be in use.",
+                    });
+                }
+            },
+        });
     };
 
     const addOption = (qIndex) => {
@@ -154,8 +200,22 @@ const ManageQuestions = () => {
     };
 
     const addNewQuestion = () => {
-        if (!selectedSubject) return setError("Select a subject first");
-        if (!questionType) return setError("Select question type first");
+        if (!selectedSubject) return (
+            openAlert({
+                type: ALERT_TYPES.ERROR,
+                title: "Subject Required",
+                message: "Please select a subject before adding a question.",
+                confirmText: "OK"
+            })
+        )
+        if (!questionType) return (
+            openAlert({
+                type: ALERT_TYPES.ERROR,
+                title: "Type Required",
+                message: "Please select a question type.",
+                confirmText: "OK"
+            })
+        )
 
         setQuestions(prev => [
             ...prev,
@@ -191,8 +251,22 @@ const ManageQuestions = () => {
 
 
     const submitAllQuestions = async () => {
-        if (!selectedSubject) return setError("Select subject first");
-        if (questions.length === 0) return setError("Add at least one question");
+        if (!selectedSubject) return (
+            openAlert({
+                type: ALERT_TYPES.ERROR,
+                title: "Subject Required",
+                message: "Please select a subject before submitting questions.",
+                confirmText: "OK"
+            })
+        )
+        if (questions.length === 0) return (
+            openAlert({
+                type: ALERT_TYPES.ERROR,
+                title: "No Questions",
+                message: "Add at least one question before submitting.",
+                confirmText: "OK"
+            })
+        )
 
         try {
             await api.post("/questions/bulk", {
@@ -200,11 +274,10 @@ const ManageQuestions = () => {
                 questions
             });
             openAlert({
-                type: "success",
-                title: "Success",
-                message: "Questions added successfully!",
-                confirmText: "Understood",
-                showCancel: false,
+                type: ALERT_TYPES.SUCCESS,
+                title: "Questions Added",
+                message: "All questions were added successfully.",
+                confirmText: "OK",
             });
             setQuestions([]);
             setSelectedSubject("");
@@ -218,17 +291,38 @@ const ManageQuestions = () => {
     };
 
 
-    const handleDeleteQuestion = async (id) => {
-        if (!window.confirm("Delete this question?")) return;
+    const handleDeleteQuestion = (id) => {
+        openAlert({
+            type: ALERT_TYPES.WARNING,
+            title: "Delete Question",
+            message:
+                "Are you sure you want to permanently delete this question? This action cannot be undone.",
+            confirmText: "Delete",
+            cancelText: "Cancel",
+            onConfirm: async () => {
+                try {
+                    await api.delete(`/questions/${id}`);
 
-        try {
-            await api.delete(`/questions/${id}`);
-            if (paginatedQuestions.length === 1 && currentPage > 1)
-                setCurrentPage((p) => p - 1);
-            await fetchQuestions();
-        } catch {
-            setError("Failed to delete question.");
-        }
+                    if (paginatedQuestions.length === 1 && currentPage > 1) {
+                        setCurrentPage((p) => p - 1);
+                    }
+
+                    await fetchQuestions();
+
+                    openAlert({
+                        type: ALERT_TYPES.SUCCESS,
+                        title: "Deleted",
+                        message: "Question deleted successfully.",
+                    });
+                } catch {
+                    openAlert({
+                        type: ALERT_TYPES.ERROR,
+                        title: "Delete Failed",
+                        message: "Unable to delete question. Please try again.",
+                    });
+                }
+            },
+        });
     };
 
     const openEditModal = (question) => {
@@ -551,7 +645,7 @@ const ManageQuestions = () => {
                                             {/* ✅ Multiple Select */}
                                             {q.questionType === "multiple_select" && (
                                                 <div className="form-group" style={{ marginTop: "12px" }}>
-                                                    <label>Select Correct Answers</label>
+                                                    <label>Select Correct Answers (Press Ctrl to select Multiple Options)</label>
                                                     <select
                                                         multiple
                                                         value={q.correctAnswers}
@@ -645,7 +739,7 @@ const ManageQuestions = () => {
                                     required
                                 />
                                 <button className="btn-add-subject" onClick={handleAddSubject}>
-                                    + Add Subject
+                                    {loading ? "Adding Subject..." : "+ Add Subject"}
                                 </button>
                             </div>
 

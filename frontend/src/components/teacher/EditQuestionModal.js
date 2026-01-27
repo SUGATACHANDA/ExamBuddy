@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api from "../../api/axiosConfig";
+import { useAlert } from "hooks/useAlert";
+import AlertModal, { ALERT_TYPES } from "components/ui/AlertModal";
 
 const EditQuestionModal = ({ question, onClose, onSave }) => {
     const [questionText, setQuestionText] = useState("");
@@ -9,6 +11,8 @@ const EditQuestionModal = ({ question, onClose, onSave }) => {
     const [options, setOptions] = useState(["", "", "", ""]);
     const [correctAnswer, setCorrectAnswer] = useState("");
     const [correctAnswers, setCorrectAnswers] = useState([]);
+
+    const [alertConfig, setAlertConfig, openAlert, closeAlert] = useAlert();
 
     // Short Answer
     const [expectedAnswer, setExpectedAnswer] = useState("");
@@ -188,10 +192,25 @@ const EditQuestionModal = ({ question, onClose, onSave }) => {
         try {
             const response = await api.put(`/questions/${question._id}`, payload);
             console.log("Update response:", response.data); // Debug log
-            onSave();
-            onClose();
+            openAlert({
+                type: ALERT_TYPES.SUCCESS,
+                title: "Question Updated",
+                message: "The question has been updated successfully.",
+                confirmText: "OK",
+                onConfirm: () => {
+                    onSave();
+                },
+            });
         } catch (err) {
             console.error("Update error:", err);
+            openAlert({
+                type: ALERT_TYPES.ERROR,
+                title: "Update Failed",
+                message:
+                    err.response?.data?.message ||
+                    "Unable to update the question. Please try again.",
+                confirmText: "OK",
+            });
             setError("Failed to update question. " + (err.response?.data?.message || err.message));
         } finally {
             setLoading(false);
@@ -380,6 +399,19 @@ const EditQuestionModal = ({ question, onClose, onSave }) => {
                     </div>
                 </form>
             </div>
+            <AlertModal
+                {...alertConfig}
+                isOpen={alertConfig.isOpen}
+                onConfirm={() => {
+                    alertConfig.onConfirm?.();
+                    closeAlert();
+                    onClose(); // close edit modal after alert
+                }}
+                onCancel={() => {
+                    alertConfig.onCancel?.();
+                    closeAlert();
+                }}
+            />
         </div>
     );
 };

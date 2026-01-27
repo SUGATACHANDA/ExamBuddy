@@ -1,0 +1,138 @@
+/* ================= BACKDROP ================= */
+.alert-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+/* ================= CARD ================= */
+.alert-modal-wrapper {
+  width: 100%;
+  max-width: 420px;
+}
+
+.alert-modal-card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+/* ================= HEADER ================= */
+.alert-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 24px 16px;
+}
+
+.alert-modal-icon-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 600;
+  color: white;
+}
+
+.alert-modal-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+}
+
+/* ================= BODY ================= */
+.alert-modal-body {
+  padding: 0 24px 24px;
+}
+
+.alert-modal-message {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #475569;
+}
+
+/* ================= ACTIONS ================= */
+.alert-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.alert-btn {
+  min-width: 90px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+}
+
+/* Secondary (Cancel) */
+.alert-btn-cancel {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.alert-btn-cancel:hover {
+  background: #e2e8f0;
+}
+
+/* Primary (Confirm) */
+.alert-btn-confirm {
+  color: white;
+}
+
+/* ================= TYPES ================= */
+.alert-modal-info .alert-modal-icon-circle,
+.alert-btn-info {
+  background: #2563eb;
+}
+
+.alert-modal-success .alert-modal-icon-circle,
+.alert-btn-success {
+  background: #059669;
+}
+
+.alert-modal-warning .alert-modal-icon-circle,
+.alert-btn-warning {
+  background: #d97706;
+}
+
+.alert-modal-error .alert-modal-icon-circle,
+.alert-btn-error {
+  background: #dc2626;
+}
+
+/* ================= MOBILE ================= */
+@media (max-width: 640px) {
+  .alert-modal-backdrop {
+    align-items: flex-end;
+  }
+
+  .alert-modal-card {
+    border-radius: 16px 16px 0 0;
+  }
+
+  .alert-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .alert-btn {
+    width: 100%;
+  }
+}

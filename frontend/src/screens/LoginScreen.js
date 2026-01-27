@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom'; // <-- Make sure to import Link
 import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Loader2Icon } from 'lucide-react';
 import { togglePasswordVisibility } from 'utils/passwordToggle';
 
 const LoginScreen = () => {
@@ -134,7 +134,14 @@ const LoginScreen = () => {
                     {/* ----------------------------------------- */}
 
                     <button type="submit" className="btn btn-primary" disabled={loading}>
-                        {loading ? 'Logging in...' : 'Login'}
+                        {loading ? (
+                            <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                                <Loader2Icon size={20} className="spin" />
+                                {/* Logging in... */}
+                            </span>
+                        ) : (
+                            "Login"
+                        )}
                     </button>
                 </form>
             </div>
